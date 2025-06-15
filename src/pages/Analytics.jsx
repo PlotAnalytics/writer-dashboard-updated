@@ -1044,7 +1044,10 @@ const Analytics = () => {
                 fontWeight: 500
               },
               '& .Mui-selected': { color: 'white !important' },
-              '& .MuiTabs-indicator': { backgroundColor: '#E6B800' }
+              '& .MuiTabs-indicator': {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                height: 3
+              }
             }}
           >
             <Tab label="Overview" />
@@ -1075,7 +1078,12 @@ const Analytics = () => {
                     <Typography variant="body2" sx={{ color: '#888' }}>
                       Progress to 100M views
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#E6B800' }}>
+                    <Typography variant="body2" sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 600
+                    }}>
                       {analyticsData.summary.progressToTarget.toFixed(1)}%
                     </Typography>
                   </Box>
@@ -1087,7 +1095,7 @@ const Analytics = () => {
                       borderRadius: 4,
                       bgcolor: '#333',
                       '& .MuiLinearProgress-bar': {
-                        bgcolor: '#E6B800',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         borderRadius: 4
                       }
                     }}
@@ -1126,7 +1134,12 @@ const Analytics = () => {
                 )}
                 {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
                   <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#E6B800', fontWeight: 600 }}>
+                    <Typography variant="h5" sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      fontWeight: 600
+                    }}>
                       {analyticsData.totalSubmissions || analyticsData.topVideos?.length || 50}
                     </Typography>
                     <Typography variant="body2" sx={{ color: '#888' }}>
@@ -1411,11 +1424,12 @@ const Analytics = () => {
                       variant={contentFilter === 'all' ? 'contained' : 'outlined'}
                       onClick={() => handleContentFilterChange('all')}
                       sx={{
-                        bgcolor: contentFilter === 'all' ? '#E6B800' : 'transparent',
-                        color: contentFilter === 'all' ? 'black' : '#888',
-                        borderColor: contentFilter === 'all' ? '#E6B800' : '#444',
+                        background: contentFilter === 'all' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+                        color: contentFilter === 'all' ? 'white' : '#888',
+                        borderColor: contentFilter === 'all' ? 'transparent' : '#444',
                         textTransform: 'none',
                         fontWeight: 600,
+                        boxShadow: contentFilter === 'all' ? '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none',
                         '&:hover': {
                           bgcolor: contentFilter === 'all' ? '#D4A600' : 'rgba(255,255,255,0.05)',
                           borderColor: '#666'
@@ -1428,11 +1442,12 @@ const Analytics = () => {
                       variant={contentFilter === 'videos' ? 'contained' : 'outlined'}
                       onClick={() => handleContentFilterChange('videos')}
                       sx={{
-                        bgcolor: contentFilter === 'videos' ? '#E6B800' : 'transparent',
-                        color: contentFilter === 'videos' ? 'black' : '#888',
-                        borderColor: contentFilter === 'videos' ? '#E6B800' : '#444',
+                        background: contentFilter === 'videos' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+                        color: contentFilter === 'videos' ? 'white' : '#888',
+                        borderColor: contentFilter === 'videos' ? 'transparent' : '#444',
                         textTransform: 'none',
                         fontWeight: 600,
+                        boxShadow: contentFilter === 'videos' ? '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none',
                         '&:hover': {
                           bgcolor: contentFilter === 'videos' ? '#D4A600' : 'rgba(255,255,255,0.05)',
                           borderColor: '#666'
@@ -1445,11 +1460,12 @@ const Analytics = () => {
                       variant={contentFilter === 'shorts' ? 'contained' : 'outlined'}
                       onClick={() => handleContentFilterChange('shorts')}
                       sx={{
-                        bgcolor: contentFilter === 'shorts' ? '#E6B800' : 'transparent',
-                        color: contentFilter === 'shorts' ? 'black' : '#888',
-                        borderColor: contentFilter === 'shorts' ? '#E6B800' : '#444',
+                        background: contentFilter === 'shorts' ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'transparent',
+                        color: contentFilter === 'shorts' ? 'white' : '#888',
+                        borderColor: contentFilter === 'shorts' ? 'transparent' : '#444',
                         textTransform: 'none',
                         fontWeight: 600,
+                        boxShadow: contentFilter === 'shorts' ? '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none',
                         '&:hover': {
                           bgcolor: contentFilter === 'shorts' ? '#D4A600' : 'rgba(255,255,255,0.05)',
                           borderColor: '#666'
@@ -1507,7 +1523,10 @@ const Analytics = () => {
                         >
                           {/* Compact Rank */}
                           <Typography variant="body2" sx={{
-                            color: index < 3 ? '#E6B800' : '#888',
+                            background: index < 3 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'none',
+                            color: index < 3 ? 'transparent' : '#888',
+                            WebkitBackgroundClip: index < 3 ? 'text' : 'none',
+                            WebkitTextFillColor: index < 3 ? 'transparent' : '#888',
                             minWidth: 16,
                             fontWeight: index < 3 ? 600 : 400,
                             fontSize: '12px'
@@ -1528,7 +1547,8 @@ const Analytics = () => {
                                 border: '1px solid #333',
                                 transition: 'all 0.2s ease',
                                 '&:hover': {
-                                  border: '1px solid #E6B800',
+                                  border: '1px solid #667eea',
+                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                                   transform: 'scale(1.02)'
                                 }
                               }}
@@ -1677,7 +1697,12 @@ const Analytics = () => {
                         <Typography variant="body2" sx={{ color: 'white' }}>
                           Average Daily Views
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#E6B800', fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 600
+                        }}>
                           {formatNumber(analyticsData.avgDailyViews || 0)}
                         </Typography>
                       </Box>
@@ -1722,7 +1747,12 @@ const Analytics = () => {
                         <Typography variant="body2" sx={{ color: 'white' }}>
                           Progress to Target
                         </Typography>
-                        <Typography variant="body2" sx={{ color: '#E6B800', fontWeight: 600 }}>
+                        <Typography variant="body2" sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 600
+                        }}>
                           {analyticsData.summary?.progressToTarget?.toFixed(1) || 0}%
                         </Typography>
                       </Box>
@@ -1758,7 +1788,8 @@ const Analytics = () => {
                                 transition: 'all 0.2s ease',
                                 cursor: 'pointer',
                                 '&:hover': {
-                                  border: '2px solid #E6B800',
+                                  border: '2px solid #667eea',
+                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                                   transform: 'scale(1.02)'
                                 }
                               }}
@@ -1911,7 +1942,9 @@ const Analytics = () => {
                               <Typography
                                 variant="caption"
                                 sx={{
-                                  color: '#E6B800',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  WebkitBackgroundClip: 'text',
+                                  WebkitTextFillColor: 'transparent',
                                   fontWeight: 500,
                                   cursor: 'pointer',
                                   '&:hover': { textDecoration: 'underline' }
@@ -1960,10 +1993,11 @@ const Analytics = () => {
                                 size="small"
                                 onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
                                 sx={{
-                                  bgcolor: '#E6B800',
-                                  color: 'black',
+                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                  color: 'white',
                                   textTransform: 'none',
                                   flex: 1,
+                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
                                   '&:hover': { bgcolor: '#D4A600' }
                                 }}
                               >
@@ -1977,7 +2011,12 @@ const Analytics = () => {
                             <Typography variant="caption" sx={{ color: '#888' }}>
                               Latest of {analyticsData.totalSubmissions || 0} videos
                             </Typography>
-                            <Typography variant="caption" sx={{ color: '#E6B800', fontWeight: 600 }}>
+                            <Typography variant="caption" sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              fontWeight: 600
+                            }}>
                               LATEST
                             </Typography>
                           </Box>
@@ -2020,7 +2059,12 @@ const Analytics = () => {
                       <Typography variant="h6" sx={{ color: 'white', mb: 2 }}>
                         Views Trend
                       </Typography>
-                      <Typography variant="h4" sx={{ color: '#E6B800', mb: 1 }}>
+                      <Typography variant="h4" sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        mb: 1
+                      }}>
                         {analyticsData.summary?.trend === 'up' ? '↗️' : '↘️'} {analyticsData.summary?.trend === 'up' ? '+' : '-'}
                         {Math.abs(((analyticsData.summary?.highestDay || 0) - (analyticsData.summary?.lowestDay || 0)) / (analyticsData.summary?.lowestDay || 1) * 100).toFixed(1)}%
                       </Typography>
@@ -2085,7 +2129,12 @@ const Analytics = () => {
                             <Typography variant="body2" sx={{ color: '#888', mb: 1 }}>
                               {month.month}
                             </Typography>
-                            <Typography variant="h5" sx={{ color: '#E6B800', mb: 1 }}>
+                            <Typography variant="h5" sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              mb: 1
+                            }}>
                               {month.submissions}
                             </Typography>
                             <Typography variant="caption" sx={{ color: '#4CAF50' }}>
@@ -2120,7 +2169,7 @@ const Analytics = () => {
                               width: 8,
                               height: 8,
                               borderRadius: '50%',
-                              bgcolor: activity.action.includes('Published') ? '#4CAF50' : '#E6B800'
+                              bgcolor: activity.action.includes('Published') ? '#4CAF50' : '#667eea'
                             }} />
                             <Box sx={{ flex: 1 }}>
                               <Typography variant="body2" sx={{ color: 'white' }}>
