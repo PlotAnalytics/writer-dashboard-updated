@@ -59,7 +59,7 @@ const Login = () => {
     <Box
       sx={{
         minHeight: '100vh',
-        background: 'linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 50%, #000000 100%)',
+        background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
         position: 'relative',
         overflow: 'hidden',
         display: 'flex',
@@ -73,9 +73,9 @@ const Login = () => {
           right: 0,
           bottom: 0,
           background: `
-            radial-gradient(circle at 20% 20%, rgba(244, 196, 48, 0.1) 0%, transparent 50%),
-            radial-gradient(circle at 80% 80%, rgba(244, 196, 48, 0.05) 0%, transparent 50%),
-            radial-gradient(circle at 40% 60%, rgba(244, 196, 48, 0.03) 0%, transparent 50%)
+            radial-gradient(circle at 20% 20%, rgba(102, 126, 234, 0.15) 0%, transparent 50%),
+            radial-gradient(circle at 80% 80%, rgba(118, 75, 162, 0.1) 0%, transparent 50%),
+            radial-gradient(circle at 40% 60%, rgba(102, 126, 234, 0.08) 0%, transparent 50%)
           `,
           animation: 'backgroundFloat 8s ease-in-out infinite',
         },
@@ -93,12 +93,12 @@ const Login = () => {
           '100%': { transform: 'rotateY(360deg) rotateX(360deg)' },
         },
         '@keyframes pulse3D': {
-          '0%, 100%': { transform: 'scale(1) rotateZ(0deg)', boxShadow: '0 0 20px rgba(244, 196, 48, 0.3)' },
-          '50%': { transform: 'scale(1.1) rotateZ(180deg)', boxShadow: '0 0 40px rgba(244, 196, 48, 0.6)' },
+          '0%, 100%': { transform: 'scale(1) rotateZ(0deg)', boxShadow: '0 0 20px rgba(102, 126, 234, 0.3)' },
+          '50%': { transform: 'scale(1.1) rotateZ(180deg)', boxShadow: '0 0 40px rgba(102, 126, 234, 0.6)' },
         },
       }}
     >
-      {/* 3D Animated Background Elements */}
+      {/* Modern 3D Animated Background Elements */}
       <Box
         sx={{
           position: 'absolute',
@@ -106,12 +106,14 @@ const Login = () => {
           left: '8%',
           width: '120px',
           height: '120px',
-          background: 'linear-gradient(45deg, rgba(244, 196, 48, 0.2), rgba(244, 196, 48, 0.05))',
+          background: 'linear-gradient(45deg, rgba(102, 126, 234, 0.2), rgba(118, 75, 162, 0.1))',
           borderRadius: '20px',
           animation: 'float3D 6s ease-in-out infinite',
           animationDelay: '0s',
           transform: 'perspective(1000px)',
-          boxShadow: '0 10px 30px rgba(244, 196, 48, 0.1)',
+          boxShadow: '0 10px 30px rgba(102, 126, 234, 0.2)',
+          backdropFilter: 'blur(10px)',
+          border: '1px solid rgba(102, 126, 234, 0.3)',
         }}
       />
       <Box
@@ -121,12 +123,13 @@ const Login = () => {
           right: '10%',
           width: '80px',
           height: '80px',
-          background: 'linear-gradient(135deg, rgba(244, 196, 48, 0.15), transparent)',
+          background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.2), transparent)',
           borderRadius: '50%',
           animation: 'rotate3D 20s linear infinite',
           animationDelay: '2s',
           transform: 'perspective(1000px)',
-          border: '1px solid rgba(244, 196, 48, 0.2)',
+          border: '1px solid rgba(118, 75, 162, 0.4)',
+          backdropFilter: 'blur(5px)',
         }}
       />
       <Box
@@ -136,11 +139,13 @@ const Login = () => {
           right: '20%',
           width: '60px',
           height: '60px',
-          background: 'rgba(244, 196, 48, 0.1)',
+          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15), rgba(118, 75, 162, 0.15))',
           borderRadius: '10px',
           animation: 'pulse3D 4s ease-in-out infinite',
           animationDelay: '1s',
           transform: 'perspective(1000px)',
+          backdropFilter: 'blur(8px)',
+          border: '1px solid rgba(102, 126, 234, 0.2)',
         }}
       />
       <Box
@@ -150,12 +155,13 @@ const Login = () => {
           left: '15%',
           width: '100px',
           height: '100px',
-          background: 'linear-gradient(90deg, rgba(244, 196, 48, 0.08), rgba(244, 196, 48, 0.02))',
+          background: 'linear-gradient(90deg, rgba(102, 126, 234, 0.12), rgba(118, 75, 162, 0.08))',
           borderRadius: '15px',
           animation: 'float3D 8s ease-in-out infinite',
           animationDelay: '3s',
           transform: 'perspective(1000px) rotateY(45deg)',
-          border: '1px solid rgba(244, 196, 48, 0.1)',
+          border: '1px solid rgba(102, 126, 234, 0.2)',
+          backdropFilter: 'blur(6px)',
         }}
       />
 
@@ -167,21 +173,21 @@ const Login = () => {
           alignItems="center"
           minHeight="100vh"
         >
-          {/* Header Section - Clean, No Animations */}
+          {/* Modern Header Section */}
           <Box textAlign="center" mb={4}>
             <Avatar
               sx={{
-                bgcolor: '#f4c430',
                 width: 80,
                 height: 80,
                 mb: 3,
                 mx: 'auto',
-                boxShadow: '0 8px 32px rgba(244, 196, 48, 0.4)',
-                background: 'linear-gradient(135deg, #f4c430 0%, #f39c12 100%)',
-                border: '2px solid rgba(244, 196, 48, 0.3)',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                boxShadow: '0 8px 32px rgba(102, 126, 234, 0.4)',
+                border: '2px solid rgba(102, 126, 234, 0.3)',
+                backdropFilter: 'blur(10px)',
               }}
             >
-              <EditIcon sx={{ fontSize: 40, color: '#000' }} />
+              <EditIcon sx={{ fontSize: 40, color: 'white' }} />
             </Avatar>
 
             <Typography
@@ -189,9 +195,12 @@ const Login = () => {
               component="h1"
               sx={{
                 fontWeight: 700,
-                color: '#f4c430',
                 mb: 1,
-                textShadow: '0 2px 8px rgba(244, 196, 48, 0.3)',
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+                textShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
               }}
             >
               Writer Studio
@@ -201,58 +210,94 @@ const Login = () => {
               variant="h6"
               sx={{
                 color: 'rgba(255, 255, 255, 0.8)',
-                fontWeight: 300,
+                fontWeight: 400,
                 mb: 1,
+                fontSize: '18px',
               }}
             >
               Professional Content Dashboard
             </Typography>
 
-            {/* Feature Chips - Static */}
-            <Box display="flex" justifyContent="center" gap={1} flexWrap="wrap" mt={2}>
+            {/* Modern Feature Chips */}
+            <Box display="flex" justifyContent="center" gap={2} flexWrap="wrap" mt={3}>
               <Chip
                 icon={<Analytics />}
                 label="Analytics"
-                size="small"
+                size="medium"
                 sx={{
-                  bgcolor: 'rgba(244, 196, 48, 0.1)',
-                  color: '#f4c430',
-                  border: '1px solid rgba(244, 196, 48, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  color: '#667eea',
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  fontWeight: '600',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                  },
+                  transition: 'all 0.3s ease',
                 }}
               />
               <Chip
                 icon={<VideoLibrary />}
                 label="Content"
-                size="small"
+                size="medium"
                 sx={{
-                  bgcolor: 'rgba(244, 196, 48, 0.1)',
-                  color: '#f4c430',
-                  border: '1px solid rgba(244, 196, 48, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  color: '#667eea',
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  fontWeight: '600',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                  },
+                  transition: 'all 0.3s ease',
                 }}
               />
               <Chip
                 icon={<TrendingUp />}
                 label="Growth"
-                size="small"
+                size="medium"
                 sx={{
-                  bgcolor: 'rgba(244, 196, 48, 0.1)',
-                  color: '#f4c430',
-                  border: '1px solid rgba(244, 196, 48, 0.3)',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
+                  backdropFilter: 'blur(10px)',
+                  color: '#667eea',
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  fontWeight: '600',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                  },
+                  transition: 'all 0.3s ease',
                 }}
               />
             </Box>
           </Box>
 
-          {/* Login Card - Clean, No Animations */}
+          {/* Modern Login Card */}
           <Card
             sx={{
               width: '100%',
               maxWidth: 450,
-              background: 'rgba(0, 0, 0, 0.8)',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
               backdropFilter: 'blur(20px)',
-              border: '2px solid rgba(244, 196, 48, 0.3)',
-              borderRadius: 4,
-              boxShadow: '0 20px 60px rgba(244, 196, 48, 0.1), inset 0 1px 0 rgba(244, 196, 48, 0.2)',
+              border: '1px solid rgba(102, 126, 234, 0.3)',
+              borderRadius: '20px',
+              boxShadow: '0 20px 60px rgba(102, 126, 234, 0.2), inset 0 1px 0 rgba(102, 126, 234, 0.2)',
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
+                borderRadius: '20px 20px 0 0',
+              }
             }}
           >
             <CardContent sx={{ p: 4 }}>
@@ -261,8 +306,10 @@ const Login = () => {
                   severity="error"
                   sx={{
                     mb: 3,
-                    bgcolor: 'rgba(244, 67, 54, 0.1)',
+                    background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(244, 67, 54, 0.05) 100%)',
+                    backdropFilter: 'blur(10px)',
                     border: '1px solid rgba(244, 67, 54, 0.3)',
+                    borderRadius: '12px',
                     color: '#ff6b6b',
                   }}
                 >
@@ -283,26 +330,33 @@ const Login = () => {
                   autoFocus
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: 'rgba(0, 0, 0, 0.5)',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '12px',
                       '& fieldset': {
-                        borderColor: 'rgba(244, 196, 48, 0.3)',
+                        borderColor: 'rgba(102, 126, 234, 0.3)',
+                        border: '1px solid rgba(102, 126, 234, 0.3)',
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(244, 196, 48, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 0.6)',
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#f4c430',
+                        borderColor: '#667eea',
                         borderWidth: '2px',
+                        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: 'rgba(244, 196, 48, 0.8)',
+                      color: 'rgba(102, 126, 234, 0.8)',
+                      fontWeight: '500',
                     },
                     '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#f4c430',
+                      color: '#667eea',
                     },
                     '& .MuiOutlinedInput-input': {
                       color: 'white',
+                      fontSize: '16px',
                     },
                   }}
                 />
@@ -322,7 +376,7 @@ const Login = () => {
                         <IconButton
                           onClick={() => setShowPassword(!showPassword)}
                           edge="end"
-                          sx={{ color: 'rgba(244, 196, 48, 0.7)' }}
+                          sx={{ color: 'rgba(102, 126, 234, 0.7)' }}
                         >
                           {showPassword ? <VisibilityOff /> : <Visibility />}
                         </IconButton>
@@ -331,26 +385,33 @@ const Login = () => {
                   }}
                   sx={{
                     '& .MuiOutlinedInput-root': {
-                      bgcolor: 'rgba(0, 0, 0, 0.5)',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '12px',
                       '& fieldset': {
-                        borderColor: 'rgba(244, 196, 48, 0.3)',
+                        borderColor: 'rgba(102, 126, 234, 0.3)',
+                        border: '1px solid rgba(102, 126, 234, 0.3)',
                       },
                       '&:hover fieldset': {
-                        borderColor: 'rgba(244, 196, 48, 0.6)',
+                        borderColor: 'rgba(102, 126, 234, 0.6)',
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
                       },
                       '&.Mui-focused fieldset': {
-                        borderColor: '#f4c430',
+                        borderColor: '#667eea',
                         borderWidth: '2px',
+                        boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
                       },
                     },
                     '& .MuiInputLabel-root': {
-                      color: 'rgba(244, 196, 48, 0.8)',
+                      color: 'rgba(102, 126, 234, 0.8)',
+                      fontWeight: '500',
                     },
                     '& .MuiInputLabel-root.Mui-focused': {
-                      color: '#f4c430',
+                      color: '#667eea',
                     },
                     '& .MuiOutlinedInput-input': {
                       color: 'white',
+                      fontSize: '16px',
                     },
                   }}
                 />
@@ -363,21 +424,27 @@ const Login = () => {
                   sx={{
                     mt: 4,
                     mb: 2,
-                    py: 1.5,
-                    fontSize: '1.1rem',
-                    fontWeight: 600,
-                    background: 'linear-gradient(135deg, #f4c430 0%, #f39c12 100%)',
-                    color: '#000',
-                    boxShadow: '0 4px 20px rgba(244, 196, 48, 0.3)',
-                    border: '1px solid rgba(244, 196, 48, 0.5)',
+                    py: 2,
+                    fontSize: '16px',
+                    fontWeight: 700,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.4)',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
                     '&:hover': {
-                      background: 'linear-gradient(135deg, #f39c12 0%, #e67e22 100%)',
-                      boxShadow: '0 6px 25px rgba(244, 196, 48, 0.4)',
+                      background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
+                      boxShadow: '0 6px 25px rgba(102, 126, 234, 0.6)',
+                      transform: 'translateY(-2px)',
                     },
                     '&:disabled': {
-                      background: 'rgba(244, 196, 48, 0.3)',
-                      color: 'rgba(0, 0, 0, 0.5)',
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      boxShadow: 'none',
+                      transform: 'none',
                     },
+                    transition: 'all 0.3s ease',
                   }}
                 >
                   {loading ? (
@@ -411,19 +478,20 @@ const Login = () => {
             </CardContent>
           </Card>
 
-          {/* Footer */}
+          {/* Modern Footer */}
           <Box mt={4} textAlign="center">
             <Typography
               variant="body2"
               sx={{
-                color: 'rgba(244, 196, 48, 0.6)',
+                color: 'rgba(102, 126, 234, 0.6)',
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: 1,
+                fontWeight: '500',
               }}
             >
-
+              Powered by modern technology
             </Typography>
           </Box>
         </Box>
