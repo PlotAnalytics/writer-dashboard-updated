@@ -720,25 +720,149 @@ const Analytics = () => {
           minHeight: '100vh',
           background: 'transparent',
           color: 'white',
-          p: { xs: 2, lg: 4 }
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '33%': { transform: 'translateY(-20px) rotate(120deg)' },
+            '66%': { transform: 'translateY(10px) rotate(240deg)' },
+          },
+          '@keyframes pulse': {
+            '0%, 100%': { transform: 'scale(1)', opacity: 0.8 },
+            '50%': { transform: 'scale(1.1)', opacity: 1 },
+          },
+          '@keyframes spin': {
+            '0%': { transform: 'rotate(0deg)' },
+            '100%': { transform: 'rotate(360deg)' },
+          },
+          '@keyframes wave': {
+            '0%, 100%': { transform: 'scaleY(1)' },
+            '50%': { transform: 'scaleY(1.5)' },
+          },
+          '@keyframes glow': {
+            '0%, 100%': { boxShadow: '0 0 20px rgba(102, 126, 234, 0.5)' },
+            '50%': { boxShadow: '0 0 40px rgba(102, 126, 234, 0.8), 0 0 60px rgba(118, 75, 162, 0.6)' },
+          },
         }}>
-          <Box sx={{ width: '100%', mb: 4 }}>
-            <LinearProgress sx={{
-              bgcolor: 'rgba(255, 255, 255, 0.1)',
-              '& .MuiLinearProgress-bar': {
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
-              }
-            }} />
-          </Box>
-          <Typography variant="h4" sx={{
-            color: 'white',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            backgroundClip: 'text',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
+          {/* Animated Background Elements */}
+          <Box sx={{
+            position: 'absolute',
+            top: '20%',
+            left: '15%',
+            width: '80px',
+            height: '80px',
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)',
+            borderRadius: '20px',
+            animation: 'float 4s ease-in-out infinite',
+            animationDelay: '0s',
+          }} />
+
+          <Box sx={{
+            position: 'absolute',
+            top: '60%',
+            right: '20%',
+            width: '60px',
+            height: '60px',
+            background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.4) 0%, rgba(102, 126, 234, 0.4) 100%)',
+            borderRadius: '50%',
+            animation: 'pulse 3s ease-in-out infinite',
+            animationDelay: '1s',
+          }} />
+
+          <Box sx={{
+            position: 'absolute',
+            bottom: '25%',
+            left: '25%',
+            width: '40px',
+            height: '40px',
+            background: 'rgba(102, 126, 234, 0.5)',
+            borderRadius: '8px',
+            animation: 'spin 6s linear infinite',
+            animationDelay: '2s',
+          }} />
+
+          {/* Main Loading Animation */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 1,
           }}>
-            Loading analytics...
-          </Typography>
+            {/* Animated Chart Icon */}
+            <Box sx={{
+              position: 'relative',
+              width: '120px',
+              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '30px',
+              border: '2px solid rgba(102, 126, 234, 0.3)',
+              animation: 'glow 2s ease-in-out infinite',
+            }}>
+              {/* Animated Bars */}
+              <Box sx={{ display: 'flex', alignItems: 'end', gap: 1 }}>
+                {[1, 2, 3, 4, 5].map((bar, index) => (
+                  <Box
+                    key={bar}
+                    sx={{
+                      width: '8px',
+                      height: `${20 + (index * 8)}px`,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '4px',
+                      animation: 'wave 1.5s ease-in-out infinite',
+                      animationDelay: `${index * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            {/* Loading Text */}
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{
+                fontWeight: 700,
+                mb: 2,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
+                Loading Analytics
+              </Typography>
+
+              <Typography variant="body1" sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                mb: 3,
+                fontSize: '16px',
+              }}>
+                Preparing your performance insights...
+              </Typography>
+
+              {/* Animated Dots */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                {[1, 2, 3].map((dot, index) => (
+                  <Box
+                    key={dot}
+                    sx={{
+                      width: '12px',
+                      height: '12px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '50%',
+                      animation: 'pulse 1.4s ease-in-out infinite',
+                      animationDelay: `${index * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+          </Box>
         </Box>
       </Layout>
     );
