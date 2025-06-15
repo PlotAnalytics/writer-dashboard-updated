@@ -24,7 +24,7 @@ const RealtimeWidget = () => {
           'Content-Type': 'application/json'
         },
         params: {
-          hours: 24
+          hours: 72
         }
       });
 
@@ -57,7 +57,7 @@ const RealtimeWidget = () => {
         border: '1px solid #333',
         p: 3,
         width: '280px',
-        height: '320px',
+        height: '400px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -75,7 +75,7 @@ const RealtimeWidget = () => {
         border: '1px solid #333',
         p: 3,
         width: '280px',
-        height: '320px',
+        height: '400px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center'
@@ -94,7 +94,7 @@ const RealtimeWidget = () => {
       border: '1px solid #333',
       p: 3,
       width: '280px',
-      height: '320px',
+      height: '400px',
       display: 'flex',
       flexDirection: 'column'
     }}>
@@ -134,7 +134,7 @@ const RealtimeWidget = () => {
           {formatNumber(realtimeData?.totalViews || 0)}
         </Typography>
         <Typography variant="body2" sx={{ color: '#888', fontSize: '14px' }}>
-          Views • Last 24 hours
+          Views • Last 72 hours
         </Typography>
       </Box>
 
@@ -169,9 +169,10 @@ const RealtimeWidget = () => {
               type: 'bar',
               itemStyle: {
                 color: '#4fc3f7',
-                borderRadius: [2, 2, 0, 0]
+                borderRadius: [1, 1, 0, 0]
               },
-              barWidth: '60%',
+              barWidth: '80%',
+              barGap: '10%',
               emphasis: {
                 itemStyle: {
                   color: '#29B6F6'
@@ -187,9 +188,9 @@ const RealtimeWidget = () => {
               formatter: (params) => {
                 const dataIndex = params[0]?.dataIndex;
                 const dataPoint = realtimeData?.chartData?.[dataIndex];
-                
+
                 if (!dataPoint) return '';
-                
+
                 return `
                   <div style="min-width: 120px;">
                     <div style="font-size: 12px; color: #ccc;">${dataPoint.time}</div>

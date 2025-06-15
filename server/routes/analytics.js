@@ -112,18 +112,33 @@ try {
 // Load environment variables from root directory
 require('dotenv').config({ path: require('path').join(__dirname, '../../.env') });
 
-// BigQuery setup with environment credentials
+// BigQuery setup with admin_dashboard.json credentials
 const setupBigQueryClient = async () => {
   try {
-    // Get credentials from environment variable
-    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    const fs = require('fs');
+    const path = require('path');
 
-    if (!credentialsJson) {
-      throw new Error('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not set');
+    // Try to load credentials from admin_dashboard.json file first
+    let credentials;
+    const credentialsPath = path.join(__dirname, '..', '..', 'admin_dashboard.json');
+
+    if (fs.existsSync(credentialsPath)) {
+      console.log(`🔍 Analytics BigQuery: Loading credentials from admin_dashboard.json`);
+      const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+      credentials = JSON.parse(credentialsFile);
+    } else {
+      // Fallback to environment variable
+      const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+      if (!credentialsJson) {
+        throw new Error('Neither admin_dashboard.json file nor GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable found');
+      }
+
+      console.log(`🔍 Analytics BigQuery: Loading credentials from environment variable`);
+      credentials = JSON.parse(credentialsJson);
     }
 
-    const credentials = JSON.parse(credentialsJson);
-    const projectId = process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
+    const projectId = credentials.project_id || process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
 
     const bigquery = new BigQuery({
       credentials: credentials,
@@ -131,7 +146,8 @@ const setupBigQueryClient = async () => {
       location: "US",
     });
 
-    console.log(`✅ BigQuery client initialized successfully for project: ${projectId}`);
+    console.log(`✅ Analytics BigQuery client initialized successfully for project: ${projectId}`);
+    console.log(`✅ Analytics using service account: ${credentials.client_email}`);
     return bigquery;
   } catch (error) {
     console.error("❌ Failed to set up BigQuery client:", error);
@@ -3857,7 +3873,7 @@ router.get('/realtime', authenticateToken, async (req, res) => {
       // Query to get hourly view increments (not cumulative totals) from InfluxDB
 const flux = `
     from(bucket: "youtube_api")
-        |> range(start: -25h, stop: -1h)
+        |> range(start: -${parseInt(hours) + 1}h, stop: -1h)
         |> filter(fn: (r) =>
              r._measurement == "views" and
              r._field       == "views" and
@@ -3871,7 +3887,7 @@ const flux = `
         |> aggregateWindow(every: 1h, fn: sum, createEmpty: false)
         |> keep(columns: ["_time", "_value"])
         |> sort(columns: ["_time"])
-        |> limit(n: 24)
+        |> limit(n: ${parseInt(hours)})
 `;
 
 
@@ -3928,8 +3944,28 @@ const flux = `
       totalViews = 0;
     }
 
-    // Format chart data for the widget (last 24 bars representing hourly data)
-    const chartData = hourlyData.slice(-24).map((item) => {
+    // Create a complete time series for the last N hours (fill missing hours with 0)
+    const now = new Date();
+    const completeHourlyData = [];
+
+    // Generate all hours from N hours ago to now
+    for (let i = parseInt(hours) - 1; i >= 0; i--) {
+      const hourTime = new Date(now.getTime() - (i * 60 * 60 * 1000));
+
+      // Find matching data point from InfluxDB
+      const matchingData = hourlyData.find(item => {
+        const itemTime = new Date(item.time);
+        return Math.abs(itemTime.getTime() - hourTime.getTime()) < 30 * 60 * 1000; // Within 30 minutes
+      });
+
+      completeHourlyData.push({
+        time: hourTime.toISOString(),
+        views: matchingData ? matchingData.views : 0
+      });
+    }
+
+    // Format chart data for the widget (complete N bars representing hourly data)
+    const chartData = completeHourlyData.map((item) => {
       const date = new Date(item.time);
       // Convert UTC to EST for display
       const estDate = new Date(date.getTime() - (5 * 60 * 60 * 1000));
@@ -3950,12 +3986,13 @@ const flux = `
       chartData: chartData,
       lastUpdated: new Date().toISOString(),
       timeRange: `${hours} hours`,
-      dataPoints: hourlyData.length,
+      dataPoints: chartData.length, // Use chartData length (complete series)
+      influxDataPoints: hourlyData.length, // Original InfluxDB data points
       writerId: writerId,
       writerName: writer.name
     };
 
-    console.log(`⚡ Realtime response: ${totalViews.toLocaleString()} views, ${chartData.length} chart points`);
+    console.log(`⚡ Realtime response: ${totalViews.toLocaleString()} views, ${chartData.length} chart points (${hourlyData.length} from InfluxDB)`);
 
     res.json(response);
 

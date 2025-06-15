@@ -31,6 +31,7 @@ import {
   CartesianGrid,
   Tooltip,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 import Layout from "../components/Layout.jsx";
 import { useAuth } from "../contexts/AuthContext";
@@ -129,8 +130,8 @@ const VideoAnalytics = () => {
           subscribersGained: response.data.subscribersGained || Math.floor(response.data.views * 0.02) || 0,
           subscribersLost: response.data.subscribersLost || Math.floor(response.data.views * 0.005) || 0,
           shares: response.data.shares || Math.floor(response.data.likes * 0.1) || 0,
-          // Calculate "Stayed to Watch" from retention data
-          stayedToWatch: calculateStayedToWatch(response.data.retentionData),
+          // Calculate "Stayed to Watch" from average_view_duration_percentage in video report historical
+          stayedToWatch: calculateStayedToWatch(response.data),
         };
 
         setVideoData(enhancedData);
@@ -259,24 +260,15 @@ const VideoAnalytics = () => {
     return ((likes / views) * 100).toFixed(2);
   };
 
-  // Calculate "Stayed to Watch" - % of viewers who reached the last 10% of the video
-  const calculateStayedToWatch = (retentionData) => {
-    if (!retentionData || !Array.isArray(retentionData) || retentionData.length === 0) {
-      return null;
+  // Calculate "Stayed to Watch" - get from average_view_duration_percentage in video report historical
+  const calculateStayedToWatch = (videoData) => {
+    // Check if we have the avgViewDurationPercentage from BigQuery data
+    if (videoData && videoData.avgViewDurationPercentage !== undefined) {
+      return videoData.avgViewDurationPercentage * 100;
     }
 
-    // Filter retention data for the last 10% of the video (elapsed_video_time_ratio between 0.9 and 1.0)
-    const lastTenPercent = retentionData.filter(
-      point => point.elapsed_video_time_ratio >= 0.9 && point.elapsed_video_time_ratio <= 1.0
-    );
-
-    if (lastTenPercent.length === 0) {
-      return null;
-    }
-
-    // Calculate average audience_watch_ratio for the last 10% and convert to percentage
-    const avgWatchRatio = lastTenPercent.reduce((sum, point) => sum + (point.audience_watch_ratio || 0), 0) / lastTenPercent.length;
-    return avgWatchRatio * 100;
+    // Fallback: if no BigQuery data available, return null
+    return null;
   };
 
   const calculateRetentionRate = (avgViewDuration, totalDuration) => {
@@ -765,7 +757,7 @@ const VideoAnalytics = () => {
                     variant="h5"
                     sx={{ color: "white", fontWeight: 600 }}
                   >
-                    Audience retention
+                    Average Audience Retention by Elapsed Video Time
                   </Typography>
                 </Box>
 
@@ -820,10 +812,10 @@ const VideoAnalytics = () => {
                           variant="h4"
                           sx={{ color: "#fff", fontWeight: 700, mb: 1 }}
                         >
-                          {videoData.stayedToWatch ? `${videoData.stayedToWatch.toFixed(1)}%` : "No data yet"}
+                          {videoData.retentionRate ? `${videoData.retentionRate}%` : "No data yet"}
                         </Typography>
                         <Typography variant="caption" sx={{ color: "#aaa" }}>
-                          Percentage of viewers who reached the last 10%
+                          Retention at 30-second mark
                         </Typography>
                       </Box>
 
@@ -851,7 +843,7 @@ const VideoAnalytics = () => {
                         </Typography>
                       </Box>
 
-                      {/* Engagement rate */}
+                      {/* Watch time */}
                       <Box
                         sx={{
                           p: 3,
@@ -862,85 +854,33 @@ const VideoAnalytics = () => {
                         }}
                       >
                         <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
-                          Engagement rate
+                          Watch time
                         </Typography>
                         <Typography
                           variant="h4"
                           sx={{ color: "#fff", fontWeight: 700, mb: 1 }}
                         >
-                          {calculateEngagement(videoData.likes, videoData.views)}%
+                          {(() => {
+                            const watchTimeMinutes = videoData.watchTimeMinutes || videoData.metrics?.watchTimeMinutes || 0;
+                            if (watchTimeMinutes >= 60) {
+                              const hours = Math.floor(watchTimeMinutes / 60);
+                              const minutes = Math.round(watchTimeMinutes % 60);
+                              return `${hours}h ${minutes}m`;
+                            } else {
+                              return `${Math.round(watchTimeMinutes)}m`;
+                            }
+                          })()}
                         </Typography>
                         <Typography variant="caption" sx={{ color: "#aaa" }}>
-                          Likes / Views × 100
+                          Total time watched by all viewers
                         </Typography>
                       </Box>
 
-                      {/* Performance vs your average */}
-                      <Box
-                        sx={{
-                          p: 3,
-                          bgcolor: "#3a3a3a",
-                          borderRadius: 2,
-                          border: "1px solid #555",
-                          textAlign: "center"
-                        }}
-                      >
-                        <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
-                          Performance vs your average
-                        </Typography>
-                        <Typography
-                          variant="h4"
-                          sx={{
-                            color: videoData.viewsIncrease > 0 ? "#4CAF50" : "#f44336",
-                            fontWeight: 700,
-                            mb: 1
-                          }}
-                        >
-                          {videoData.viewsIncrease > 0 ? "+" : ""}{videoData.viewsIncrease || 0}%
-                        </Typography>
-                        <Typography variant="caption" sx={{ color: "#aaa" }}>
-                          {videoData.viewsIncrease > 0 ? "Higher" : "Lower"} than your average
-                        </Typography>
-                      </Box>
+
                     </Box>
                   </Box>
 
-                  {/* ───────────── Additional Retention Metrics ───────────── */}
-                    <Box
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-                        gap: 3,
-                        mb: 4
-                      }}
-                    >
-                      <Box sx={{ p: 3, bgcolor: "#2a2a2a", borderRadius: 2, border: "1px solid #333" }}>
-                        <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
-                          Avg Watch Ratio
-                        </Typography>
-                        <Typography variant="h5" sx={{ color: "#00BCD4", fontWeight: 700 }}>
-                          {formatPercentage(videoData.metrics?.avgViewDurationPercentage || videoData.avgViewDurationPercentage)}
-                        </Typography>
-                      </Box>
 
-                      <Box sx={{ p: 3, bgcolor: "#2a2a2a", borderRadius: 2, border: "1px solid #333" }}>
-                        <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
-                          Relative Retention
-                        </Typography>
-                        <Typography variant="h5" sx={{ color: "#FF9800", fontWeight: 700 }}>
-                          {formatPercentage(videoData.metrics?.avgRelRetentionPerf || 0)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ p: 3, bgcolor: "#2a2a2a", borderRadius: 2, border: "1px solid #333" }}>
-                        <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
-                          Total Watch Time
-                        </Typography>
-                        <Typography variant="h5" sx={{ color: "#4CAF50", fontWeight: 700 }}>
-                          {formatDuration(videoData.metrics?.watchTimeMinutes || videoData.watchTimeMinutes)}
-                        </Typography>
-                      </Box>
-                    </Box>
 
                     {/* Audience Retention Chart - BigQuery Data */}
                     <Box
@@ -964,25 +904,68 @@ const VideoAnalytics = () => {
                             sampleData: Array.isArray(videoData.retentionData) ? videoData.retentionData.slice(0, 3) : null
                           });
 
+                          // Get video duration in seconds (default to 178 seconds if not available)
+                          const videoDurationSeconds = videoData.videoDurationSeconds || 178;
+                          console.log(`🕐 Using video duration: ${videoDurationSeconds} seconds`);
+
                           // Process the retention data for the chart
-                          const chartData = videoData.retentionData.map(point => {
+                          const processedData = videoData.retentionData.map(point => {
                             // Handle both old and new data formats
                             const elapsedRatio = point.elapsed_video_time_ratio || point.rawElapsedRatio || 0;
                             const audienceWatch = point.audience_watch_ratio || point.rawAudienceWatch || 0;
                             const relativePerf = point.relative_retention_performance || point.rawRetentionPerf || null;
 
+                            // Convert elapsed ratio to actual seconds
+                            const elapsedTimeSeconds = elapsedRatio * videoDurationSeconds;
+
                             return {
                               elapsed_video_time_ratio: elapsedRatio,
+                              elapsed_video_time_seconds: elapsedTimeSeconds,
                               audience_watch_ratio: audienceWatch,
                               relative_retention_performance: relativePerf,
-                              timeLabel: `${Math.round(elapsedRatio * 100)}%`,
+                              timeLabel: `${Math.round(elapsedTimeSeconds)}s`,
                               audienceRetention: Math.round(audienceWatch * 100),
                               relativePerformance: relativePerf ? Math.round(relativePerf * 100) : null,
-                              time: point.time || `${Math.round(elapsedRatio * 100)}%`
+                              time: point.time || `${Math.round(elapsedTimeSeconds)}s`
                             };
                           });
 
-                          console.log('📊 Chart Data Sample:', chartData.slice(0, 3));
+                          // Aggregate data by elapsed time in seconds (group by rounded seconds)
+                          const aggregatedData = new Map();
+
+                          processedData.forEach(point => {
+                            const roundedSeconds = Math.round(point.elapsed_video_time_seconds);
+
+                            if (!aggregatedData.has(roundedSeconds)) {
+                              aggregatedData.set(roundedSeconds, {
+                                elapsed_video_time_seconds: roundedSeconds,
+                                audience_watch_ratios: [],
+                                relative_performance_ratios: []
+                              });
+                            }
+
+                            aggregatedData.get(roundedSeconds).audience_watch_ratios.push(point.audience_watch_ratio);
+                            if (point.relative_retention_performance !== null) {
+                              aggregatedData.get(roundedSeconds).relative_performance_ratios.push(point.relative_retention_performance);
+                            }
+                          });
+
+                          // Calculate averages for aggregated data
+                          const chartData = Array.from(aggregatedData.values()).map(group => {
+                            const avgAudienceWatch = group.audience_watch_ratios.reduce((sum, val) => sum + val, 0) / group.audience_watch_ratios.length;
+                            const avgRelativePerf = group.relative_performance_ratios.length > 0
+                              ? group.relative_performance_ratios.reduce((sum, val) => sum + val, 0) / group.relative_performance_ratios.length
+                              : null;
+
+                            return {
+                              elapsed_video_time_seconds: group.elapsed_video_time_seconds,
+                              audienceRetention: Math.round(avgAudienceWatch * 100),
+                              relativePerformance: avgRelativePerf ? Math.round(avgRelativePerf * 100) : null,
+                              timeLabel: `${group.elapsed_video_time_seconds}s`
+                            };
+                          }).sort((a, b) => a.elapsed_video_time_seconds - b.elapsed_video_time_seconds);
+
+                          console.log('📊 Aggregated Chart Data Sample:', chartData.slice(0, 5));
 
                           return (
                             <ResponsiveContainer width="100%" height="90%">
@@ -996,15 +979,15 @@ const VideoAnalytics = () => {
                               opacity={0.3}
                             />
                             <XAxis
-                              dataKey="elapsed_video_time_ratio"
+                              dataKey="elapsed_video_time_seconds"
                               stroke="#aaa"
                               tick={{ fill: "#aaa", fontSize: 11 }}
-                              tickFormatter={(value) => `${Math.round(value * 100)}%`}
+                              tickFormatter={(value) => `${Math.round(value)}s`}
                               interval="preserveStartEnd"
-                              domain={[0, 1]}
+                              domain={[0, videoDurationSeconds]}
                               type="number"
                               label={{
-                                value: "Video Progress",
+                                value: "Elapsed Video Time (Seconds)",
                                 position: "insideBottom",
                                 offset: -15,
                                 style: {
@@ -1051,7 +1034,7 @@ const VideoAnalytics = () => {
                                 }
                                 return [`${value}%`, name];
                               }}
-                              labelFormatter={(label) => `${Math.round(label * 100)}% through video`}
+                              labelFormatter={(label) => `${Math.round(label)} seconds into video`}
                               labelStyle={{
                                 color: "#ffb300",
                                 fontWeight: "600",
@@ -1094,6 +1077,19 @@ const VideoAnalytics = () => {
                                 name="relativePerformance"
                               />
                             )}
+
+                            {/* Reference Line at 30 seconds */}
+                            <ReferenceLine
+                              x={30}
+                              stroke="#ff4444"
+                              strokeDasharray="4,4"
+                              strokeWidth={2}
+                              label={{
+                                value: "30s",
+                                position: "top",
+                                style: { fill: "#ff4444", fontSize: "12px", fontWeight: "bold" }
+                              }}
+                            />
                           </LineChart>
                         </ResponsiveContainer>
                           );
@@ -1170,6 +1166,23 @@ const VideoAnalytics = () => {
                           </Typography>
                         </Box>
                       )}
+                      <Box
+                        sx={{ display: "flex", alignItems: "center", gap: 1 }}
+                      >
+                        <Box
+                          sx={{
+                            width: 24,
+                            height: 3,
+                            bgcolor: "#ff4444",
+                            borderRadius: 1,
+                            backgroundImage:
+                              "repeating-linear-gradient(90deg, #ff4444 0, #ff4444 4px, transparent 4px, transparent 8px)",
+                          }}
+                        />
+                        <Typography variant="body2" sx={{ color: "#ff4444", fontWeight: 500 }}>
+                          30s Benchmark
+                        </Typography>
+                      </Box>
                     </Box>
 
                     {/* Dynamic Insights */}
@@ -1218,13 +1231,14 @@ const VideoAnalytics = () => {
                             Retention Performance
                           </Typography>
                           <Typography variant="body2" sx={{ color: "#ccc", lineHeight: 1.5 }}>
-                            {videoData.stayedToWatch ? (
+                            {videoData.retentionRate ? (
                               (() => {
-                                const endPercentage = Math.round(videoData.stayedToWatch);
-                                return `${endPercentage}% of viewers stayed to watch the last 10% of the video. ${
-                                  endPercentage > 50 ? "Excellent retention!" :
-                                  endPercentage > 30 ? "Good retention rate." :
-                                  "Consider improving content engagement."
+                                const retentionAt30s = Math.round(videoData.retentionRate);
+                                return `${retentionAt30s}% of viewers stay engaged at the 30-second mark. ${
+                                  retentionAt30s > 70 ? "Excellent 30s retention - your hook is very effective!" :
+                                  retentionAt30s > 50 ? "Good 30s retention - viewers are interested in your content." :
+                                  retentionAt30s > 30 ? "Moderate 30s retention - consider strengthening your opening." :
+                                  "Low 30s retention - focus on creating a stronger hook in the first 30 seconds."
                                 }`;
                               })()
                             ) : (
@@ -1440,23 +1454,7 @@ const VideoAnalytics = () => {
                           </Typography>
                         </Box>
 
-                        {/* Engagement Rate */}
-                        <Box
-                          sx={{
-                            p: 2,
-                            bgcolor: "#3a3a3a",
-                            borderRadius: 1,
-                            border: "1px solid #555",
-                            textAlign: "center"
-                          }}
-                        >
-                          <Typography variant="h6" sx={{ color: "#FF9800", fontWeight: 600 }}>
-                            {calculateEngagement(videoData.likes, videoData.views)}%
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: "#bbb" }}>
-                            Engagement
-                          </Typography>
-                        </Box>
+
 
                         {/* Stayed to Watch */}
                        

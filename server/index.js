@@ -19,24 +19,39 @@ dotenv.config();
 // Initialize BigQuery client globally
 const setupBigQueryClient = async () => {
   try {
-    // Get credentials from environment variable
-    const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    const fs = require('fs');
+    const path = require('path');
 
-    if (!credentialsJson) {
-      throw new Error(
-        "GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not set"
-      );
+    // Try to load credentials from admin_dashboard.json file first
+    let credentials;
+    const credentialsPath = path.join(__dirname, '..', 'admin_dashboard.json');
+
+    if (fs.existsSync(credentialsPath)) {
+      console.log(`🔍 BigQuery: Loading credentials from admin_dashboard.json`);
+      const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+      credentials = JSON.parse(credentialsFile);
+    } else {
+      // Fallback to environment variable
+      const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+      if (!credentialsJson) {
+        throw new Error(
+          "Neither admin_dashboard.json file nor GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable found"
+        );
+      }
+
+      console.log(`🔍 BigQuery: Loading credentials from environment variable`);
+      credentials = JSON.parse(credentialsJson);
     }
 
-    const credentials = JSON.parse(credentialsJson);
-    const projectId = process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
+    const projectId = credentials.project_id || process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
 
     console.log(`🔍 BigQuery Debug: Using project ID: "${projectId}"`);
     console.log(
       `🔍 BigQuery Debug: Credentials project_id: "${credentials.project_id}"`
     );
     console.log(
-      `🔍 BigQuery Debug: Environment BIGQUERY_PROJECT_ID: "${process.env.BIGQUERY_PROJECT_ID}"`
+      `🔍 BigQuery Debug: Service account email: "${credentials.client_email}"`
     );
 
     const bigquery = new BigQuery({
@@ -47,6 +62,9 @@ const setupBigQueryClient = async () => {
 
     console.log(
       `✅ BigQuery client initialized successfully for project: ${projectId}`
+    );
+    console.log(
+      `✅ Using service account: ${credentials.client_email}`
     );
     return bigquery;
   } catch (error) {
@@ -217,6 +235,95 @@ app.get("/api/tropes", async (req, res) => {
   } catch (error) {
     console.error("Error fetching tropes:", error);
     res.status(500).json({ error: "Failed to fetch tropes" });
+  }
+});
+
+// Debug endpoint to test BigQuery avgViewDuration for specific YouTube video ID
+app.get("/api/debug-bigquery-duration/:youtubeVideoId", async (req, res) => {
+  try {
+    const { youtubeVideoId } = req.params;
+    const { writer_name = "Antonio Samson" } = req.query;
+
+    console.log(`🔍 DEBUG: Testing BigQuery avgViewDuration for YouTube video ${youtubeVideoId} - v2`);
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: "BigQuery client not initialized" });
+    }
+
+    const projectId = process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
+    const dataset = "dbt_youtube_analytics";
+    const reportTable = "youtube_video_report_historical";
+
+    const query = `
+      SELECT
+        video_id,
+        video_title as title,
+        average_view_duration_seconds,
+        average_view_duration_percentage,
+        watch_time_minutes,
+        video_duration_seconds,
+        writer_name,
+        date_day
+      FROM \`${projectId}.${dataset}.${reportTable}\`
+      WHERE video_id = @video_id
+        AND writer_name = @writer_name
+      ORDER BY date_day DESC
+      LIMIT 1
+    `;
+
+    const params = {
+      writer_name: writer_name,
+      video_id: youtubeVideoId,
+    };
+
+    console.log(`🔍 BigQuery query params:`, params);
+    const [rows] = await global.bigqueryClient.query({ query, params });
+
+    if (rows.length === 0) {
+      return res.json({
+        error: `Video ${youtubeVideoId} not found in BigQuery for writer ${writer_name}`,
+        query_params: params
+      });
+    }
+
+    const video = rows[0];
+
+    // Calculate avgViewDuration from average_view_duration_seconds
+    let avgViewDuration = "0:00";
+    if (video.average_view_duration_seconds) {
+      const totalSeconds = Math.floor(video.average_view_duration_seconds); // Use floor for consistency
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      avgViewDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+    }
+
+    res.json({
+      youtube_video_id: youtubeVideoId,
+      writer_name: writer_name,
+      bigquery_data: {
+        title: video.title,
+        average_view_duration_seconds: video.average_view_duration_seconds,
+        calculated_avg_view_duration: avgViewDuration,
+        average_view_duration_percentage: video.average_view_duration_percentage,
+        watch_time_minutes: video.watch_time_minutes,
+        video_duration_seconds: video.video_duration_seconds,
+        date_day: video.date_day
+      },
+      calculation_details: {
+        raw_seconds: video.average_view_duration_seconds,
+        floored_seconds: Math.floor(video.average_view_duration_seconds),
+        minutes: Math.floor(Math.floor(video.average_view_duration_seconds) / 60),
+        remaining_seconds: Math.floor(video.average_view_duration_seconds) % 60,
+        formatted: avgViewDuration
+      }
+    });
+
+  } catch (error) {
+    console.error("❌ BigQuery debug endpoint error:", error);
+    res.status(500).json({
+      error: "Internal server error",
+      details: error.message
+    });
   }
 });
 
@@ -1552,27 +1659,34 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
     const projectId = process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
     const dataset = "dbt_youtube_analytics";
 
-    // Query 1: audience_retention_historical for graph data
+    // Query 1: audience_retention_historical for graph data - Get ALL raw data points
     const retentionQuery = `
       SELECT
-      elapsed_video_time_ratio,
-       audience_watch_ratio,
-       relative_retention_performance,
-       account_id,
-       writer_id,
-       account_name,
-       writer_name,
-       snapshot_date,
-       retention_snapshot_id
-     FROM \`${projectId}.${dataset}.audience_retention_historical\`
-     WHERE video_id = @video_id
-       AND writer_id = @writer_id
-     ORDER BY elapsed_video_time_ratio ASC
+        elapsed_video_time_ratio,
+        audience_watch_ratio,
+        relative_retention_performance,
+        account_id,
+        writer_id,
+        account_name,
+        writer_name,
+        snapshot_date,
+        retention_snapshot_id
+      FROM \`${projectId}.${dataset}.audience_retention_historical\`
+      WHERE video_id = @video_id
+        AND writer_id = @writer_id
+        AND audience_watch_ratio IS NOT NULL
+        AND elapsed_video_time_ratio IS NOT NULL
+      ORDER BY snapshot_date DESC, elapsed_video_time_ratio ASC
     `;
 
     console.log(
       `🔍 Querying retention graph data for video ${videoId}, writer ${writerId}`
     );
+    console.log(`🔍 EXACT BIGQUERY RETENTION QUERY:`, retentionQuery);
+    console.log(`🔍 QUERY PARAMETERS:`, {
+      video_id: youtubeVideoId,
+      writer_id: parseInt(writerId),
+    });
 
     const [retentionRows] = await bigquery.query({
       query: retentionQuery,
@@ -1583,8 +1697,38 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
     });
 
     console.log(
-      `📊 BigQuery returned ${retentionRows.length} retention data points`
+      `📊 BigQuery returned ${retentionRows.length} raw retention data points`
     );
+
+    // Log date range information
+    if (retentionRows.length > 0) {
+      const dates = [...new Set(retentionRows.map(row => row.snapshot_date.value || row.snapshot_date))].sort();
+      console.log(`📊 Retention data spans from ${dates[0]} to ${dates[dates.length - 1]} (${dates.length} unique dates)`);
+      console.log(`📊 ALL UNIQUE DATES FOUND:`, dates);
+
+      // Log summary of data by date
+      const dataByDate = {};
+      retentionRows.forEach(row => {
+        const dateStr = row.snapshot_date.value || row.snapshot_date.toString();
+        if (!dataByDate[dateStr]) {
+          dataByDate[dateStr] = [];
+        }
+        dataByDate[dateStr].push(row);
+      });
+
+      console.log(`📊 DATA BREAKDOWN BY DATE:`, Object.keys(dataByDate).sort().map(date => ({
+        date: date,
+        dataPoints: dataByDate[date].length,
+        sampleRetention: (dataByDate[date][0]?.audience_watch_ratio * 100).toFixed(1) + '%'
+      })));
+
+      // Check if we're missing expected dates (June 7-12)
+      const expectedDates = ['2025-06-07', '2025-06-08', '2025-06-09', '2025-06-10', '2025-06-11', '2025-06-12'];
+      const missingDates = expectedDates.filter(date => !Object.keys(dataByDate).includes(date));
+      if (missingDates.length > 0) {
+        console.log(`⚠️ MISSING EXPECTED DATES:`, missingDates);
+      }
+    }
 
     // Query 2: youtube_video_report_historical for duration metrics
     const durationQuery = `
@@ -1593,10 +1737,12 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
         video_duration_seconds,
         average_view_duration_seconds,
         average_view_duration_percentage,
-        video_id
+        video_id,
+        date_day
       FROM \`${projectId}.${dataset}.youtube_video_report_historical\`
       WHERE video_id = @video_id
         AND writer_name = @writer_name
+      ORDER BY date_day DESC
       LIMIT 1
     `;
 
@@ -1649,62 +1795,156 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
 
     console.log(`🕐 Video duration: ${actualVideoDurationSeconds} seconds from BigQuery`);
 
-    const retentionData = retentionRows.map((row, index) => {
-      // Use elapsed_video_time_ratio for x-axis (time progression 0.0 to 1.0)
+    // STEP 1: Convert ratio to actual seconds for each data point
+    console.log(`📊 STEP 1: Converting elapsed_video_time_ratio to actual seconds...`);
+    const rawDataWithSeconds = retentionRows.map((row, index) => {
       const timeRatio = parseFloat(row.elapsed_video_time_ratio || 0);
+      const elapsedSeconds = timeRatio * actualVideoDurationSeconds; // Exact calculation as per methodology
 
-      // Convert ratio to actual time format using real video duration
-      const actualSeconds = Math.floor(timeRatio * actualVideoDurationSeconds);
-      const minutes = Math.floor(actualSeconds / 60);
-      const seconds = actualSeconds % 60;
-      const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-
-      // Use audience_watch_ratio for primary line (this video's retention)
-      const audienceRetention = Math.round((row.audience_watch_ratio || 0) * 100);
-
-      // Use relative_retention_performance for secondary line (vs YouTube average)
-      const relativePerformance = row.relative_retention_performance ?
-        Math.round(row.relative_retention_performance * 100) : null;
-
-      // Log first few data points for debugging
+      // Log first few conversions for debugging
       if (index < 5) {
-        console.log(
-          `🕐 Time conversion ${index}: ratio=${timeRatio.toFixed(3)} → ${actualSeconds}s → ${timeStr}`
-        );
+        console.log(`🕐 Conversion ${index}: ratio=${timeRatio.toFixed(4)} × ${actualVideoDurationSeconds}s = ${elapsedSeconds.toFixed(2)}s`);
       }
 
       return {
-        time: timeStr,
+        elapsed_video_time_seconds: elapsedSeconds,
         elapsed_video_time_ratio: timeRatio,
-        audience_watch_ratio: row.audience_watch_ratio,
-        relative_retention_performance: row.relative_retention_performance,
-        // Keep raw values for debugging and frontend processing
-        rawElapsedRatio: row.elapsed_video_time_ratio,
-        rawRetentionPerf: row.relative_retention_performance,
-        rawAudienceWatch: row.audience_watch_ratio,
+        audience_watch_ratio: parseFloat(row.audience_watch_ratio || 0),
+        relative_retention_performance: row.relative_retention_performance ? parseFloat(row.relative_retention_performance) : null,
+        snapshot_date: row.snapshot_date
       };
     });
 
-    // Calculate "stayed to watch" - percentage of viewers who reached the end of the video
-    // This is retention at elapsed_video_time_ratio = 1.0 (or closest to it)
+    // STEP 2: Group by elapsed_video_time_seconds and calculate averages
+    console.log(`📊 STEP 2: Grouping by elapsed seconds and calculating averages...`);
+    const secondsGroupMap = new Map();
+
+    // Log raw data around 30 seconds for debugging
+    const thirtySecondRawData = rawDataWithSeconds.filter(point =>
+      Math.abs(point.elapsed_video_time_seconds - 30) < 2.0 // Within 2 seconds of 30s
+    );
+    console.log(`🔍 RAW DATA AROUND 30 SECONDS (±2s):`, thirtySecondRawData.map(p => ({
+      exactSeconds: p.elapsed_video_time_seconds.toFixed(2),
+      retention: (p.audience_watch_ratio * 100).toFixed(1) + '%',
+      date: p.snapshot_date,
+      rawRatio: p.audience_watch_ratio.toFixed(4)
+    })));
+
+    rawDataWithSeconds.forEach(point => {
+      const roundedSeconds = Math.round(point.elapsed_video_time_seconds * 100) / 100; // Round to 2 decimal places
+
+      if (!secondsGroupMap.has(roundedSeconds)) {
+        secondsGroupMap.set(roundedSeconds, {
+          elapsed_video_time_seconds: roundedSeconds,
+          audience_watch_ratios: [],
+          relative_performance_ratios: [],
+          dates: []
+        });
+      }
+
+      const group = secondsGroupMap.get(roundedSeconds);
+      group.audience_watch_ratios.push(point.audience_watch_ratio);
+      if (point.relative_retention_performance !== null) {
+        group.relative_performance_ratios.push(point.relative_retention_performance);
+      }
+      group.dates.push(point.snapshot_date);
+    });
+
+    // STEP 3: Calculate averages and sort by elapsed seconds
+    console.log(`📊 STEP 3: Calculating averages and sorting by elapsed seconds...`);
+    const retentionData = Array.from(secondsGroupMap.values()).map(group => {
+      const avgAudienceWatch = group.audience_watch_ratios.reduce((sum, val) => sum + val, 0) / group.audience_watch_ratios.length;
+      const avgRelativePerf = group.relative_performance_ratios.length > 0
+        ? group.relative_performance_ratios.reduce((sum, val) => sum + val, 0) / group.relative_performance_ratios.length
+        : null;
+
+      // Convert seconds back to time format for display
+      const totalSeconds = Math.floor(group.elapsed_video_time_seconds);
+      const minutes = Math.floor(totalSeconds / 60);
+      const seconds = totalSeconds % 60;
+      const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
+
+      return {
+        time: timeStr,
+        elapsed_video_time_seconds: group.elapsed_video_time_seconds,
+        elapsed_video_time_ratio: group.elapsed_video_time_seconds / actualVideoDurationSeconds,
+        audience_watch_ratio: avgAudienceWatch,
+        relative_retention_performance: avgRelativePerf,
+        // Keep raw values for frontend processing
+        rawElapsedRatio: group.elapsed_video_time_seconds / actualVideoDurationSeconds,
+        rawRetentionPerf: avgRelativePerf,
+        rawAudienceWatch: avgAudienceWatch,
+        // Metadata about averaging
+        dataPointsCount: group.audience_watch_ratios.length,
+        uniqueDates: [...new Set(group.dates)].length
+      };
+    }).sort((a, b) => a.elapsed_video_time_seconds - b.elapsed_video_time_seconds); // STEP 4: Sort by elapsed seconds
+
+    console.log(`📊 STEP 4: Final aggregated data: ${retentionData.length} time points, spanning ${retentionData[0]?.elapsed_video_time_seconds.toFixed(2)}s to ${retentionData[retentionData.length - 1]?.elapsed_video_time_seconds.toFixed(2)}s`);
+
+    // Log sample of aggregated data
+    if (retentionData.length > 0) {
+      console.log(`📊 Sample aggregated points:`, retentionData.slice(0, 3).map(p => ({
+        seconds: p.elapsed_video_time_seconds.toFixed(2),
+        retention: (p.audience_watch_ratio * 100).toFixed(1) + '%',
+        dataPoints: p.dataPointsCount,
+        dates: p.uniqueDates
+      })));
+
+      // Find and log the 30-second mark specifically
+      const thirtySecondPoint = retentionData.find(p =>
+        Math.abs(p.elapsed_video_time_seconds - 30) < 1.0 // Within 1 second of 30s
+      );
+      if (thirtySecondPoint) {
+        console.log(`🎯 30-SECOND MARK ANALYSIS:`, {
+          exactSeconds: thirtySecondPoint.elapsed_video_time_seconds.toFixed(2),
+          averagedRetention: (thirtySecondPoint.audience_watch_ratio * 100).toFixed(1) + '%',
+          dataPointsAveraged: thirtySecondPoint.dataPointsCount,
+          uniqueDatesIncluded: thirtySecondPoint.uniqueDates,
+          rawAudienceWatchRatio: thirtySecondPoint.audience_watch_ratio.toFixed(4)
+        });
+
+        // Show the individual values that were averaged
+        const thirtySecondGroup = secondsGroupMap.get(thirtySecondPoint.elapsed_video_time_seconds);
+        if (thirtySecondGroup) {
+          console.log(`🔍 INDIVIDUAL VALUES AVERAGED FOR 30s:`, {
+            individualRetentions: thirtySecondGroup.audience_watch_ratios.map(r => (r * 100).toFixed(1) + '%'),
+            individualDates: thirtySecondGroup.dates,
+            average: (thirtySecondGroup.audience_watch_ratios.reduce((sum, val) => sum + val, 0) / thirtySecondGroup.audience_watch_ratios.length * 100).toFixed(1) + '%'
+          });
+        }
+      }
+    }
+
+    // Calculate "stayed to watch" - retention percentage at 30-second mark
     let stayedToWatch = 0;
-    if (retentionRows.length) {
-      // Find the point closest to the end of the video (elapsed_video_time_ratio = 1.0)
-      const endPoint = retentionRows.reduce(
-        (best, row) => {
-          const ratio = parseFloat(row.elapsed_video_time_ratio);
-          const watch = parseFloat(row.audience_watch_ratio);
-          const dist = Math.abs(ratio - 1.0);
-          if (dist < best.dist) {
-            return { dist, watch, ratio };
-          }
-          return best;
-        },
-        { dist: 1, watch: 0, ratio: 0 }
+    if (retentionData.length) {
+      // Find the point closest to 30 seconds
+      const thirtySecondPoint = retentionData.find(p =>
+        Math.abs(p.elapsed_video_time_seconds - 30) < 1.0 // Within 1 second of 30s
       );
 
-      stayedToWatch = Math.round(endPoint.watch * 100);
-      console.log(`📊 Stayed to watch calculation: ${stayedToWatch}% at ratio ${endPoint.ratio.toFixed(3)}`);
+      if (thirtySecondPoint) {
+        stayedToWatch = Math.round(thirtySecondPoint.audience_watch_ratio * 100);
+        console.log(`📊 Stayed to watch (30s mark): ${stayedToWatch}% at ${thirtySecondPoint.elapsed_video_time_seconds.toFixed(2)}s`);
+      } else {
+        // Fallback: find closest point to 30 seconds if exact match not found
+        const closestPoint = retentionData.reduce(
+          (best, point) => {
+            const dist = Math.abs(point.elapsed_video_time_seconds - 30);
+            if (dist < best.dist) {
+              return { dist, point };
+            }
+            return best;
+          },
+          { dist: Infinity, point: null }
+        );
+
+        if (closestPoint.point) {
+          stayedToWatch = Math.round(closestPoint.point.audience_watch_ratio * 100);
+          console.log(`📊 Stayed to watch (closest to 30s): ${stayedToWatch}% at ${closestPoint.point.elapsed_video_time_seconds.toFixed(2)}s`);
+        }
+      }
     }
 
     // 1b) new “global” metrics:
@@ -1790,8 +2030,9 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
 
       // Use average_view_duration_seconds if available, otherwise convert watch_time_minutes
       if (averageViewDurationSeconds) {
-        const minutes = Math.floor(averageViewDurationSeconds / 60);
-        const seconds = Math.round(averageViewDurationSeconds % 60);
+        const totalSeconds = Math.floor(averageViewDurationSeconds); // Use floor for consistency
+        const minutes = Math.floor(totalSeconds / 60);
+        const seconds = totalSeconds % 60;
         avgViewDurationFromReport = `${minutes}:${seconds
           .toString()
           .padStart(2, "0")}`;
@@ -1828,6 +2069,7 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
         avgAudienceWatchRatio, // e.g. 62  (%)    avgRelRetentionPerf,          // e.g. 85  (%)
         totalWatchTime, // e.g. 152.3 (minutes)
         avgViewPct, // e.g. 42.7 (%)
+        avgViewDuration: avgViewDurationFromReport, // Add the formatted duration here
       },
       // Additional metrics from youtube_video_report_historical for retention section display
       durationMetrics: {
@@ -1942,10 +2184,12 @@ async function getBigQueryVideoAnalytics(
         subscribers_gained,
         subscribers_lost,
         account_name,
-        writer_name
+        writer_name,
+        date_day
       FROM \`${projectId}.${dataset}.${reportTable}\`
       WHERE video_id = @video_id
         AND writer_name = @writer_name
+      ORDER BY date_day DESC
       LIMIT 1
     `;
 
@@ -2001,7 +2245,7 @@ async function getBigQueryVideoAnalytics(
     // Calculate average view duration from BigQuery data
     let avgViewDuration = "0:00";
     if (video.average_view_duration_seconds) {
-      const totalSeconds = Math.round(video.average_view_duration_seconds);
+      const totalSeconds = Math.floor(video.average_view_duration_seconds); // Use floor instead of round for more accurate representation
       const minutes = Math.floor(totalSeconds / 60);
       const seconds = totalSeconds % 60;
       avgViewDuration = `${minutes}:${seconds.toString().padStart(2, "0")}`;
@@ -2130,9 +2374,9 @@ async function getBigQueryVideoAnalytics(
       description: video.video_description,
       channelTitle: video.channel_title,
       url: videoUrl, // Use the real URL from PostgreSQL video table
-      // BigQuery engagement data (but not views)
-      likes: parseInt(video.likes || 0),
-      comments: parseInt(video.comments || 0),
+      // Get accurate likes and comments from PostgreSQL statistics_youtube_api table
+      likes: await getPostgreSQLLikesComments(videoId, 'likes'),
+      comments: await getPostgreSQLLikesComments(videoId, 'comments'),
       dislikes: parseInt(video.dislikes || 0),
       shares: parseInt(video.shares || 0),
       subscribersGained: parseInt(video.subscribers_gained || 0),
@@ -2435,9 +2679,9 @@ app.get("/api/video/:id", async (req, res) => {
           // Views from InfluxDB (original source)
           views: totalData.views || influxVideo._value || 0,
 
-          // Engagement from BigQuery if available, otherwise InfluxDB
-          likes: bigQueryData?.likes || totalData.likes || 0,
-          comments: bigQueryData?.comments || totalData.comments || 0,
+          // Engagement from PostgreSQL statistics_youtube_api (most accurate)
+          likes: await getPostgreSQLLikesComments(id, 'likes'),
+          comments: await getPostgreSQLLikesComments(id, 'comments'),
           dislikes: bigQueryData?.dislikes || 0,
           shares: bigQueryData?.shares || 0,
           subscribersGained: bigQueryData?.subscribersGained || 0,
@@ -3092,6 +3336,34 @@ async function getVideoLineChartData(
   } catch (error) {
     console.error("❌ Error getting video line chart data:", error);
     return []; // Return empty array instead of mock data
+  }
+}
+
+// Helper function to get accurate likes and comments from PostgreSQL statistics_youtube_api table
+async function getPostgreSQLLikesComments(videoId, field) {
+  try {
+    const query = `
+      SELECT
+        COALESCE(statistics_youtube_api.likes_total, 0) AS likes_total,
+        COALESCE(statistics_youtube_api.comments_total, 0) AS comments_total
+      FROM video
+      LEFT JOIN statistics_youtube_api ON CAST(video.id AS VARCHAR) = statistics_youtube_api.video_id
+      WHERE video.id = $1
+    `;
+
+    const { rows } = await pool.query(query, [parseInt(videoId)]);
+
+    if (rows.length > 0) {
+      const result = field === 'likes' ? parseInt(rows[0].likes_total || 0) : parseInt(rows[0].comments_total || 0);
+      console.log(`📊 PostgreSQL ${field} for video ${videoId}: ${result}`);
+      return result;
+    } else {
+      console.log(`⚠️ No PostgreSQL data found for video ${videoId}`);
+      return 0;
+    }
+  } catch (error) {
+    console.error(`❌ Error getting PostgreSQL ${field} for video ${videoId}:`, error);
+    return 0;
   }
 }
 
