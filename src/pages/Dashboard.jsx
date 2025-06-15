@@ -374,17 +374,42 @@ const Dashboard = () => {
     <Layout>
       <Box sx={{
         minHeight: '100vh',
-        bgcolor: '#1a1a1a',
+        background: 'transparent',
         color: 'white',
         p: { xs: 2, lg: 4 },
         width: '100%'
       }}>
-        {/* Welcome Header */}
-        <Box sx={{ mb: 4, textAlign: 'left' }}>
-          <Typography variant="h5" fontWeight="600" sx={{ color: 'white', mb: 0.5 }}>
+        {/* Modern Welcome Header */}
+        <Box sx={{
+          mb: 6,
+          textAlign: 'left',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            bottom: -10,
+            left: 0,
+            width: '60px',
+            height: '3px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '2px',
+          }
+        }}>
+          <Typography variant="h4" fontWeight="700" sx={{
+            color: 'white',
+            mb: 1,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             Welcome, {writer?.name || user?.name || 'Writer'}! What are we writing today?
           </Typography>
-          <Typography variant="body2" sx={{ color: '#888' }}>
+          <Typography variant="body1" sx={{
+            color: 'rgba(255, 255, 255, 0.7)',
+            fontSize: '16px',
+            fontWeight: 500
+          }}>
             Writer ID: {writer?.id || user?.writerId || 'N/A'}
           </Typography>
         </Box>
@@ -407,11 +432,15 @@ const Dashboard = () => {
           }}>
             <Box>
               <Typography
-                variant="h6"
-                fontWeight="600"
+                variant="h5"
+                fontWeight="700"
                 sx={{
                   color: 'white',
-                  mb: 3,
+                  mb: 4,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
                 }}
               >
                 New Script Submission
@@ -422,9 +451,10 @@ const Dashboard = () => {
                   severity="error"
                   sx={{
                     mb: 3,
-                    bgcolor: 'rgba(244, 67, 54, 0.1)',
+                    background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1) 0%, rgba(244, 67, 54, 0.05) 100%)',
                     border: '1px solid rgba(244, 67, 54, 0.3)',
-                    borderRadius: '12px',
+                    borderRadius: '16px',
+                    backdropFilter: 'blur(10px)',
                     '& .MuiAlert-message': { color: '#ff6b6b' }
                   }}
                 >
@@ -436,12 +466,25 @@ const Dashboard = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{
-                  bgcolor: '#2A2A2A',
+                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                  backdropFilter: 'blur(20px)',
                   p: 4,
-                  borderRadius: '12px',
-                  border: '1px solid #444',
+                  borderRadius: '20px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
                   width: '100%',
-                  maxWidth: '600px'
+                  maxWidth: '600px',
+                  position: 'relative',
+                  '&::before': {
+                    content: '""',
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: '1px',
+                    background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
+                    borderRadius: '20px 20px 0 0',
+                  }
                 }}
               >
                 {/* Title Field */}
@@ -617,16 +660,29 @@ const Dashboard = () => {
                   fullWidth
                   disabled={isSubmitting}
                   sx={{
-                    bgcolor: '#E6B800',
-                    color: 'black',
-                    fontWeight: 'bold',
-                    fontSize: '1rem',
-                    py: 1.5,
-                    '&:hover': { bgcolor: '#D4A600' },
-                    '&:disabled': { bgcolor: '#666', color: '#999' },
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    fontWeight: '700',
+                    fontSize: '16px',
+                    py: 2,
+                    borderRadius: '12px',
+                    textTransform: 'none',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+                    transition: 'all 0.3s ease',
+                    '&:hover': {
+                      background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
+                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
+                      transform: 'translateY(-2px)',
+                    },
+                    '&:disabled': {
+                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      boxShadow: 'none',
+                      transform: 'none',
+                    },
                   }}
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit'}
+                  {isSubmitting ? 'Submitting...' : 'Submit Script'}
                 </Button>
               </Box>
             </Box>
