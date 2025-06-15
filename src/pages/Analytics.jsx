@@ -718,17 +718,25 @@ const Analytics = () => {
       <Layout>
         <Box sx={{
           minHeight: '100vh',
-          bgcolor: '#1a1a1a',
+          background: 'transparent',
           color: 'white',
           p: { xs: 2, lg: 4 }
         }}>
           <Box sx={{ width: '100%', mb: 4 }}>
             <LinearProgress sx={{
-              bgcolor: '#333',
-              '& .MuiLinearProgress-bar': { bgcolor: '#E6B800' }
+              bgcolor: 'rgba(255, 255, 255, 0.1)',
+              '& .MuiLinearProgress-bar': {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+              }
             }} />
           </Box>
-          <Typography variant="h4" sx={{ color: 'white' }}>
+          <Typography variant="h4" sx={{
+            color: 'white',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
             Loading analytics...
           </Typography>
         </Box>
@@ -740,7 +748,7 @@ const Analytics = () => {
     <Layout>
       <Box sx={{
         minHeight: '100vh',
-        bgcolor: '#1a1a1a',
+        background: 'transparent',
         color: 'white',
         p: { xs: 2, lg: 4 }
       }}>

@@ -368,14 +368,36 @@ const Content = () => {
     <Layout>
       <Box sx={{
         minHeight: '100vh',
-        bgcolor: '#1a1a1a',
+        background: 'transparent',
         color: 'white',
         p: 0
       }}>
-        {/* Header */}
-        <Box sx={{ p: 3, borderBottom: '1px solid #333' }}>
-          <Typography variant="h5" sx={{ color: 'white', fontWeight: 600, mb: 3 }}>
-            Channel content
+        {/* Modern Header */}
+        <Box sx={{
+          p: 3,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            bottom: -1,
+            left: 24,
+            width: '60px',
+            height: '2px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '2px',
+          }
+        }}>
+          <Typography variant="h4" sx={{
+            color: 'white',
+            fontWeight: 700,
+            mb: 3,
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent',
+          }}>
+            Channel Content
           </Typography>
 
           {/* Tabs */}
