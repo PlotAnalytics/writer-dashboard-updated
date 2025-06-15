@@ -487,50 +487,83 @@ const Dashboard = () => {
                   }
                 }}
               >
-                {/* Title Field */}
+                {/* Modern Title Field */}
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="body2" sx={{ color: '#ccc', mb: 1, fontWeight: '500' }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    mb: 2,
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
                     Title
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder=""
+                    placeholder="Enter your script title..."
                     value={title}
                     onChange={(e) => setTitle(e.target.value)}
                     required
-                    size="small"
+                    size="medium"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#1a1a1a',
-                        border: '1px solid #555',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        transition: 'all 0.3s ease',
                         '& fieldset': { border: 'none' },
-                        '&:hover fieldset': { border: 'none' },
-                        '&.Mui-focused fieldset': { border: '1px solid #E6B800' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid #667eea',
+                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                        },
                       },
-                      '& .MuiInputBase-input': { color: 'white' },
+                      '& .MuiInputBase-input': {
+                        color: 'white',
+                        fontSize: '16px',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.5)',
+                        }
+                      },
                     }}
                   />
                 </Box>
 
-                {/* Type Section */}
-                <Box sx={{ mb: 3 }}>
-                  <Typography variant="body2" sx={{ color: '#ccc', mb: 1, fontWeight: '500' }}>
+                {/* Modern Type Section */}
+                <Box sx={{ mb: 4 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    mb: 2,
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
                     Type
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 3 }}>
-                    <FormControl size="small" sx={{ minWidth: '200px' }} required>
+                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                    <FormControl size="medium" sx={{ minWidth: '200px' }} required>
                       <Select
                         value={prefixType}
                         onChange={handleTypeChange}
                         displayEmpty
                         sx={{
-                          bgcolor: '#1a1a1a',
-                          border: '1px solid #555',
+                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                          backdropFilter: 'blur(10px)',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          borderRadius: '12px',
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                          '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                          '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: '1px solid #E6B800' },
-                          '& .MuiSelect-select': { color: 'white' },
-                          '& .MuiSvgIcon-root': { color: 'white' },
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid #667eea',
+                            boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                          },
+                          '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
+                          '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
                         }}
                       >
                         <MenuItem value="Trope">Trope</MenuItem>
@@ -542,22 +575,34 @@ const Dashboard = () => {
 
                     {prefixType === "Trope" && (
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Typography variant="body2" sx={{ color: '#ccc', fontWeight: '500' }}>
+                        <Typography variant="body2" sx={{
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontWeight: '600',
+                          fontSize: '14px'
+                        }}>
                           Number
                         </Typography>
-                        <FormControl size="small" sx={{ minWidth: '100px' }}>
+                        <FormControl size="medium" sx={{ minWidth: '120px' }}>
                           <Select
                             value={prefixNumber}
                             onChange={(e) => setPrefixNumber(e.target.value)}
                             displayEmpty
                             sx={{
-                              bgcolor: '#1a1a1a',
-                              border: '1px solid #555',
+                              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                              backdropFilter: 'blur(10px)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '12px',
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                              '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                              '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: '1px solid #E6B800' },
-                              '& .MuiSelect-select': { color: 'white' },
-                              '& .MuiSvgIcon-root': { color: 'white' },
+                              '&:hover': {
+                                border: '1px solid rgba(102, 126, 234, 0.5)',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                              },
+                              '&.Mui-focused': {
+                                border: '1px solid #667eea',
+                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                              },
+                              '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
+                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
                             }}
                           >
                             <MenuItem value="Choose" disabled>
@@ -575,48 +620,70 @@ const Dashboard = () => {
                   </Box>
                 </Box>
 
-                {/* TLDR/Trope Display Box - Now below Type */}
+                {/* Modern Trope Display Box */}
                 <Box sx={{ mb: 4 }}>
                   <Box
                     sx={{
-                      border: '1px solid #555',
-                      borderRadius: '4px',
-                      padding: '12px 15px',
-                      bgcolor: '#1a1a1a',
-                      fontSize: '14px',
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      borderRadius: '12px',
+                      padding: '16px 20px',
+                      fontSize: '15px',
                       width: '100%',
-                      height: '48px',
+                      minHeight: '56px',
                       display: 'flex',
                       alignItems: 'center',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      color: '#ccc'
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontWeight: '500',
+                      backdropFilter: 'blur(10px)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)',
+                      }
                     }}
                   >
                     {prefixType === "Trope" && prefixNumber !== "Choose"
                       ? `${tropeList[prefixNumber - 1]}`
-                      : ""}
+                      : prefixType === "Trope"
+                        ? "Select a trope number to see description"
+                        : "Trope description will appear here"}
                   </Box>
                 </Box>
 
+                {/* Modern Structure Field */}
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="body2" sx={{ color: '#ccc', mb: 1, fontWeight: '500' }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    mb: 2,
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
                     Structure
                   </Typography>
-                  <FormControl fullWidth size="small">
+                  <FormControl fullWidth size="medium">
                     <Select
                       value={selectedStructure || ""}
                       onChange={(e) => setSelectedStructure(e.target.value)}
                       displayEmpty
                       sx={{
-                        bgcolor: '#1a1a1a',
-                        border: '1px solid #555',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
                         '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                        '&:hover .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { border: '1px solid #E6B800' },
-                        '& .MuiSelect-select': { color: 'white' },
-                        '& .MuiSvgIcon-root': { color: 'white' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid #667eea',
+                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                        },
+                        '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
+                        '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
                       }}
                     >
                       <MenuItem value="">-- No structure selected --</MenuItem>
@@ -629,27 +696,48 @@ const Dashboard = () => {
                   </FormControl>
                 </Box>
 
+                {/* Modern Google Doc Link Field */}
                 <Box sx={{ mb: 4 }}>
-                  <Typography variant="body2" sx={{ color: '#ccc', mb: 1, fontWeight: '500' }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    mb: 2,
+                    fontWeight: '600',
+                    fontSize: '14px'
+                  }}>
                     Google Doc Link
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder=""
+                    placeholder="https://docs.google.com/document/d/..."
                     type="url"
                     value={googleDocLink}
                     onChange={(e) => setGoogleDocLink(e.target.value)}
                     required
-                    size="small"
+                    size="medium"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        bgcolor: '#1a1a1a',
-                        border: '1px solid #555',
+                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                        borderRadius: '12px',
+                        transition: 'all 0.3s ease',
                         '& fieldset': { border: 'none' },
-                        '&:hover fieldset': { border: 'none' },
-                        '&.Mui-focused fieldset': { border: '1px solid #E6B800' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid #667eea',
+                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                        },
                       },
-                      '& .MuiInputBase-input': { color: 'white' },
+                      '& .MuiInputBase-input': {
+                        color: 'white',
+                        fontSize: '16px',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.5)',
+                        }
+                      },
                     }}
                   />
                 </Box>

@@ -315,21 +315,24 @@ const PreviousSubmissions = ({
         >
           Previous Submissions
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1.5 }}>
+        <Box sx={{ display: 'flex', gap: 2 }}>
           <IconButton
             onClick={onRefresh}
             size="small"
             sx={{
-              bgcolor: 'rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+              backdropFilter: 'blur(10px)',
               color: 'white',
-              borderRadius: '8px',
-              width: 32,
-              height: 32,
+              borderRadius: '12px',
+              width: 40,
+              height: 40,
+              border: '1px solid rgba(255, 255, 255, 0.2)',
               '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.15)',
-                transform: 'scale(1.05)'
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             <RefreshIcon fontSize="small" />
@@ -337,24 +340,24 @@ const PreviousSubmissions = ({
           <Button
             startIcon={<FilterIcon />}
             onClick={handleFilterClick}
-            size="small"
+            size="medium"
             sx={{
-              bgcolor: '#E6B800',
-              color: 'black',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
               border: 'none',
               fontWeight: '600',
-              borderRadius: '8px',
-              px: 2,
-              py: 0.5,
-              fontSize: '0.8rem',
+              borderRadius: '12px',
+              px: 4,
+              py: 1.5,
+              fontSize: '14px',
               textTransform: 'none',
+              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
               '&:hover': {
-                bgcolor: '#D4A600',
-                border: 'none',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(230, 184, 0, 0.3)'
+                background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)'
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             Filters
@@ -362,23 +365,25 @@ const PreviousSubmissions = ({
           <Button
             startIcon={<SortIcon />}
             onClick={handleSortClick}
-            size="small"
+            size="medium"
             sx={{
-              bgcolor: 'rgba(255, 255, 255, 0.08)',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+              backdropFilter: 'blur(10px)',
               color: 'white',
               border: '1px solid rgba(255, 255, 255, 0.2)',
-              fontWeight: '500',
-              borderRadius: '8px',
-              px: 2,
-              py: 0.5,
-              fontSize: '0.8rem',
+              fontWeight: '600',
+              borderRadius: '12px',
+              px: 4,
+              py: 1.5,
+              fontSize: '14px',
               textTransform: 'none',
               '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.15)',
-                borderColor: 'rgba(255, 255, 255, 0.3)',
-                transform: 'translateY(-1px)'
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
+                borderColor: 'rgba(102, 126, 234, 0.4)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)'
               },
-              transition: 'all 0.2s ease'
+              transition: 'all 0.3s ease'
             }}
           >
             Sort By {sortBy}
@@ -387,45 +392,46 @@ const PreviousSubmissions = ({
       </Box>
 
       {/* Modern Search Bar */}
-      <Box sx={{ mb: 3 }}>
+      <Box sx={{ mb: 4 }}>
         <TextField
           fullWidth
           placeholder="Search submissions by title..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          size="small"
+          size="medium"
           slotProps={{
             input: {
               startAdornment: (
                 <InputAdornment position="start">
-                  <SearchIcon sx={{ color: '#E6B800' }} />
+                  <SearchIcon sx={{ color: '#667eea', fontSize: '20px' }} />
                 </InputAdornment>
               ),
             },
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              bgcolor: 'rgba(255, 255, 255, 0.05)',
-              border: '1px solid rgba(230, 184, 0, 0.3)',
-              borderRadius: '12px',
-              transition: 'all 0.2s ease-in-out',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(102, 126, 234, 0.3)',
+              borderRadius: '16px',
+              transition: 'all 0.3s ease',
+              height: '56px',
               '& fieldset': { border: 'none' },
               '&:hover': {
-                bgcolor: 'rgba(255, 255, 255, 0.08)',
-                borderColor: 'rgba(230, 184, 0, 0.5)',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 12px rgba(230, 184, 0, 0.15)',
+                border: '1px solid rgba(102, 126, 234, 0.5)',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.15)',
               },
               '&.Mui-focused': {
-                bgcolor: 'rgba(255, 255, 255, 0.1)',
-                borderColor: '#E6B800',
-                transform: 'translateY(-1px)',
-                boxShadow: '0 4px 20px rgba(230, 184, 0, 0.25)',
+                border: '1px solid #667eea',
+                transform: 'translateY(-2px)',
+                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.25)',
               },
             },
             '& .MuiInputBase-input': {
               color: 'white',
-              fontSize: '0.95rem',
+              fontSize: '16px',
+              fontWeight: '500',
               '&::placeholder': {
                 color: 'rgba(255, 255, 255, 0.5)',
                 opacity: 1,
