@@ -138,7 +138,7 @@ const RealtimeWidget = () => {
         </Typography>
       </Box>
 
-      {/* Mini Dotted Line Chart */}
+      {/* Mini Bar Chart */}
       <Box sx={{ flex: 1, minHeight: '120px' }}>
         <ReactECharts
           option={{
@@ -166,28 +166,16 @@ const RealtimeWidget = () => {
             },
             series: [{
               data: realtimeData?.chartData?.map(item => item.views) || [],
-              type: 'line',
-              lineStyle: {
-                color: '#4fc3f7',
-                width: 2,
-                type: 'dashed' // Makes the line dotted/dashed
-              },
+              type: 'bar',
               itemStyle: {
                 color: '#4fc3f7',
-                borderColor: '#fff',
-                borderWidth: 2
+                borderRadius: [1, 1, 0, 0]
               },
-              symbol: 'circle',
-              symbolSize: 6,
+              barWidth: '80%',
+              barGap: '10%',
               emphasis: {
                 itemStyle: {
-                  color: '#29B6F6',
-                  borderColor: '#fff',
-                  borderWidth: 2
-                },
-                lineStyle: {
-                  color: '#29B6F6',
-                  width: 3
+                  color: '#29B6F6'
                 }
               }
             }],

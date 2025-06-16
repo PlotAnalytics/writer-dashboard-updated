@@ -1814,7 +1814,7 @@ const Analytics = () => {
                 )}
               </Box>
 
-              {/* Realtime Hourly Views Dotted Line Chart */}
+              {/* Realtime Hourly Views Bar Chart */}
               <Box sx={{
                 flex: '1 1 25%',
                 height: '400px',
