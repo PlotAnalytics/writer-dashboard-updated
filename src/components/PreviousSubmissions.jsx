@@ -864,19 +864,19 @@ const PreviousSubmissions = ({
                       size="small"
                       onClick={() => window.open(submission.google_doc_link, '_blank')}
                       sx={{
-                        bgcolor: '#E6B800',
-                        color: 'black',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
                         fontWeight: '500',
                         fontSize: '0.75rem',
                         borderRadius: '8px',
                         px: 1.5,
                         py: 0.6,
                         textTransform: 'none',
-                        boxShadow: '0 1px 4px rgba(230, 184, 0, 0.3)',
+                        boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)',
                         '&:hover': {
-                          bgcolor: '#D4A600',
+                          background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
                           transform: 'translateY(-1px)',
-                          boxShadow: '0 2px 8px rgba(230, 184, 0, 0.4)'
+                          boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
                         },
                         transition: 'all 0.2s ease'
                       }}
