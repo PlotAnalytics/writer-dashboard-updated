@@ -126,54 +126,66 @@ const Layout = ({ children }) => {
         variant="permanent"
         anchor="left"
       >
-        {/* Modern Header with Animation */}
+        {/* Modern Header with User Profile and Notification */}
         <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
           <Box display="flex" alignItems="center" justifyContent="space-between">
+            {/* User Profile Section */}
             <Box display="flex" alignItems="center" gap={2}>
-              <Box
-                sx={{
-                  width: 40,
-                  height: 40,
-                  borderRadius: '12px',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                  position: 'relative',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  '&:hover': {
-                    transform: 'scale(1.05) rotate(5deg)',
-                    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
-                  },
-                  '&::before': {
-                    content: '""',
+              <Box sx={{ position: 'relative' }}>
+                <Avatar
+                  sx={{
+                    width: 48,
+                    height: 48,
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    fontSize: '20px',
+                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                    border: '2px solid rgba(255, 255, 255, 0.2)',
+                  }}
+                >
+                  {user?.avatar || user?.name?.charAt(0) || 'U'}
+                </Avatar>
+                <Box
+                  sx={{
                     position: 'absolute',
-                    inset: 0,
-                    borderRadius: '12px',
-                    padding: '2px',
-                    background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                    mask: 'linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0)',
-                    maskComposite: 'exclude',
-                  },
-                }}
-              >
-                <EditIcon sx={{ color: 'white', fontSize: 20 }} />
+                    bottom: -2,
+                    right: -2,
+                    width: 16,
+                    height: 16,
+                    borderRadius: '50%',
+                    bgcolor: '#4CAF50',
+                    border: '2px solid #1a1a2e',
+                    boxShadow: '0 2px 8px rgba(76, 175, 80, 0.4)',
+                  }}
+                />
               </Box>
-              <Box>
-                <Typography variant="h6" fontWeight="700" sx={{
-                  color: 'white',
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                }}>
-                  Writer Studio
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body1" fontWeight="600" sx={{ color: 'white', mb: 0.5 }}>
+                  {user?.name || 'Writer'}
                 </Typography>
-                <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.6)' }}>
-                  Content Management
-                </Typography>
+                <Box display="flex" alignItems="center" gap={1}>
+                  <Chip
+                    label={`ID: ${user?.writerId || 'N/A'}`}
+                    size="small"
+                    sx={{
+                      bgcolor: 'rgba(255, 255, 255, 0.1)',
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      fontSize: '11px',
+                      height: '20px',
+                      '& .MuiChip-label': { px: 1 },
+                    }}
+                  />
+                  <Box
+                    sx={{
+                      width: 6,
+                      height: 6,
+                      borderRadius: '50%',
+                      bgcolor: '#4CAF50',
+                      boxShadow: '0 0 6px rgba(76, 175, 80, 0.6)',
+                    }}
+                  />
+                </Box>
               </Box>
             </Box>
 
@@ -211,67 +223,7 @@ const Layout = ({ children }) => {
           </Box>
         </Box>
 
-        {/* Modern User Profile */}
-        <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
-          <Box display="flex" alignItems="center" gap={2}>
-            <Box sx={{ position: 'relative' }}>
-              <Avatar
-                sx={{
-                  width: 48,
-                  height: 48,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  color: 'white',
-                  fontWeight: 'bold',
-                  fontSize: '20px',
-                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                  border: '2px solid rgba(255, 255, 255, 0.2)',
-                }}
-              >
-                {user?.avatar || user?.name?.charAt(0) || 'U'}
-              </Avatar>
-              <Box
-                sx={{
-                  position: 'absolute',
-                  bottom: -2,
-                  right: -2,
-                  width: 16,
-                  height: 16,
-                  borderRadius: '50%',
-                  bgcolor: '#4CAF50',
-                  border: '2px solid #1a1a2e',
-                  boxShadow: '0 2px 8px rgba(76, 175, 80, 0.4)',
-                }}
-              />
-            </Box>
-            <Box sx={{ flex: 1 }}>
-              <Typography variant="body1" fontWeight="600" sx={{ color: 'white', mb: 0.5 }}>
-                {user?.name || 'Writer'}
-              </Typography>
-              <Box display="flex" alignItems="center" gap={1}>
-                <Chip
-                  label={`ID: ${user?.writerId || 'N/A'}`}
-                  size="small"
-                  sx={{
-                    bgcolor: 'rgba(255, 255, 255, 0.1)',
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    fontSize: '11px',
-                    height: '20px',
-                    '& .MuiChip-label': { px: 1 },
-                  }}
-                />
-                <Box
-                  sx={{
-                    width: 6,
-                    height: 6,
-                    borderRadius: '50%',
-                    bgcolor: '#4CAF50',
-                    boxShadow: '0 0 6px rgba(76, 175, 80, 0.6)',
-                  }}
-                />
-              </Box>
-            </Box>
-          </Box>
-        </Box>
+
 
         {/* Modern Navigation */}
         <Box sx={{ px: 2, py: 3 }}>
