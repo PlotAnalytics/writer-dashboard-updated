@@ -406,9 +406,10 @@ const Dashboard = () => {
               height: '12px',
               borderRadius: '50%',
               background: '#FFD700',
+              opacity: 0,
               animation: 'firecracker1 3s ease-out forwards',
               '@keyframes firecracker1': {
-                '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                '0%': { opacity: 0, transform: 'scale(0)' },
                 '10%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 30px #FFD700' },
                 '30%': {
                   opacity: 1,
@@ -416,7 +417,8 @@ const Dashboard = () => {
                   boxShadow: '0 0 60px #FFD700, 0 0 80px #FF6B35, 0 0 100px #FF1744'
                 },
                 '60%': { opacity: 0.8, transform: 'scale(2)' },
-                '100%': { opacity: 0, transform: 'scale(0)', visibility: 'hidden' }
+                '99%': { opacity: 0, transform: 'scale(0)' },
+                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
               },
               '&::before': {
                 content: '""',
@@ -427,11 +429,13 @@ const Dashboard = () => {
                 bottom: '-8px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%)',
+                opacity: 0,
                 animation: 'sparkle1 3s ease-out forwards',
                 '@keyframes sparkle1': {
-                  '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                  '0%': { opacity: 0, transform: 'scale(0)' },
                   '20%': { opacity: 1, transform: 'scale(4)' },
-                  '100%': { opacity: 0, transform: 'scale(8)', visibility: 'hidden' }
+                  '99%': { opacity: 0, transform: 'scale(8)' },
+                  '100%': { opacity: 0, transform: 'scale(8)', display: 'none' }
                 }
               }
             }} />
@@ -445,9 +449,10 @@ const Dashboard = () => {
               height: '10px',
               borderRadius: '50%',
               background: '#FF6B35',
+              opacity: 0,
               animation: 'firecracker2 3.5s ease-out 1s forwards',
               '@keyframes firecracker2': {
-                '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                '0%': { opacity: 0, transform: 'scale(0)' },
                 '15%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 25px #FF6B35' },
                 '35%': {
                   opacity: 1,
@@ -455,7 +460,8 @@ const Dashboard = () => {
                   boxShadow: '0 0 50px #FF6B35, 0 0 70px #FFD700, 0 0 90px #FF1744'
                 },
                 '65%': { opacity: 0.7, transform: 'scale(1.5)' },
-                '100%': { opacity: 0, transform: 'scale(0)', visibility: 'hidden' }
+                '99%': { opacity: 0, transform: 'scale(0)' },
+                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
               },
               '&::before': {
                 content: '""',
@@ -466,11 +472,13 @@ const Dashboard = () => {
                 bottom: '-6px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(255,107,53,0.8) 0%, transparent 70%)',
+                opacity: 0,
                 animation: 'sparkle2 3.5s ease-out 1s forwards',
                 '@keyframes sparkle2': {
-                  '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                  '0%': { opacity: 0, transform: 'scale(0)' },
                   '25%': { opacity: 1, transform: 'scale(3)' },
-                  '100%': { opacity: 0, transform: 'scale(7)', visibility: 'hidden' }
+                  '99%': { opacity: 0, transform: 'scale(7)' },
+                  '100%': { opacity: 0, transform: 'scale(7)', display: 'none' }
                 }
               }
             }} />
@@ -484,9 +492,10 @@ const Dashboard = () => {
               height: '14px',
               borderRadius: '50%',
               background: '#FF1744',
+              opacity: 0,
               animation: 'firecracker3 4s ease-out 2s forwards',
               '@keyframes firecracker3': {
-                '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                '0%': { opacity: 0, transform: 'scale(0)' },
                 '20%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 35px #FF1744' },
                 '40%': {
                   opacity: 1,
@@ -494,7 +503,8 @@ const Dashboard = () => {
                   boxShadow: '0 0 70px #FF1744, 0 0 90px #FFD700, 0 0 110px #FF6B35'
                 },
                 '70%': { opacity: 0.8, transform: 'scale(2)' },
-                '100%': { opacity: 0, transform: 'scale(0)', visibility: 'hidden' }
+                '99%': { opacity: 0, transform: 'scale(0)' },
+                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
               },
               '&::before': {
                 content: '""',
@@ -505,11 +515,13 @@ const Dashboard = () => {
                 bottom: '-10px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(255,23,68,0.9) 0%, transparent 70%)',
+                opacity: 0,
                 animation: 'sparkle3 4s ease-out 2s forwards',
                 '@keyframes sparkle3': {
-                  '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                  '0%': { opacity: 0, transform: 'scale(0)' },
                   '30%': { opacity: 1, transform: 'scale(4)' },
-                  '100%': { opacity: 0, transform: 'scale(9)', visibility: 'hidden' }
+                  '99%': { opacity: 0, transform: 'scale(9)' },
+                  '100%': { opacity: 0, transform: 'scale(9)', display: 'none' }
                 }
               }
             }} />
@@ -523,9 +535,10 @@ const Dashboard = () => {
               height: '16px',
               borderRadius: '50%',
               background: '#9C27B0',
+              opacity: 0,
               animation: 'firecracker4 3.8s ease-out 3s forwards',
               '@keyframes firecracker4': {
-                '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                '0%': { opacity: 0, transform: 'scale(0)' },
                 '12%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 40px #9C27B0' },
                 '35%': {
                   opacity: 1,
@@ -533,7 +546,8 @@ const Dashboard = () => {
                   boxShadow: '0 0 80px #9C27B0, 0 0 100px #FFD700, 0 0 120px #FF6B35'
                 },
                 '65%': { opacity: 0.9, transform: 'scale(2.5)' },
-                '100%': { opacity: 0, transform: 'scale(0)', visibility: 'hidden' }
+                '99%': { opacity: 0, transform: 'scale(0)' },
+                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
               },
               '&::before': {
                 content: '""',
@@ -544,11 +558,13 @@ const Dashboard = () => {
                 bottom: '-12px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(156,39,176,0.9) 0%, transparent 70%)',
+                opacity: 0,
                 animation: 'sparkle4 3.8s ease-out 3s forwards',
                 '@keyframes sparkle4': {
-                  '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                  '0%': { opacity: 0, transform: 'scale(0)' },
                   '25%': { opacity: 1, transform: 'scale(5)' },
-                  '100%': { opacity: 0, transform: 'scale(10)', visibility: 'hidden' }
+                  '99%': { opacity: 0, transform: 'scale(10)' },
+                  '100%': { opacity: 0, transform: 'scale(10)', display: 'none' }
                 }
               }
             }} />
@@ -563,9 +579,10 @@ const Dashboard = () => {
               height: '18px',
               borderRadius: '50%',
               background: '#00E676',
+              opacity: 0,
               animation: 'firecracker5 4.2s ease-out 4s forwards',
               '@keyframes firecracker5': {
-                '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)', visibility: 'visible' },
+                '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
                 '12%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 45px #00E676' },
                 '35%': {
                   opacity: 1,
@@ -573,7 +590,8 @@ const Dashboard = () => {
                   boxShadow: '0 0 90px #00E676, 0 0 120px #FFD700, 0 0 150px #FF1744'
                 },
                 '65%': { opacity: 0.7, transform: 'translate(-50%, -50%) scale(2.5)' },
-                '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)', visibility: 'hidden' }
+                '99%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
+                '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)', display: 'none' }
               },
               '&::before': {
                 content: '""',
@@ -584,11 +602,13 @@ const Dashboard = () => {
                 bottom: '-12px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(0,230,118,0.9) 0%, transparent 70%)',
+                opacity: 0,
                 animation: 'sparkle5 4.2s ease-out 4s forwards',
                 '@keyframes sparkle5': {
-                  '0%': { opacity: 0, transform: 'scale(0)', visibility: 'visible' },
+                  '0%': { opacity: 0, transform: 'scale(0)' },
                   '25%': { opacity: 1, transform: 'scale(5)' },
-                  '100%': { opacity: 0, transform: 'scale(10)', visibility: 'hidden' }
+                  '99%': { opacity: 0, transform: 'scale(10)' },
+                  '100%': { opacity: 0, transform: 'scale(10)', display: 'none' }
                 }
               }
             }} />
