@@ -217,7 +217,7 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
         WHERE writer_name = @writer_name
           AND est_date BETWEEN @start_date AND @end_date
-          AND est_date <= DATETIME_SUB(CURRENT_DATETIME("America/New_York"), INTERVAL 3 DAY)
+          AND DATE(est_date) <= DATE_SUB(CURRENT_DATE("America/New_York"), INTERVAL 3 DAY)
           AND writer_name IS NOT NULL
           AND views IS NOT NULL
         GROUP BY est_date
@@ -967,7 +967,7 @@ async function getBigQueryAnalyticsOverview(
       FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
       WHERE writer_name = @writer_name
         AND est_date BETWEEN @start_date AND @end_date
-        AND est_date <= DATETIME_SUB(CURRENT_DATETIME("America/New_York"), INTERVAL 3 DAY)
+        AND DATE(est_date) <= DATE_SUB(CURRENT_DATE("America/New_York"), INTERVAL 3 DAY)
         AND writer_name IS NOT NULL
         AND views IS NOT NULL
       GROUP BY est_date
