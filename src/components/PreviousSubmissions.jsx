@@ -303,7 +303,6 @@ const PreviousSubmissions = ({
         mb: 3,
         pb: 2,
         borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
-        flexWrap: 'wrap',
         gap: 2
       }}>
         <Typography
@@ -318,7 +317,7 @@ const PreviousSubmissions = ({
         >
           Previous Submissions
         </Typography>
-        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end' }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flexShrink: 0 }}>
           <IconButton
             onClick={onRefresh}
             size="small"

@@ -383,17 +383,6 @@ const Dashboard = () => {
         <Box sx={{
           mb: 6,
           textAlign: 'left',
-          position: 'relative',
-          '&::before': {
-            content: '""',
-            position: 'absolute',
-            bottom: -10,
-            left: 0,
-            width: '60px',
-            height: '3px',
-            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-            borderRadius: '2px',
-          }
         }}>
           <Typography variant="h4" fontWeight="700" sx={{
             color: 'white',
