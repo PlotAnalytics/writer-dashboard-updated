@@ -365,38 +365,77 @@ const Analytics = () => {
           }
         }
 
-        // Use BigQuery DAILY TOTALS data (exactly as QA script)
+        // Use BigQuery DAILY TOTALS data (exactly as QA script) - EXCLUDE LAST 3 DAYS EST
         if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
-          // Use the daily totals data - each point is total views for a date
-          viewsData = overviewData.aggregatedViewsData;
+          // Calculate cutoff date (3 days ago in EST)
+          const now = new Date();
+          const estOffset = -5; // EST is UTC-5 (adjust for daylight saving if needed)
+          const nowEST = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
+          const cutoffDate = new Date(nowEST);
+          cutoffDate.setDate(cutoffDate.getDate() - 3);
+          const cutoffDateString = cutoffDate.toISOString().split('T')[0];
 
-          // Transform daily totals for chart display - each point is daily total views
-          chartData = overviewData.aggregatedViewsData.map(item => ({
+          console.log('📅 BigQuery Filter: Excluding last 3 days EST');
+          console.log('📅 Current EST time:', nowEST.toISOString());
+          console.log('📅 Cutoff date (3 days ago EST):', cutoffDateString);
+
+          // Filter out last 3 days EST from BigQuery data
+          const filteredData = overviewData.aggregatedViewsData.filter(item => {
+            const itemDate = item.time;
+            const isIncluded = itemDate <= cutoffDateString;
+            if (!isIncluded) {
+              console.log('📅 Excluding recent date:', itemDate, '(within last 3 days EST)');
+            }
+            return isIncluded;
+          });
+
+          console.log('📊 BigQuery data filtering results:', {
+            originalDataPoints: overviewData.aggregatedViewsData.length,
+            filteredDataPoints: filteredData.length,
+            excludedDataPoints: overviewData.aggregatedViewsData.length - filteredData.length,
+            cutoffDate: cutoffDateString
+          });
+
+          // Use the filtered data
+          viewsData = filteredData;
+
+          // Transform filtered daily totals for chart display
+          chartData = filteredData.map(item => ({
             date: item.time,
             views: item.views,
             formattedDate: dayjs(item.time).format('MMM D, YYYY'),
             unique_videos: item.unique_videos || 0,
-            source: item.source || 'BigQuery_Daily_Totals'
+            source: item.source || 'BigQuery_Daily_Totals_Filtered'
           }));
 
-          totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
+          // Recalculate total views from filtered data
+          totalViews = filteredData.reduce((acc, item) => acc + item.views, 0);
 
-          console.log('✅ Using BigQuery DAILY TOTALS (EXACTLY as QA script):', {
+          console.log('✅ Using FILTERED BigQuery DAILY TOTALS (excluding last 3 days EST):', {
             dailyTotalsPoints: viewsData.length,
             chartDataPoints: chartData.length,
             totalViews: totalViews.toLocaleString(),
-            sampleDailyTotal: viewsData[0],
-            sampleChartData: chartData[0],
+            excludedDays: overviewData.aggregatedViewsData.length - filteredData.length,
+            cutoffDate: cutoffDateString,
+            sampleFilteredData: chartData[0],
             dataTypes: [...new Set(viewsData.map(item => item.source))]
           });
 
-          // Debug: Show sample of daily totals structure
-          console.log('📊 DAILY TOTALS Sample (first 3 points):', chartData.slice(0, 3).map(item => ({
+          // Debug: Show sample of filtered daily totals structure
+          console.log('📊 FILTERED DAILY TOTALS Sample (first 3 points):', chartData.slice(0, 3).map(item => ({
             date: item.date,
             views: item.views,
             unique_videos: item.unique_videos,
             source: item.source
           })));
+
+          // Show excluded dates for transparency
+          const excludedDates = overviewData.aggregatedViewsData
+            .filter(item => item.time > cutoffDateString)
+            .map(item => item.time);
+          if (excludedDates.length > 0) {
+            console.log('📅 Excluded dates (last 3 days EST):', excludedDates);
+          }
         } else {
           console.log('⚠️ No daily totals data in overview response');
         }
@@ -555,37 +594,86 @@ const Analytics = () => {
         throw new Error(`API Error: ${overviewResponse.status} - ${errorText}`);
       }
 
-      // Use BigQuery DAILY TOTALS data for the specific date range
+      // Use BigQuery DAILY TOTALS data for the specific date range - EXCLUDE LAST 3 DAYS EST
       if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
-        // Use the daily totals data - each point is total views for a date
-        viewsData = overviewData.aggregatedViewsData;
+        // Calculate cutoff date (3 days ago in EST)
+        const now = new Date();
+        const estOffset = -5; // EST is UTC-5 (adjust for daylight saving if needed)
+        const nowEST = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
+        const cutoffDate = new Date(nowEST);
+        cutoffDate.setDate(cutoffDate.getDate() - 3);
+        const cutoffDateString = cutoffDate.toISOString().split('T')[0];
 
-        // Transform daily totals for chart display
-        chartData = overviewData.aggregatedViewsData.map(item => ({
+        console.log('📅 Custom Range BigQuery Filter: Excluding last 3 days EST');
+        console.log('📅 Custom range requested:', `${startDate} to ${endDate}`);
+        console.log('📅 Cutoff date (3 days ago EST):', cutoffDateString);
+
+        // Filter out last 3 days EST from BigQuery data, but respect user's custom range
+        const filteredData = overviewData.aggregatedViewsData.filter(item => {
+          const itemDate = item.time;
+          // Include data if it's within user's range AND not in the last 3 days EST
+          const withinUserRange = itemDate >= startDate && itemDate <= endDate;
+          const notInLast3Days = itemDate <= cutoffDateString;
+          const isIncluded = withinUserRange && notInLast3Days;
+
+          if (withinUserRange && !notInLast3Days) {
+            console.log('📅 Excluding recent date from custom range:', itemDate, '(within last 3 days EST)');
+          }
+
+          return isIncluded;
+        });
+
+        console.log('📊 Custom range BigQuery filtering results:', {
+          originalDataPoints: overviewData.aggregatedViewsData.length,
+          filteredDataPoints: filteredData.length,
+          excludedDataPoints: overviewData.aggregatedViewsData.length - filteredData.length,
+          customRange: `${startDate} to ${endDate}`,
+          cutoffDate: cutoffDateString
+        });
+
+        // Use the filtered data
+        viewsData = filteredData;
+
+        // Transform filtered daily totals for chart display
+        chartData = filteredData.map(item => ({
           date: item.time,
           views: item.views,
           formattedDate: dayjs(item.time).format('MMM D, YYYY'),
           unique_videos: item.unique_videos || 0,
-          source: item.source || 'BigQuery_Daily_Totals'
+          source: item.source || 'BigQuery_Custom_Range_Filtered'
         }));
 
-        totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
+        // Recalculate total views from filtered data
+        totalViews = filteredData.reduce((acc, item) => acc + item.views, 0);
 
-        console.log('✅ Using BigQuery data for custom date range:', {
+        console.log('✅ Using FILTERED BigQuery data for custom range (excluding last 3 days EST):', {
           dailyTotalsPoints: viewsData.length,
           chartDataPoints: chartData.length,
           totalViews: totalViews.toLocaleString(),
           dateRange: `${startDate} to ${endDate}`,
+          excludedDays: overviewData.aggregatedViewsData.length - filteredData.length,
+          cutoffDate: cutoffDateString,
           sampleData: chartData[0]
         });
 
         // Special logging for single date
         if (startDate === endDate) {
+          const isDateExcluded = startDate > cutoffDateString;
           console.log('📅 SINGLE DATE ANALYSIS:', {
             date: startDate,
             views: totalViews.toLocaleString(),
-            chartPoints: chartData.length
+            chartPoints: chartData.length,
+            isExcluded: isDateExcluded,
+            reason: isDateExcluded ? 'Date is within last 3 days EST' : 'Date is valid'
           });
+        }
+
+        // Show excluded dates for transparency
+        const excludedDates = overviewData.aggregatedViewsData
+          .filter(item => item.time >= startDate && item.time <= endDate && item.time > cutoffDateString)
+          .map(item => item.time);
+        if (excludedDates.length > 0) {
+          console.log('📅 Excluded dates from custom range (last 3 days EST):', excludedDates);
         }
       } else {
         console.log('⚠️ No daily totals data in overview response for custom range');
