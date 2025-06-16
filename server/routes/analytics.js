@@ -390,6 +390,57 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
       }
     }
 
+    // Add InfluxDB daily data for missing dates only (dotted line visualization)
+    console.log(`📊 Adding InfluxDB daily data for missing dates (dotted line visualization)...`);
+
+    // Create a set of dates we already have BigQuery data for
+    const existingDates = new Set(allData.map(item => item.time.value));
+    console.log(`📊 Existing dates from BigQuery:`, Array.from(existingDates).slice(0, 5));
+
+    // Generate all dates in the range to find missing ones
+    const allDatesInRange = [];
+    const currentDate = new Date(startDate);
+    const endDateObj = new Date(endDate);
+
+    while (currentDate <= endDateObj) {
+      allDatesInRange.push(currentDate.toISOString().split('T')[0]);
+      currentDate.setDate(currentDate.getDate() + 1);
+    }
+
+    const missingDates = allDatesInRange.filter(date => !existingDates.has(date));
+    console.log(`📊 Missing dates for InfluxDB daily data:`, missingDates.slice(0, 5));
+
+    if (missingDates.length > 0) {
+      try {
+        const daysDiff = Math.ceil((new Date(endDate) - new Date(startDate)) / (1000 * 60 * 60 * 24));
+        const influxDailyData = await getDailyInfluxData(writerId, daysDiff + 5);
+
+        if (influxDailyData.length > 0) {
+          // Filter InfluxDB daily data to only missing dates
+          const filteredInfluxDaily = influxDailyData.filter(item => {
+            return missingDates.includes(item.time);
+          });
+
+          // Add InfluxDB daily data for missing dates only
+          const influxDailyFormatted = filteredInfluxDaily.map(item => ({
+            time: { value: item.time },
+            views: item.views,
+            source: item.source
+          }));
+
+          allData = [...allData, ...influxDailyFormatted];
+          console.log(`✅ Added ${influxDailyFormatted.length} InfluxDB daily data points for missing dates only`);
+          console.log(`📊 InfluxDB daily data sample:`, influxDailyFormatted.slice(0, 3));
+        } else {
+          console.log(`⚠️ No InfluxDB daily data available for missing dates`);
+        }
+      } catch (influxDailyError) {
+        console.error('❌ InfluxDB daily data error:', influxDailyError.message);
+      }
+    } else {
+      console.log(`✅ No missing dates - BigQuery covers all dates in range`);
+    }
+
     // Sort all data by date
     allData.sort((a, b) => new Date(a.time.value) - new Date(b.time.value));
 
@@ -3832,6 +3883,79 @@ router.get('/test-new-bigquery', async (req, res) => {
     });
   }
 });
+
+// Helper function to get daily InfluxDB data for main chart
+async function getDailyInfluxData(writerId, days = 30) {
+  try {
+    const InfluxService = require('../services/influxService');
+    const influx = new InfluxService();
+
+    // Query to get daily view increments (not cumulative totals) from InfluxDB
+    const flux = `
+      from(bucket: "youtube_api")
+          |> range(start: -${parseInt(days)}d)
+          |> filter(fn: (r) =>
+               r._measurement == "views" and
+               r._field       == "views" and
+               r.writer_id    == "${writerId}"
+             )
+          |> map(fn: (r) => ({ r with _value: int(v: r._value) }))
+          |> group(columns: ["video_id"])
+          |> sort(columns: ["_time"])
+          |> difference(nonNegative: true, columns: ["_value"])
+          |> group()
+          |> aggregateWindow(every: 1d, fn: sum, createEmpty: false)
+          |> keep(columns: ["_time", "_value"])
+          |> sort(columns: ["_time"])
+    `;
+
+    console.log(`📊 InfluxDB daily query for writer_id ${writerId}: ${flux}`);
+
+    let influxResults = [];
+    await new Promise((resolve, reject) => {
+      influx.queryApi.queryRows(flux, {
+        next(row, tableMeta) {
+          const o = tableMeta.toObject(row);
+          influxResults.push({
+            _time: o._time,
+            _value: o._value || 0
+          });
+        },
+        error(error) {
+          console.error(`📊 InfluxDB daily queryRows error:`, error.message);
+          reject(error);
+        },
+        complete() {
+          console.log(`📊 InfluxDB daily queryRows returned ${influxResults.length} raw results`);
+          resolve();
+        }
+      });
+    });
+
+    // Convert to format expected by frontend with UTC to EST conversion
+    const dailyData = influxResults.map(item => {
+      const utcDate = new Date(item._time);
+      // Convert UTC to EST (UTC-5, or UTC-4 for EDT)
+      const estDate = new Date(utcDate.toLocaleString("en-US", {timeZone: "America/New_York"}));
+
+      return {
+        time: estDate.toISOString().split('T')[0], // YYYY-MM-DD format
+        views: parseInt(item._value || 0),
+        source: 'InfluxDB_Daily_Aggregation'
+      };
+    });
+
+    console.log(`📊 InfluxDB daily returned ${dailyData.length} daily data points`);
+    if (dailyData.length > 0) {
+      console.log(`📊 Sample daily data:`, dailyData.slice(0, 3));
+    }
+
+    return dailyData;
+  } catch (error) {
+    console.error('📊 InfluxDB daily data error:', error.message);
+    return [];
+  }
+}
 
 // Realtime analytics endpoint - Last 24 hours hourly data
 router.get('/realtime', authenticateToken, async (req, res) => {
