@@ -386,7 +386,7 @@ const Analytics = () => {
 
           totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
 
-          console.log('✅ Using BigQuery DAILY TOTALS (filtered in query - last 2 days excluded):', {
+          console.log('✅ Using BigQuery DAILY TOTALS (filtered in query - last 3 days excluded):', {
             dailyTotalsPoints: viewsData.length,
             chartDataPoints: chartData.length,
             totalViews: totalViews.toLocaleString(),
@@ -576,7 +576,7 @@ const Analytics = () => {
 
         totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
 
-        console.log('✅ Using BigQuery data for custom range (filtered in query - last 2 days excluded):', {
+        console.log('✅ Using BigQuery data for custom range (filtered in query - last 3 days excluded):', {
           dailyTotalsPoints: viewsData.length,
           chartDataPoints: chartData.length,
           totalViews: totalViews.toLocaleString(),
