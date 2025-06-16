@@ -11,7 +11,6 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
-import FirecrackerEffects from '../components/FirecrackerEffects.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
 import axios from 'axios';
