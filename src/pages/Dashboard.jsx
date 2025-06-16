@@ -464,19 +464,21 @@ const Dashboard = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{
-                  background: 'rgba(255, 255, 255, 0.02)',
-                  backdropFilter: 'blur(8px)',
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                  backdropFilter: 'blur(12px)',
                   p: 3,
                   borderRadius: '12px',
-                  border: '1px solid rgba(255, 255, 255, 0.06)',
-                  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(102, 126, 234, 0.15)',
                   width: '100%',
                   maxWidth: '600px',
-                  transition: 'all 0.3s ease',
+                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  transform: 'translateY(-2px)',
                   '&:hover': {
-                    background: 'rgba(255, 255, 255, 0.04)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%)',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.15), 0 6px 20px rgba(0, 0, 0, 0.1), 0 3px 12px rgba(102, 126, 234, 0.2)',
+                    transform: 'translateY(-4px)',
                   },
                 }}
               >
