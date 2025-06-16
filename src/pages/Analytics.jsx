@@ -367,24 +367,26 @@ const Analytics = () => {
 
         // Use BigQuery DAILY TOTALS data (exactly as QA script) - EXCLUDE LAST 3 DAYS EST
         if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
-          // Calculate cutoff date (3 days ago in EST)
+          // Calculate cutoff date (3 days ago in Eastern Time - EDT/EST)
           const now = new Date();
-          const estOffset = -5; // EST is UTC-5 (adjust for daylight saving if needed)
-          const nowEST = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
-          const cutoffDate = new Date(nowEST);
+          // Use proper Eastern Time (automatically handles EDT/EST)
+          const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+          const cutoffDate = new Date(easternTime);
           cutoffDate.setDate(cutoffDate.getDate() - 3);
           const cutoffDateString = cutoffDate.toISOString().split('T')[0];
 
-          console.log('📅 BigQuery Filter: Excluding last 3 days EST');
-          console.log('📅 Current EST time:', nowEST.toISOString());
-          console.log('📅 Cutoff date (3 days ago EST):', cutoffDateString);
+          console.log('📅 BigQuery Filter: Excluding last 3 days Eastern Time');
+          console.log('📅 Current Eastern time:', easternTime.toISOString());
+          console.log('📅 Cutoff date (3 days ago Eastern):', cutoffDateString);
+          console.log('📅 Today in Eastern Time:', easternTime.toDateString());
+          console.log('📅 Should show data up to:', cutoffDate.toDateString());
 
           // Filter out last 3 days EST from BigQuery data
           const filteredData = overviewData.aggregatedViewsData.filter(item => {
             const itemDate = item.time;
             const isIncluded = itemDate <= cutoffDateString;
             if (!isIncluded) {
-              console.log('📅 Excluding recent date:', itemDate, '(within last 3 days EST)');
+              console.log('📅 Excluding recent date:', itemDate, '(within last 3 days Eastern Time)');
             }
             return isIncluded;
           });
@@ -411,7 +413,7 @@ const Analytics = () => {
           // Recalculate total views from filtered data
           totalViews = filteredData.reduce((acc, item) => acc + item.views, 0);
 
-          console.log('✅ Using FILTERED BigQuery DAILY TOTALS (excluding last 3 days EST):', {
+          console.log('✅ Using FILTERED BigQuery DAILY TOTALS (excluding last 3 days Eastern Time):', {
             dailyTotalsPoints: viewsData.length,
             chartDataPoints: chartData.length,
             totalViews: totalViews.toLocaleString(),
@@ -434,7 +436,7 @@ const Analytics = () => {
             .filter(item => item.time > cutoffDateString)
             .map(item => item.time);
           if (excludedDates.length > 0) {
-            console.log('📅 Excluded dates (last 3 days EST):', excludedDates);
+            console.log('📅 Excluded dates (last 3 days Eastern Time):', excludedDates);
           }
         } else {
           console.log('⚠️ No daily totals data in overview response');
@@ -596,17 +598,20 @@ const Analytics = () => {
 
       // Use BigQuery DAILY TOTALS data for the specific date range - EXCLUDE LAST 3 DAYS EST
       if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
-        // Calculate cutoff date (3 days ago in EST)
+        // Calculate cutoff date (3 days ago in Eastern Time - EDT/EST)
         const now = new Date();
-        const estOffset = -5; // EST is UTC-5 (adjust for daylight saving if needed)
-        const nowEST = new Date(now.getTime() + (estOffset * 60 * 60 * 1000));
-        const cutoffDate = new Date(nowEST);
+        // Use proper Eastern Time (automatically handles EDT/EST)
+        const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+        const cutoffDate = new Date(easternTime);
         cutoffDate.setDate(cutoffDate.getDate() - 3);
         const cutoffDateString = cutoffDate.toISOString().split('T')[0];
 
-        console.log('📅 Custom Range BigQuery Filter: Excluding last 3 days EST');
+        console.log('📅 Custom Range BigQuery Filter: Excluding last 3 days Eastern Time');
         console.log('📅 Custom range requested:', `${startDate} to ${endDate}`);
-        console.log('📅 Cutoff date (3 days ago EST):', cutoffDateString);
+        console.log('📅 Current Eastern time:', easternTime.toISOString());
+        console.log('📅 Cutoff date (3 days ago Eastern):', cutoffDateString);
+        console.log('📅 Today in Eastern Time:', easternTime.toDateString());
+        console.log('📅 Should show data up to:', cutoffDate.toDateString());
 
         // Filter out last 3 days EST from BigQuery data, but respect user's custom range
         const filteredData = overviewData.aggregatedViewsData.filter(item => {
@@ -617,7 +622,7 @@ const Analytics = () => {
           const isIncluded = withinUserRange && notInLast3Days;
 
           if (withinUserRange && !notInLast3Days) {
-            console.log('📅 Excluding recent date from custom range:', itemDate, '(within last 3 days EST)');
+            console.log('📅 Excluding recent date from custom range:', itemDate, '(within last 3 days Eastern Time)');
           }
 
           return isIncluded;
@@ -646,7 +651,7 @@ const Analytics = () => {
         // Recalculate total views from filtered data
         totalViews = filteredData.reduce((acc, item) => acc + item.views, 0);
 
-        console.log('✅ Using FILTERED BigQuery data for custom range (excluding last 3 days EST):', {
+        console.log('✅ Using FILTERED BigQuery data for custom range (excluding last 3 days Eastern Time):', {
           dailyTotalsPoints: viewsData.length,
           chartDataPoints: chartData.length,
           totalViews: totalViews.toLocaleString(),
@@ -664,7 +669,7 @@ const Analytics = () => {
             views: totalViews.toLocaleString(),
             chartPoints: chartData.length,
             isExcluded: isDateExcluded,
-            reason: isDateExcluded ? 'Date is within last 3 days EST' : 'Date is valid'
+            reason: isDateExcluded ? 'Date is within last 3 days Eastern Time' : 'Date is valid'
           });
         }
 
@@ -673,7 +678,7 @@ const Analytics = () => {
           .filter(item => item.time >= startDate && item.time <= endDate && item.time > cutoffDateString)
           .map(item => item.time);
         if (excludedDates.length > 0) {
-          console.log('📅 Excluded dates from custom range (last 3 days EST):', excludedDates);
+          console.log('📅 Excluded dates from custom range (last 3 days Eastern Time):', excludedDates);
         }
       } else {
         console.log('⚠️ No daily totals data in overview response for custom range');
