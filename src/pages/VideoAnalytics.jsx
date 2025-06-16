@@ -329,20 +329,152 @@ const VideoAnalytics = () => {
   if (loading) {
     return (
       <Layout>
-        <Box
-          sx={{
-            minHeight: "100vh",
-            bgcolor: "#1a1a1a",
-            color: "white",
-            p: 4,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <Box sx={{ textAlign: "center" }}>
-            <CircularProgress sx={{ color: "#E6B800", mb: 2 }} />
-            <Typography variant="h6">Loading video analytics...</Typography>
+        <Box sx={{
+          minHeight: '100vh',
+          background: 'transparent',
+          color: 'white',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          position: 'relative',
+          overflow: 'hidden',
+          '@keyframes float': {
+            '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+            '33%': { transform: 'translateY(-20px) rotate(120deg)' },
+            '66%': { transform: 'translateY(10px) rotate(240deg)' },
+          },
+          '@keyframes pulse': {
+            '0%, 100%': { transform: 'scale(1)', opacity: 0.8 },
+            '50%': { transform: 'scale(1.1)', opacity: 1 },
+          },
+          '@keyframes spin': {
+            '0%': { transform: 'rotate(0deg)' },
+            '100%': { transform: 'rotate(360deg)' },
+          },
+          '@keyframes wave': {
+            '0%, 100%': { transform: 'scaleY(1)' },
+            '50%': { transform: 'scaleY(1.5)' },
+          },
+          '@keyframes glow': {
+            '0%, 100%': { boxShadow: '0 0 20px rgba(102, 126, 234, 0.5)' },
+            '50%': { boxShadow: '0 0 40px rgba(102, 126, 234, 0.8), 0 0 60px rgba(118, 75, 162, 0.6)' },
+          },
+        }}>
+          {/* Animated Background Elements */}
+          <Box sx={{
+            position: 'absolute',
+            top: '20%',
+            left: '15%',
+            width: '80px',
+            height: '80px',
+            background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%)',
+            borderRadius: '20px',
+            animation: 'float 4s ease-in-out infinite',
+            animationDelay: '0s',
+          }} />
+
+          <Box sx={{
+            position: 'absolute',
+            top: '60%',
+            right: '20%',
+            width: '60px',
+            height: '60px',
+            background: 'linear-gradient(135deg, rgba(118, 75, 162, 0.4) 0%, rgba(102, 126, 234, 0.4) 100%)',
+            borderRadius: '50%',
+            animation: 'pulse 3s ease-in-out infinite',
+            animationDelay: '1s',
+          }} />
+
+          <Box sx={{
+            position: 'absolute',
+            bottom: '25%',
+            left: '25%',
+            width: '40px',
+            height: '40px',
+            background: 'rgba(102, 126, 234, 0.5)',
+            borderRadius: '8px',
+            animation: 'spin 6s linear infinite',
+            animationDelay: '2s',
+          }} />
+
+          {/* Main Loading Animation */}
+          <Box sx={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 4,
+            zIndex: 1,
+          }}>
+            {/* Animated Chart Icon */}
+            <Box sx={{
+              position: 'relative',
+              width: '120px',
+              height: '120px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '30px',
+              border: '2px solid rgba(102, 126, 234, 0.3)',
+              animation: 'glow 2s ease-in-out infinite',
+            }}>
+              {/* Animated Bars */}
+              <Box sx={{ display: 'flex', alignItems: 'end', gap: 1 }}>
+                {[1, 2, 3, 4, 5].map((bar, index) => (
+                  <Box
+                    key={bar}
+                    sx={{
+                      width: '8px',
+                      height: `${20 + (index * 8)}px`,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '4px',
+                      animation: 'wave 1.5s ease-in-out infinite',
+                      animationDelay: `${index * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
+
+            {/* Loading Text */}
+            <Box sx={{ textAlign: 'center' }}>
+              <Typography variant="h4" sx={{
+                fontWeight: 700,
+                mb: 2,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
+                Loading Video Analytics
+              </Typography>
+
+              <Typography variant="body1" sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                mb: 3,
+                fontSize: '16px',
+              }}>
+                Preparing your video insights...
+              </Typography>
+
+              {/* Animated Dots */}
+              <Box sx={{ display: 'flex', justifyContent: 'center', gap: 1 }}>
+                {[1, 2, 3].map((dot, index) => (
+                  <Box
+                    key={dot}
+                    sx={{
+                      width: '12px',
+                      height: '12px',
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '50%',
+                      animation: 'pulse 1.4s ease-in-out infinite',
+                      animationDelay: `${index * 0.2}s`,
+                    }}
+                  />
+                ))}
+              </Box>
+            </Box>
           </Box>
         </Box>
       </Layout>
@@ -384,48 +516,100 @@ const VideoAnalytics = () => {
       <Box
         sx={{
           minHeight: "100vh",
-          bgcolor: "#1a1a1a",
+          background: 'transparent',
           color: "white",
-          p: 4,
+          p: 0,
         }}
       >
-        {/* Header */}
-        <Box sx={{ mb: 4 }}>
-          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 2 }}>
+        {/* Modern Header */}
+        <Box sx={{
+          p: 3,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            bottom: -1,
+            left: 24,
+            width: '60px',
+            height: '2px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '2px',
+          }
+        }}>
+          <Box sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}>
             <IconButton
               onClick={() => navigate("/content")}
-              sx={{ color: "#888" }}
+              sx={{
+                color: "rgba(255, 255, 255, 0.7)",
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(10px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  background: 'rgba(102, 126, 234, 0.1)',
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                }
+              }}
             >
               <ArrowBackIcon />
             </IconButton>
-            <Typography variant="h4" sx={{ color: "white", fontWeight: 600 }}>
-              Video analytics
+            <Typography variant="h4" sx={{
+              color: "white",
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Video Analytics
             </Typography>
           </Box>
 
-          {/* Tabs */}
+          {/* Modern Tabs */}
           <Tabs
             value={tabValue}
             onChange={(_, newValue) => setTabValue(newValue)}
             sx={{
               "& .MuiTab-root": {
-                color: "#888",
+                color: "rgba(255, 255, 255, 0.6)",
                 textTransform: "none",
                 fontSize: "16px",
-                fontWeight: 500,
+                fontWeight: 600,
+                borderRadius: '12px',
+                margin: '0 4px',
+                minHeight: '48px',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                }
               },
-              "& .Mui-selected": { color: "white !important" },
-              "& .MuiTabs-indicator": { backgroundColor: "white" },
+              "& .Mui-selected": {
+                color: "white !important",
+                background: 'rgba(102, 126, 234, 0.1) !important',
+                border: '1px solid rgba(102, 126, 234, 0.3) !important',
+              },
+              "& .MuiTabs-indicator": {
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                height: '3px',
+                borderRadius: '2px',
+              },
             }}
           >
             <Tab label="Overview" />
-
             <Tab label="Engagement" />
           </Tabs>
 
-          {/* Date Range Filter */}
+          {/* Modern Date Range Filter */}
           <Box sx={{ mt: 3, display: "flex", alignItems: "center", gap: 2 }}>
-            <Typography variant="body2" sx={{ color: "#888" }}>
+            <Typography variant="body2" sx={{
+              color: "rgba(255, 255, 255, 0.7)",
+              fontWeight: 600,
+            }}>
               Date range:
             </Typography>
             <FormControl size="small">
@@ -434,12 +618,20 @@ const VideoAnalytics = () => {
                 onChange={handleDateRangeChange}
                 sx={{
                   color: "white",
-                  bgcolor: "#333",
-                  border: "1px solid #444",
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: '12px',
                   minWidth: 150,
+                  transition: 'all 0.2s ease-in-out',
                   "& .MuiOutlinedInput-notchedOutline": { border: "none" },
-                  "& .MuiSelect-icon": { color: "#888" },
-                  "&:hover": { bgcolor: "#444" },
+                  "& .MuiSelect-icon": { color: "rgba(255, 255, 255, 0.7)" },
+                  "&:hover": {
+                    background: 'rgba(102, 126, 234, 0.1)',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                  },
                 }}
               >
                 <MenuItem value="7">Last 7 days</MenuItem>
@@ -453,10 +645,22 @@ const VideoAnalytics = () => {
             </FormControl>
           </Box>
 
-          {/* Custom Date Range Picker */}
+          {/* Modern Custom Date Range Picker */}
           {showCustomDatePicker && (
-            <Box sx={{ mt: 2, p: 3, bgcolor: "#2A2A2A", borderRadius: 2, border: "1px solid #333" }}>
-              <Typography variant="h6" sx={{ color: "white", mb: 2 }}>
+            <Box sx={{
+              mt: 2,
+              p: 3,
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              borderRadius: '16px',
+              border: "1px solid rgba(255, 255, 255, 0.1)",
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+            }}>
+              <Typography variant="h6" sx={{
+                color: "white",
+                mb: 2,
+                fontWeight: 600,
+              }}>
                 Select Custom Date Range
               </Typography>
               <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
@@ -469,9 +673,10 @@ const VideoAnalytics = () => {
                     value={customStartDate}
                     onChange={(e) => setCustomStartDate(e.target.value)}
                     style={{
-                      backgroundColor: "#333",
-                      border: "1px solid #444",
-                      borderRadius: "4px",
+                      background: "rgba(255, 255, 255, 0.08)",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: "8px",
                       color: "white",
                       padding: "8px 12px",
                       fontSize: "14px",
@@ -487,9 +692,10 @@ const VideoAnalytics = () => {
                     value={customEndDate}
                     onChange={(e) => setCustomEndDate(e.target.value)}
                     style={{
-                      backgroundColor: "#333",
-                      border: "1px solid #444",
-                      borderRadius: "4px",
+                      background: "rgba(255, 255, 255, 0.08)",
+                      backdropFilter: "blur(10px)",
+                      border: "1px solid rgba(255, 255, 255, 0.15)",
+                      borderRadius: "8px",
                       color: "white",
                       padding: "8px 12px",
                       fontSize: "14px",
@@ -502,10 +708,23 @@ const VideoAnalytics = () => {
                     onClick={handleApplyCustomRange}
                     disabled={!customStartDate || !customEndDate}
                     sx={{
-                      bgcolor: "#ffb300",
-                      color: "black",
-                      "&:hover": { bgcolor: "#e6a000" },
-                      "&:disabled": { bgcolor: "#666", color: "#999" },
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      color: "white",
+                      borderRadius: '12px',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                      transition: 'all 0.2s ease-in-out',
+                      "&:hover": {
+                        background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 6px 16px rgba(102, 126, 234, 0.4)',
+                      },
+                      "&:disabled": {
+                        background: "rgba(255, 255, 255, 0.1)",
+                        color: "rgba(255, 255, 255, 0.3)",
+                        boxShadow: 'none',
+                      },
                     }}
                   >
                     Apply
@@ -514,9 +733,16 @@ const VideoAnalytics = () => {
                     variant="outlined"
                     onClick={() => setShowCustomDatePicker(false)}
                     sx={{
-                      color: "#888",
-                      borderColor: "#444",
-                      "&:hover": { borderColor: "#666" },
+                      color: "rgba(255, 255, 255, 0.7)",
+                      borderColor: "rgba(255, 255, 255, 0.2)",
+                      borderRadius: '12px',
+                      fontWeight: 600,
+                      textTransform: 'none',
+                      transition: 'all 0.2s ease-in-out',
+                      "&:hover": {
+                        borderColor: "rgba(255, 255, 255, 0.4)",
+                        background: 'rgba(255, 255, 255, 0.05)',
+                      },
                     }}
                   >
                     Cancel
@@ -527,6 +753,7 @@ const VideoAnalytics = () => {
           )}
         </Box>
 
+        <Box sx={{ p: 3 }}>
         {/* Performance Summary */}
         {videoData.views > 0 && (
           <Box sx={{ textAlign: "center", mb: 6 }}>
@@ -556,10 +783,17 @@ const VideoAnalytics = () => {
             {/* Overview Tab - Views Chart Section */}
             <Card
               sx={{
-                bgcolor: "#2A2A2A",
-                border: "1px solid #333",
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(20px)',
+                border: "1px solid rgba(255, 255, 255, 0.1)",
                 mb: 4,
-                borderRadius: 2,
+                borderRadius: '20px',
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+                }
               }}
             >
               <CardContent sx={{ p: 4 }}>
@@ -605,8 +839,10 @@ const VideoAnalytics = () => {
                 <Box
                   sx={{
                     height: 300,
-                    bgcolor: "#1a1a1a",
-                    borderRadius: 1,
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(255, 255, 255, 0.08)',
+                    borderRadius: '12px',
                     position: "relative",
                     mb: 3,
                     p: 2,
@@ -653,10 +889,12 @@ const VideoAnalytics = () => {
                         />
                         <Tooltip
                           contentStyle={{
-                            backgroundColor: "#333",
-                            border: "1px solid #555",
-                            borderRadius: "4px",
+                            background: "rgba(255, 255, 255, 0.1)",
+                            backdropFilter: "blur(20px)",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            borderRadius: "12px",
                             color: "white",
+                            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
                           }}
                           formatter={(value) => [formatNumber(value), "Views"]}
                           labelFormatter={(label) => `Date: ${label}`}
@@ -724,10 +962,19 @@ const VideoAnalytics = () => {
                 <Button
                   variant="outlined"
                   sx={{
-                    color: "#888",
-                    borderColor: "#444",
+                    color: "rgba(255, 255, 255, 0.7)",
+                    borderColor: "rgba(255, 255, 255, 0.2)",
+                    borderRadius: '12px',
+                    fontWeight: 600,
                     textTransform: "none",
-                    "&:hover": { borderColor: "#666" },
+                    transition: 'all 0.2s ease-in-out',
+                    "&:hover": {
+                      borderColor: "rgba(102, 126, 234, 0.5)",
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      color: 'white',
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                    },
                   }}
                 >
                   See more
@@ -738,10 +985,17 @@ const VideoAnalytics = () => {
             {/* Audience Retention Chart Card */}
             <Card
               sx={{
-                bgcolor: "#2A2A2A",
-                border: "1px solid #333",
-                borderRadius: 2,
+                background: 'rgba(255, 255, 255, 0.05)',
+                backdropFilter: 'blur(20px)',
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: '20px',
                 mb: 3,
+                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                transition: 'all 0.2s ease-in-out',
+                '&:hover': {
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+                }
               }}
             >
               <CardContent sx={{ p: 4 }}>
@@ -799,10 +1053,17 @@ const VideoAnalytics = () => {
                       <Box
                         sx={{
                           p: 3,
-                          bgcolor: "#3a3a3a",
-                          borderRadius: 2,
-                          border: "1px solid #555",
-                          textAlign: "center"
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '16px',
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          textAlign: "center",
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                          }
                         }}
                       >
                         <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
@@ -823,10 +1084,17 @@ const VideoAnalytics = () => {
                       <Box
                         sx={{
                           p: 3,
-                          bgcolor: "#3a3a3a",
-                          borderRadius: 2,
-                          border: "1px solid #555",
-                          textAlign: "center"
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '16px',
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          textAlign: "center",
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                          }
                         }}
                       >
                         <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
@@ -847,10 +1115,17 @@ const VideoAnalytics = () => {
                       <Box
                         sx={{
                           p: 3,
-                          bgcolor: "#3a3a3a",
-                          borderRadius: 2,
-                          border: "1px solid #555",
-                          textAlign: "center"
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '16px',
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          textAlign: "center",
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                          }
                         }}
                       >
                         <Typography variant="body2" sx={{ color: "#bbb", mb: 1 }}>
@@ -886,12 +1161,13 @@ const VideoAnalytics = () => {
                     <Box
                       sx={{
                         height: 400,
-                        bgcolor: "#1a1a1a",
-                        borderRadius: 2,
+                        background: 'rgba(255, 255, 255, 0.03)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '12px',
                         position: "relative",
                         mb: 3,
                         p: 3,
-                        border: "1px solid #333",
+                        border: "1px solid rgba(255, 255, 255, 0.08)",
                       }}
                     >
                       {Array.isArray(videoData.retentionData) && videoData.retentionData.length > 0 ? (
@@ -1017,11 +1293,12 @@ const VideoAnalytics = () => {
                             />
                             <Tooltip
                               contentStyle={{
-                                backgroundColor: "#1a1a1a",
-                                border: "1px solid #555",
-                                borderRadius: "8px",
+                                background: "rgba(255, 255, 255, 0.1)",
+                                backdropFilter: "blur(20px)",
+                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                borderRadius: "12px",
                                 color: "white",
-                                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
                                 padding: "12px",
                                 fontSize: "12px"
                               }}
@@ -1125,8 +1402,10 @@ const VideoAnalytics = () => {
                         alignItems: "center",
                         justifyContent: "center",
                         p: 2,
-                        bgcolor: "#2a2a2a",
-                        borderRadius: 1,
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        backdropFilter: 'blur(10px)',
+                        borderRadius: '12px',
+                        border: "1px solid rgba(255, 255, 255, 0.15)",
                       }}
                     >
                       <Box
@@ -1201,9 +1480,16 @@ const VideoAnalytics = () => {
                           alignItems: "flex-start",
                           gap: 2,
                           p: 3,
-                          bgcolor: "#2a2a2a",
-                          borderRadius: 2,
-                          border: "1px solid #333",
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '16px',
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                          }
                         }}
                       >
                         <Box
@@ -1255,9 +1541,16 @@ const VideoAnalytics = () => {
                           alignItems: "flex-start",
                           gap: 2,
                           p: 3,
-                          bgcolor: "#2a2a2a",
-                          borderRadius: 2,
-                          border: "1px solid #333",
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          backdropFilter: 'blur(10px)',
+                          borderRadius: '16px',
+                          border: "1px solid rgba(255, 255, 255, 0.15)",
+                          transition: 'all 0.2s ease-in-out',
+                          '&:hover': {
+                            transform: 'translateY(-2px)',
+                            boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                          }
                         }}
                       >
                         <Box
@@ -1307,9 +1600,16 @@ const VideoAnalytics = () => {
               {/* Video Details - Horizontal Card */}
               <Card
                 sx={{
-                  bgcolor: "#2A2A2A",
-                  border: "1px solid #333",
-                  borderRadius: 2,
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(20px)',
+                  border: "1px solid rgba(255, 255, 255, 0.1)",
+                  borderRadius: '20px',
+                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+                  }
                 }}
               >
                 <CardContent sx={{ p: 4 }}>
@@ -1805,10 +2105,17 @@ const VideoAnalytics = () => {
         {tabValue === 2 && (
           <Card
             sx={{
-              bgcolor: "#2A2A2A",
-              border: "1px solid #333",
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: "1px solid rgba(255, 255, 255, 0.1)",
               mb: 4,
-              borderRadius: 2,
+              borderRadius: '20px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+              }
             }}
           >
             <CardContent sx={{ p: 4 }}>
@@ -1827,8 +2134,20 @@ const VideoAnalytics = () => {
                   mb: 4,
                 }}
               >
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Impressions
                   </Typography>
                   <Typography
@@ -1839,8 +2158,20 @@ const VideoAnalytics = () => {
                   </Typography>
                 </Box>
 
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Unique viewers
                   </Typography>
                   <Typography
@@ -1864,10 +2195,17 @@ const VideoAnalytics = () => {
         {tabValue === 1 && (
           <Card
             sx={{
-              bgcolor: "#2A2A2A",
-              border: "1px solid #333",
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: "1px solid rgba(255, 255, 255, 0.1)",
               mb: 4,
-              borderRadius: 2,
+              borderRadius: '20px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+              }
             }}
           >
             <CardContent sx={{ p: 4 }}>
@@ -1886,8 +2224,20 @@ const VideoAnalytics = () => {
                   mb: 4,
                 }}
               >
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Likes
                   </Typography>
                   <Typography
@@ -1901,8 +2251,20 @@ const VideoAnalytics = () => {
                     engagement
                   </Typography>
                 </Box>
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Comments
                   </Typography>
                   <Typography
@@ -1916,8 +2278,20 @@ const VideoAnalytics = () => {
                     comment rate
                   </Typography>
                 </Box>
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Shares
                   </Typography>
                   <Typography
@@ -1938,15 +2312,24 @@ const VideoAnalytics = () => {
             </CardContent>
           </Card>
         )}
+        </Box>
 
         {/* Audience Tab */}
         {tabValue === 3 && (
+          <Box sx={{ p: 3 }}>
           <Card
             sx={{
-              bgcolor: "#2A2A2A",
-              border: "1px solid #333",
+              background: 'rgba(255, 255, 255, 0.05)',
+              backdropFilter: 'blur(20px)',
+              border: "1px solid rgba(255, 255, 255, 0.1)",
               mb: 4,
-              borderRadius: 2,
+              borderRadius: '20px',
+              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+              transition: 'all 0.2s ease-in-out',
+              '&:hover': {
+                transform: 'translateY(-2px)',
+                boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+              }
             }}
           >
             <CardContent sx={{ p: 4 }}>
@@ -1965,9 +2348,33 @@ const VideoAnalytics = () => {
                   mb: 4,
                 }}
               >
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}></Box>
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}></Box>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     New viewers
                   </Typography>
                   <Typography
@@ -1977,8 +2384,20 @@ const VideoAnalytics = () => {
                     {(70 - (Math.random() * 30 + 40)).toFixed(1)}%
                   </Typography>
                 </Box>
-                <Box sx={{ p: 3, bgcolor: "#1a1a1a", borderRadius: 1 }}>
-                  <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
+                <Box sx={{
+                  p: 3,
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '16px',
+                  border: "1px solid rgba(255, 255, 255, 0.15)",
+                  transition: 'all 0.2s ease-in-out',
+                  '&:hover': {
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.15)',
+                    border: "1px solid rgba(102, 126, 234, 0.3)",
+                  }
+                }}>
+                  <Typography variant="body2" sx={{ color: "rgba(255, 255, 255, 0.7)", mb: 1 }}>
                     Subscribers gained
                   </Typography>
                   <Typography
@@ -1997,6 +2416,7 @@ const VideoAnalytics = () => {
               </Typography>
             </CardContent>
           </Card>
+          </Box>
         )}
       </Box>
     </Layout>

@@ -36,3 +36,4 @@ dist-ssr
 
 # Build outputs
 build/
+admin_dashboard.json

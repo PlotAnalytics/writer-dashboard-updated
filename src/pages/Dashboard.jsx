@@ -11,10 +11,10 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
-import FirecrackerEffects from '../components/FirecrackerEffects.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
 import axios from 'axios';
+import '../styles/firecracker.css';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [googleDocLink, setGoogleDocLink] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [isInitialized, setIsInitialized] = useState(false);
 
   // Enhanced form state from reference
   const [tropeList, setTropeList] = useState([]);
@@ -167,28 +168,39 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch writer data - Matching WriterDashboard.jsx
+  // Fetch writer data - Enhanced with better error handling
   const fetchWriterData = async () => {
     try {
-      const username = user?.username || localStorage.getItem('username');
-      if (!username) {
-        setError('Username not found in local storage.');
+      // First check if we have user data from AuthContext
+      if (!user?.username) {
+        console.log('⚠️ No user data available yet, waiting for authentication...');
         return;
       }
 
-      const response = await axios.get(`/api/getWriter?username=${username}`);
+      console.log('🔍 Fetching writer data for username:', user.username);
+      const response = await axios.get(`/api/getWriter?username=${user.username}`);
+      console.log('✅ Writer data fetched:', response.data);
       setWriter(response.data);
       fetchStructures();
       fetchScripts(response.data.id);
+      setIsInitialized(true);
     } catch (error) {
-      console.error('Error fetching writer data:', error);
-      // Fallback to mock data when API is not available
-      setWriter({
-        id: 1,
-        name: username || 'Test Writer',
+      console.error('❌ Error fetching writer data:', error);
+
+      // Enhanced fallback with user data from AuthContext
+      const fallbackWriter = {
+        id: user?.writerId || localStorage.getItem('writerId') || 74,
+        name: user?.name || user?.username || 'Test Writer',
         access_advanced_types: true,
-        username: username || 'test_user'
-      });
+        username: user?.username || 'test_user'
+      };
+
+      console.log('🔄 Using fallback writer data:', fallbackWriter);
+      setWriter(fallbackWriter);
+
+      // Still try to fetch scripts with fallback writer ID
+      fetchScripts(fallbackWriter.id);
+      setIsInitialized(true);
     }
   };
 
@@ -254,10 +266,13 @@ const Dashboard = () => {
     fetchTropes();
   }, []);
 
-  // useEffect for writer data - Matching WriterDashboard.jsx
+  // useEffect for writer data - Enhanced with proper dependency handling
   useEffect(() => {
-    fetchWriterData();
-  }, [user]);
+    if (user && user.username && !loading && !isInitialized) {
+      console.log('🚀 User authenticated, fetching writer data...');
+      fetchWriterData();
+    }
+  }, [user, loading, isInitialized]);
 
   // WebSocket listener for real-time status updates
   useEffect(() => {
@@ -294,8 +309,14 @@ const Dashboard = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    console.log('📝 Form submission attempted');
+    console.log('👤 Current user:', user);
+    console.log('✍️ Current writer:', writer);
+    console.log('🔐 Auth loading state:', loading);
+
     if (!writer) {
-      setError('Writer information not loaded yet.');
+      console.error('❌ Writer information not available');
+      setError('Writer information not loaded yet. Please wait a moment and try again.');
       return;
     }
 
@@ -388,233 +409,13 @@ const Dashboard = () => {
           overflow: 'hidden',
         }}>
           {/* Firecracker Effects Container */}
-          <Box sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            pointerEvents: 'none',
-            zIndex: 1,
-          }}>
-            {/* Firecracker 1 - Top Left */}
-            <Box sx={{
-              position: 'absolute',
-              top: '10%',
-              left: '15%',
-              width: '12px',
-              height: '12px',
-              borderRadius: '50%',
-              background: '#FFD700',
-              opacity: 0,
-              animation: 'firecracker1 3s ease-out forwards',
-              '@keyframes firecracker1': {
-                '0%': { opacity: 0, transform: 'scale(0)' },
-                '10%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 30px #FFD700' },
-                '30%': {
-                  opacity: 1,
-                  transform: 'scale(3)',
-                  boxShadow: '0 0 60px #FFD700, 0 0 80px #FF6B35, 0 0 100px #FF1744'
-                },
-                '60%': { opacity: 0.8, transform: 'scale(2)' },
-                '99%': { opacity: 0, transform: 'scale(0)' },
-                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
-              },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '-8px',
-                left: '-8px',
-                right: '-8px',
-                bottom: '-8px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%)',
-                opacity: 0,
-                animation: 'sparkle1 3s ease-out forwards',
-                '@keyframes sparkle1': {
-                  '0%': { opacity: 0, transform: 'scale(0)' },
-                  '20%': { opacity: 1, transform: 'scale(4)' },
-                  '99%': { opacity: 0, transform: 'scale(8)' },
-                  '100%': { opacity: 0, transform: 'scale(8)', display: 'none' }
-                }
-              }
-            }} />
-
-            {/* Firecracker 2 - Top Right */}
-            <Box sx={{
-              position: 'absolute',
-              top: '15%',
-              right: '20%',
-              width: '10px',
-              height: '10px',
-              borderRadius: '50%',
-              background: '#FF6B35',
-              opacity: 0,
-              animation: 'firecracker2 3.5s ease-out 1s forwards',
-              '@keyframes firecracker2': {
-                '0%': { opacity: 0, transform: 'scale(0)' },
-                '15%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 25px #FF6B35' },
-                '35%': {
-                  opacity: 1,
-                  transform: 'scale(2.5)',
-                  boxShadow: '0 0 50px #FF6B35, 0 0 70px #FFD700, 0 0 90px #FF1744'
-                },
-                '65%': { opacity: 0.7, transform: 'scale(1.5)' },
-                '99%': { opacity: 0, transform: 'scale(0)' },
-                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
-              },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '-6px',
-                left: '-6px',
-                right: '-6px',
-                bottom: '-6px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,107,53,0.8) 0%, transparent 70%)',
-                opacity: 0,
-                animation: 'sparkle2 3.5s ease-out 1s forwards',
-                '@keyframes sparkle2': {
-                  '0%': { opacity: 0, transform: 'scale(0)' },
-                  '25%': { opacity: 1, transform: 'scale(3)' },
-                  '99%': { opacity: 0, transform: 'scale(7)' },
-                  '100%': { opacity: 0, transform: 'scale(7)', display: 'none' }
-                }
-              }
-            }} />
-
-            {/* Firecracker 3 - Bottom Left */}
-            <Box sx={{
-              position: 'absolute',
-              bottom: '20%',
-              left: '10%',
-              width: '14px',
-              height: '14px',
-              borderRadius: '50%',
-              background: '#FF1744',
-              opacity: 0,
-              animation: 'firecracker3 4s ease-out 2s forwards',
-              '@keyframes firecracker3': {
-                '0%': { opacity: 0, transform: 'scale(0)' },
-                '20%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 35px #FF1744' },
-                '40%': {
-                  opacity: 1,
-                  transform: 'scale(3.5)',
-                  boxShadow: '0 0 70px #FF1744, 0 0 90px #FFD700, 0 0 110px #FF6B35'
-                },
-                '70%': { opacity: 0.8, transform: 'scale(2)' },
-                '99%': { opacity: 0, transform: 'scale(0)' },
-                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
-              },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '-10px',
-                left: '-10px',
-                right: '-10px',
-                bottom: '-10px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,23,68,0.9) 0%, transparent 70%)',
-                opacity: 0,
-                animation: 'sparkle3 4s ease-out 2s forwards',
-                '@keyframes sparkle3': {
-                  '0%': { opacity: 0, transform: 'scale(0)' },
-                  '30%': { opacity: 1, transform: 'scale(4)' },
-                  '99%': { opacity: 0, transform: 'scale(9)' },
-                  '100%': { opacity: 0, transform: 'scale(9)', display: 'none' }
-                }
-              }
-            }} />
-
-            {/* Firecracker 4 - Bottom Right */}
-            <Box sx={{
-              position: 'absolute',
-              bottom: '25%',
-              right: '15%',
-              width: '16px',
-              height: '16px',
-              borderRadius: '50%',
-              background: '#9C27B0',
-              opacity: 0,
-              animation: 'firecracker4 3.8s ease-out 3s forwards',
-              '@keyframes firecracker4': {
-                '0%': { opacity: 0, transform: 'scale(0)' },
-                '12%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 40px #9C27B0' },
-                '35%': {
-                  opacity: 1,
-                  transform: 'scale(4)',
-                  boxShadow: '0 0 80px #9C27B0, 0 0 100px #FFD700, 0 0 120px #FF6B35'
-                },
-                '65%': { opacity: 0.9, transform: 'scale(2.5)' },
-                '99%': { opacity: 0, transform: 'scale(0)' },
-                '100%': { opacity: 0, transform: 'scale(0)', display: 'none' }
-              },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '-12px',
-                left: '-12px',
-                right: '-12px',
-                bottom: '-12px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(156,39,176,0.9) 0%, transparent 70%)',
-                opacity: 0,
-                animation: 'sparkle4 3.8s ease-out 3s forwards',
-                '@keyframes sparkle4': {
-                  '0%': { opacity: 0, transform: 'scale(0)' },
-                  '25%': { opacity: 1, transform: 'scale(5)' },
-                  '99%': { opacity: 0, transform: 'scale(10)' },
-                  '100%': { opacity: 0, transform: 'scale(10)', display: 'none' }
-                }
-              }
-            }} />
-
-            {/* Firecracker 5 - Center - Green */}
-            <Box sx={{
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%)',
-              width: '18px',
-              height: '18px',
-              borderRadius: '50%',
-              background: '#00E676',
-              opacity: 0,
-              animation: 'firecracker5 4.2s ease-out 4s forwards',
-              '@keyframes firecracker5': {
-                '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
-                '12%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 45px #00E676' },
-                '35%': {
-                  opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(4.5)',
-                  boxShadow: '0 0 90px #00E676, 0 0 120px #FFD700, 0 0 150px #FF1744'
-                },
-                '65%': { opacity: 0.7, transform: 'translate(-50%, -50%) scale(2.5)' },
-                '99%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
-                '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)', display: 'none' }
-              },
-              '&::before': {
-                content: '""',
-                position: 'absolute',
-                top: '-12px',
-                left: '-12px',
-                right: '-12px',
-                bottom: '-12px',
-                borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(0,230,118,0.9) 0%, transparent 70%)',
-                opacity: 0,
-                animation: 'sparkle5 4.2s ease-out 4s forwards',
-                '@keyframes sparkle5': {
-                  '0%': { opacity: 0, transform: 'scale(0)' },
-                  '25%': { opacity: 1, transform: 'scale(5)' },
-                  '99%': { opacity: 0, transform: 'scale(10)' },
-                  '100%': { opacity: 0, transform: 'scale(10)', display: 'none' }
-                }
-              }
-            }} />
-
-
-          </Box>
+          <div className="firecracker-container">
+            <div className="firecracker firecracker-1"></div>
+            <div className="firecracker firecracker-2"></div>
+            <div className="firecracker firecracker-3"></div>
+            <div className="firecracker firecracker-4"></div>
+            <div className="firecracker firecracker-5"></div>
+          </div>
 
           <Typography variant="h4" fontWeight="700" sx={{
             color: 'white',
@@ -690,6 +491,22 @@ const Dashboard = () => {
                 </Alert>
               )}
 
+              {!writer && !error && (
+                <Alert
+                  severity="info"
+                  sx={{
+                    mb: 3,
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(102, 126, 234, 0.05) 100%)',
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    borderRadius: '16px',
+                    backdropFilter: 'blur(10px)',
+                    '& .MuiAlert-message': { color: '#667eea' }
+                  }}
+                >
+                  Loading writer information...
+                </Alert>
+              )}
+
               <Box
                 component="form"
                 onSubmit={handleSubmit}
@@ -713,10 +530,10 @@ const Dashboard = () => {
                 }}
               >
                 {/* Modern Title Field */}
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 2.5 }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.5,
+                    mb: 1.2,
                     fontWeight: '500',
                     fontSize: '13px'
                   }}>
@@ -760,10 +577,10 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Modern Type Section */}
-                <Box sx={{ mb: 3 }}>
+                <Box sx={{ mb: 2.5 }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.5,
+                    mb: 1.2,
                     fontWeight: '500',
                     fontSize: '13px'
                   }}>
@@ -855,55 +672,62 @@ const Dashboard = () => {
                       </Box>
                     )}
                   </Box>
+
+                  {/* Trope Description Box - Below the Type section */}
+                  {prefixType === "Trope" && (
+                    <Box sx={{ mb: 2.5, mt: 1.5 }}>
+                      <Box sx={{
+                        width: '100%',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        padding: '12px 14px',
+                        minHeight: '38px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                        transition: 'all 0.2s ease',
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.2)',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                        },
+                      }}>
+                        <Typography variant="body2" sx={{
+                          color: prefixType === "Trope" && prefixNumber !== "Choose"
+                            ? 'rgba(255, 255, 255, 0.9)'
+                            : 'rgba(255, 255, 255, 0.5)',
+                          fontSize: '14px',
+                          fontStyle: prefixType === "Trope" && prefixNumber !== "Choose" ? 'normal' : 'italic',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                          width: '100%',
+                        }}>
+                          {prefixType === "Trope" && prefixNumber !== "Choose"
+                            ? `${tropeList[prefixNumber - 1] || 'Loading...'}`
+                            : "Select a trope number to see description"}
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
                 </Box>
 
-                {/* Modern Trope Display Box */}
-                <Box sx={{ mb: 3 }}>
-                  <Box
-                    sx={{
-                      background: 'rgba(102, 126, 234, 0.05)',
-                      border: '1px solid rgba(102, 126, 234, 0.15)',
-                      borderRadius: '8px',
-                      padding: '12px 16px',
-                      fontSize: '13px',
-                      width: '100%',
-                      minHeight: '44px',
-                      display: 'flex',
-                      alignItems: 'center',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      color: 'rgba(255, 255, 255, 0.7)',
-                      fontWeight: '400',
-                      backdropFilter: 'blur(5px)',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        background: 'rgba(102, 126, 234, 0.08)',
-                        color: 'rgba(255, 255, 255, 0.8)',
-                      }
-                    }}
-                  >
-                    {prefixType === "Trope" && prefixNumber !== "Choose"
-                      ? `${tropeList[prefixNumber - 1]}`
-                      : prefixType === "Trope"
-                        ? "Select a trope number to see description"
-                        : "Trope description will appear here"}
-                  </Box>
-                </Box>
-
-                {/* Modern Structure Field */}
-                <Box sx={{ mb: 3 }}>
+                {/* Structure Selection */}
+                <Box sx={{ mb: 2.5 }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.5,
+                    mb: 1.2,
                     fontWeight: '500',
                     fontSize: '13px'
                   }}>
-                    Structure
+                    Structure (Optional)
                   </Typography>
-                  <FormControl fullWidth size="medium">
+                  <FormControl size="medium" fullWidth>
                     <Select
-                      value={selectedStructure || ""}
+                      value={selectedStructure}
                       onChange={(e) => setSelectedStructure(e.target.value)}
                       displayEmpty
                       sx={{
@@ -931,7 +755,7 @@ const Dashboard = () => {
                     >
                       <MenuItem value="">-- No structure selected --</MenuItem>
                       {structureList.map((structure) => (
-                        <MenuItem key={structure.structure_id} value={structure.name}>
+                        <MenuItem key={structure.structure_id || structure.id} value={structure.name}>
                           {structure.name}
                         </MenuItem>
                       ))}
@@ -939,11 +763,11 @@ const Dashboard = () => {
                   </FormControl>
                 </Box>
 
-                {/* Modern Google Doc Link Field */}
-                <Box sx={{ mb: 3 }}>
+                {/* Google Doc Link */}
+                <Box sx={{ mb: 2.5 }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.5,
+                    mb: 1.2,
                     fontWeight: '500',
                     fontSize: '13px'
                   }}>
@@ -951,8 +775,8 @@ const Dashboard = () => {
                   </Typography>
                   <TextField
                     fullWidth
-                    placeholder="https://docs.google.com/document/d/..."
                     type="url"
+                    placeholder="https://docs.google.com/document/d/..."
                     value={googleDocLink}
                     onChange={(e) => setGoogleDocLink(e.target.value)}
                     required
@@ -991,7 +815,7 @@ const Dashboard = () => {
                   type="submit"
                   variant="contained"
                   fullWidth
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || !writer}
                   sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
@@ -1015,7 +839,7 @@ const Dashboard = () => {
                     },
                   }}
                 >
-                  {isSubmitting ? 'Submitting...' : 'Submit Script'}
+                  {isSubmitting ? 'Submitting...' : !writer ? 'Loading...' : 'Submit Script'}
                 </Button>
               </Box>
             </Box>

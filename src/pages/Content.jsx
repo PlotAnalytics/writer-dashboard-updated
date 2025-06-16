@@ -537,7 +537,13 @@ const Content = () => {
               input: {
                 startAdornment: (
                   <InputAdornment position="start">
-                    <SearchIcon sx={{ color: '#ffb300' }} />
+                    <SearchIcon sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                      color: '#667eea' // fallback for browsers that don't support gradient text
+                    }} />
                   </InputAdornment>
                 ),
               },
@@ -545,22 +551,23 @@ const Content = () => {
             sx={{
               maxWidth: 500,
               '& .MuiOutlinedInput-root': {
-                bgcolor: 'rgba(255, 179, 0, 0.05)',
-                border: '1px solid rgba(255, 179, 0, 0.3)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                backdropFilter: 'blur(5px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
                 borderRadius: '12px',
                 transition: 'all 0.2s ease-in-out',
                 '& fieldset': { border: 'none' },
                 '&:hover': {
-                  bgcolor: 'rgba(255, 179, 0, 0.08)',
-                  borderColor: 'rgba(255, 179, 0, 0.5)',
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.06)',
                   transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(255, 179, 0, 0.15)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
                 },
                 '&.Mui-focused': {
-                  bgcolor: 'rgba(255, 179, 0, 0.1)',
-                  borderColor: '#ffb300',
+                  border: '1px solid rgba(102, 126, 234, 0.5)',
+                  background: 'rgba(255, 255, 255, 0.08)',
                   transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 20px rgba(255, 179, 0, 0.25)',
+                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.25)',
                 },
               },
               '& .MuiInputBase-input': {
@@ -585,7 +592,18 @@ const Content = () => {
                     checked={isAllSelected}
                     indeterminate={isIndeterminate}
                     onChange={handleSelectAll}
-                    sx={{ color: '#888' }}
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      '&.Mui-checked': {
+                        color: '#667eea',
+                      },
+                      '&.MuiCheckbox-indeterminate': {
+                        color: '#667eea',
+                      },
+                      '&:hover': {
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                      }
+                    }}
                   />
                 </TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
@@ -688,8 +706,32 @@ const Content = () => {
               {loading ? (
                 <TableRow>
                   <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
-                    <CircularProgress sx={{ color: '#ffb300' }} />
-                    <Typography variant="body2" sx={{ color: '#888', mt: 2 }}>
+                    <CircularProgress sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '50%',
+                      '& .MuiCircularProgress-circle': {
+                        stroke: 'url(#gradient)',
+                      },
+                      '& svg': {
+                        filter: 'drop-shadow(0 0 8px rgba(102, 126, 234, 0.3))',
+                      }
+                    }} />
+                    <svg width="0" height="0">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#667eea" />
+                          <stop offset="100%" stopColor="#764ba2" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <Typography variant="body2" sx={{
+                      color: '#888',
+                      mt: 2,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent',
+                    }}>
                       Loading your content...
                     </Typography>
                   </TableCell>
@@ -731,7 +773,15 @@ const Content = () => {
                     <Checkbox
                       checked={isSelected(item.id)}
                       onChange={() => handleSelectItem(item.id)}
-                      sx={{ color: '#888' }}
+                      sx={{
+                        color: 'rgba(255, 255, 255, 0.4)',
+                        '&.Mui-checked': {
+                          color: '#667eea',
+                        },
+                        '&:hover': {
+                          backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                        }
+                      }}
                     />
                   </TableCell>
                   <TableCell sx={{ border: 'none', py: 2 }}>

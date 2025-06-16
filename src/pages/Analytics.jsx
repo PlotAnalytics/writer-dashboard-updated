@@ -42,6 +42,198 @@ const formatDate = (date) => {
     : "Invalid Date";
 };
 
+// Calendar Grid Component
+const CalendarGrid = ({ startDate, endDate, onDateSelect }) => {
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedStart, setSelectedStart] = useState(startDate);
+  const [selectedEnd, setSelectedEnd] = useState(endDate);
+  const [isSelecting, setIsSelecting] = useState(false);
+
+  const today = new Date();
+  const firstDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1);
+  const lastDayOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 0);
+  const startingDayOfWeek = firstDayOfMonth.getDay();
+  const daysInMonth = lastDayOfMonth.getDate();
+
+  const monthNames = [
+    'January', 'February', 'March', 'April', 'May', 'June',
+    'July', 'August', 'September', 'October', 'November', 'December'
+  ];
+
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const handleDateClick = (day) => {
+    // Create date in local timezone to avoid UTC conversion issues
+    const clickedDate = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+    // Format date manually to avoid timezone issues
+    const year = clickedDate.getFullYear();
+    const month = String(clickedDate.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateString = `${year}-${month}-${dayStr}`;
+
+    console.log('📅 Calendar: Clicked day', day, 'formatted as', dateString);
+
+    if (!isSelecting || !selectedStart) {
+      // First click - set start date
+      console.log('📅 Calendar: First click, setting start date to', dateString);
+      setSelectedStart(dateString);
+      setSelectedEnd(dateString);
+      setIsSelecting(true);
+    } else {
+      // Second click - set end date
+      const startDateObj = new Date(selectedStart);
+      if (clickedDate < startDateObj) {
+        // If clicked date is before start, swap them
+        console.log('📅 Calendar: Second click before start, swapping dates');
+        setSelectedStart(dateString);
+        setSelectedEnd(selectedStart);
+        onDateSelect(dateString, selectedStart);
+      } else {
+        console.log('📅 Calendar: Second click after start, setting end date');
+        setSelectedEnd(dateString);
+        onDateSelect(selectedStart, dateString);
+      }
+      setIsSelecting(false);
+    }
+  };
+
+  const isDateInRange = (day) => {
+    if (!selectedStart || !selectedEnd) return false;
+    // Create date string manually to avoid timezone issues
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateString = `${year}-${month}-${dayStr}`;
+
+    return dateString >= selectedStart && dateString <= selectedEnd;
+  };
+
+  const isDateSelected = (day) => {
+    // Create date string manually to avoid timezone issues
+    const year = currentMonth.getFullYear();
+    const month = String(currentMonth.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(day).padStart(2, '0');
+    const dateString = `${year}-${month}-${dayStr}`;
+
+    return dateString === selectedStart || dateString === selectedEnd;
+  };
+
+  const navigateMonth = (direction) => {
+    setCurrentMonth(prev => {
+      const newMonth = new Date(prev);
+      newMonth.setMonth(prev.getMonth() + direction);
+      return newMonth;
+    });
+  };
+
+  return (
+    <Box>
+      {/* Month Navigation */}
+      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+        <IconButton
+          onClick={() => navigateMonth(-1)}
+          sx={{
+            color: 'white',
+            width: '32px',
+            height: '32px',
+            '&:hover': {
+              background: 'rgba(102, 126, 234, 0.1)',
+              transform: 'scale(1.1)'
+            }
+          }}
+        >
+          ◀
+        </IconButton>
+        <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, fontSize: '16px' }}>
+          {monthNames[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+        </Typography>
+        <IconButton
+          onClick={() => navigateMonth(1)}
+          sx={{
+            color: 'white',
+            width: '32px',
+            height: '32px',
+            '&:hover': {
+              background: 'rgba(102, 126, 234, 0.1)',
+              transform: 'scale(1.1)'
+            }
+          }}
+        >
+          ▶
+        </IconButton>
+      </Box>
+
+      {/* Day Headers */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, mb: 1 }}>
+        {dayNames.map(day => (
+          <Box key={day} sx={{
+            textAlign: 'center',
+            color: 'rgba(255, 255, 255, 0.6)',
+            fontSize: '12px',
+            fontWeight: 600,
+            padding: '8px 0'
+          }}>
+            {day}
+          </Box>
+        ))}
+      </Box>
+
+      {/* Calendar Days */}
+      <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+        {/* Empty cells for days before month starts */}
+        {Array.from({ length: startingDayOfWeek }, (_, i) => (
+          <Box key={`empty-${i}`} sx={{ height: '36px' }} />
+        ))}
+
+        {/* Days of the month */}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const day = i + 1;
+          const isToday = today.getDate() === day &&
+                         today.getMonth() === currentMonth.getMonth() &&
+                         today.getFullYear() === currentMonth.getFullYear();
+          const inRange = isDateInRange(day);
+          const selected = isDateSelected(day);
+
+          return (
+            <Box
+              key={day}
+              onClick={() => handleDateClick(day)}
+              sx={{
+                height: '36px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontSize: '14px',
+                fontWeight: selected ? 600 : 400,
+                color: selected ? 'white' : inRange ? 'white' : 'rgba(255, 255, 255, 0.8)',
+                background: selected
+                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                  : inRange
+                    ? 'rgba(102, 126, 234, 0.2)'
+                    : isToday
+                      ? 'rgba(255, 255, 255, 0.1)'
+                      : 'transparent',
+                border: isToday && !selected ? '1px solid rgba(255, 255, 255, 0.3)' : 'none',
+                transition: 'all 0.2s ease',
+                '&:hover': {
+                  background: selected
+                    ? 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)'
+                    : 'rgba(102, 126, 234, 0.3)',
+                  transform: 'scale(1.05)'
+                }
+              }}
+            >
+              {day}
+            </Box>
+          );
+        })}
+      </Box>
+    </Box>
+  );
+};
+
 const Analytics = () => {
   console.log('🎯 Analytics component is rendering!');
 
@@ -52,8 +244,16 @@ const Analytics = () => {
   const [dateRange, setDateRange] = useState('last30days');
   const [tabValue, setTabValue] = useState(0);
   const [contentFilter, setContentFilter] = useState('all'); // 'all', 'content', 'shorts'
-  const [customStartDate, setCustomStartDate] = useState("");
-  const [customEndDate, setCustomEndDate] = useState("");
+  const [customStartDate, setCustomStartDate] = useState(() => {
+    // Default to 30 days ago
+    const date = new Date();
+    date.setDate(date.getDate() - 30);
+    return date.toISOString().split('T')[0];
+  });
+  const [customEndDate, setCustomEndDate] = useState(() => {
+    // Default to today
+    return new Date().toISOString().split('T')[0];
+  });
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [isChartLoading, setIsChartLoading] = useState(false);
 
@@ -75,6 +275,13 @@ const Analytics = () => {
     console.log('🔥 fetchAnalytics function called with dateRange:', dateRange);
     setIsChartLoading(true);
     setError(null);
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      setIsChartLoading(false);
+      setError('Request timed out. Please try again.');
+    }, 30000);
 
     try {
       // Get token from localStorage
@@ -137,6 +344,15 @@ const Analytics = () => {
           chartDataPoints: overviewData.chartData?.length || 0,
           aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0
         });
+      } else {
+        const errorText = await overviewResponse.text();
+        console.error('❌ Analytics API error:', {
+          status: overviewResponse.status,
+          statusText: overviewResponse.statusText,
+          error: errorText
+        });
+        throw new Error(`API Error: ${overviewResponse.status} - ${errorText}`);
+      }
 
         // Debug: Check for June 6th in the received data
         if (overviewData.aggregatedViewsData) {
@@ -184,7 +400,6 @@ const Analytics = () => {
         } else {
           console.log('⚠️ No daily totals data in overview response');
         }
-      }
 
       // Fetch top content and latest content using writer-specific endpoints
       console.log('📊 Fetching top content and latest content using writer-specific endpoints');
@@ -263,6 +478,166 @@ const Analytics = () => {
       console.error('❌ Analytics API error:', err);
       setError(`Failed to load analytics data: ${err.message}`);
     } finally {
+      clearTimeout(timeoutId);
+      setLoading(false);
+      setIsChartLoading(false);
+    }
+  };
+
+  // Fetch analytics with specific date range (for calendar selections)
+  const fetchAnalyticsWithDateRange = async (customRange, startDate, endDate) => {
+    console.log('🔥 fetchAnalyticsWithDateRange called with:', { customRange, startDate, endDate });
+    setIsChartLoading(true);
+    setError(null);
+
+    // Add timeout to prevent infinite loading
+    const timeoutId = setTimeout(() => {
+      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      setIsChartLoading(false);
+      setError('Request timed out. Please try again.');
+    }, 30000);
+
+    try {
+      // Get token from localStorage
+      const token = localStorage.getItem('token');
+      let writerId = localStorage.getItem('writerId') || '110';
+
+      if (!token) {
+        setError('Please log in to view analytics');
+        setLoading(false);
+        return;
+      }
+
+      console.log('📊 Fetching analytics data for specific date range:', { startDate, endDate });
+
+      // Initialize data - will be populated from BigQuery overview endpoint
+      let viewsData = [];
+      let totalViews = 0;
+      let chartData = [];
+
+      // Add strong cache-busting parameters to force fresh data
+      const cacheBuster = Date.now();
+      const randomId = Math.random().toString(36).substring(7);
+
+      // Build URL with explicit custom date parameters
+      let apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.ANALYTICS.OVERVIEW)}?range=custom&_t=${cacheBuster}&_r=${randomId}&force_refresh=true`;
+      apiUrl += `&start_date=${startDate}&end_date=${endDate}`;
+
+      console.log(`📊 Fetching from URL with custom dates: ${apiUrl}`);
+
+      const overviewResponse = await fetch(apiUrl, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
+      });
+
+      let overviewData = {};
+      if (overviewResponse.ok) {
+        overviewData = await overviewResponse.json();
+        console.log('📊 BigQuery Overview data received for custom range:', {
+          totalViews: overviewData.totalViews,
+          totalSubmissions: overviewData.totalSubmissions,
+          chartDataPoints: overviewData.chartData?.length || 0,
+          aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0,
+          dateRange: `${startDate} to ${endDate}`
+        });
+      } else {
+        const errorText = await overviewResponse.text();
+        console.error('❌ Analytics API error:', {
+          status: overviewResponse.status,
+          statusText: overviewResponse.statusText,
+          error: errorText
+        });
+        throw new Error(`API Error: ${overviewResponse.status} - ${errorText}`);
+      }
+
+      // Use BigQuery DAILY TOTALS data for the specific date range
+      if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
+        // Use the daily totals data - each point is total views for a date
+        viewsData = overviewData.aggregatedViewsData;
+
+        // Transform daily totals for chart display
+        chartData = overviewData.aggregatedViewsData.map(item => ({
+          date: item.time,
+          views: item.views,
+          formattedDate: dayjs(item.time).format('MMM D, YYYY'),
+          unique_videos: item.unique_videos || 0,
+          source: item.source || 'BigQuery_Daily_Totals'
+        }));
+
+        totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
+
+        console.log('✅ Using BigQuery data for custom date range:', {
+          dailyTotalsPoints: viewsData.length,
+          chartDataPoints: chartData.length,
+          totalViews: totalViews.toLocaleString(),
+          dateRange: `${startDate} to ${endDate}`,
+          sampleData: chartData[0]
+        });
+
+        // Special logging for single date
+        if (startDate === endDate) {
+          console.log('📅 SINGLE DATE ANALYSIS:', {
+            date: startDate,
+            views: totalViews.toLocaleString(),
+            chartPoints: chartData.length
+          });
+        }
+      } else {
+        console.log('⚠️ No daily totals data in overview response for custom range');
+      }
+
+      // Fetch top content for this specific date range
+      console.log('📊 Fetching top content for custom date range');
+      const topVideosData = await fetchTopContentWithCustomRange(contentFilter, customRange, startDate, endDate);
+      const latestContentData = await fetchLatestContent();
+
+      // Combine all data
+      const combinedData = {
+        ...overviewData,
+        totalViews: totalViews,
+        chartData: chartData,
+        aggregatedViewsData: viewsData,
+        topVideos: topVideosData || [],
+        latestContent: latestContentData,
+        avgDailyViews: chartData.length > 0 ? Math.round(totalViews / chartData.length) : 0,
+        summary: {
+          progressToTarget: (totalViews / 100000000) * 100,
+          highestDay: chartData.length > 0 ? Math.max(...chartData.map(d => d.views)) : 0,
+          lowestDay: chartData.length > 0 ? Math.min(...chartData.map(d => d.views)) : 0
+        },
+        metadata: {
+          source: 'BigQuery Custom Date Range',
+          dataSource: 'BigQuery: youtube_video_report_historical (custom range)',
+          lastUpdated: new Date().toISOString(),
+          dateRange: customRange,
+          startDate: startDate,
+          endDate: endDate,
+          bigQueryIntegrated: true
+        }
+      };
+
+      console.log('📊 Final analytics data for custom range:', {
+        totalViews: combinedData.totalViews,
+        chartDataPoints: combinedData.chartData?.length || 0,
+        dateRange: `${startDate} to ${endDate}`,
+        isSingleDate: startDate === endDate
+      });
+
+      setAnalyticsData(combinedData);
+
+      console.log('🎉 FRONTEND: Analytics data updated for custom date range!');
+      console.log('📊 FRONTEND: Chart should now display data for:', startDate === endDate ? startDate : `${startDate} to ${endDate}`);
+
+    } catch (err) {
+      console.error('❌ Analytics API error for custom range:', err);
+      setError(`Failed to load analytics data: ${err.message}`);
+    } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
       setIsChartLoading(false);
     }
@@ -876,6 +1251,8 @@ const Analytics = () => {
         color: 'white',
         p: { xs: 2, lg: 4 }
       }}>
+
+
         {/* Header */}
         <Box sx={{
           display: 'flex',
@@ -895,27 +1272,131 @@ const Analytics = () => {
             gap: 2,
             flexDirection: { xs: 'column', sm: 'row' }
           }}>
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={dateRange}
-                onChange={handleDateRangeChange}
+            {/* Cool Calendar Date Range Picker */}
+            <Box sx={{ position: 'relative' }}>
+              <Button
+                onClick={() => setShowCustomDatePicker(!showCustomDatePicker)}
                 sx={{
-                  bgcolor: '#2A2A2A',
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  backdropFilter: 'blur(10px)',
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
                   color: 'white',
-                  border: '1px solid #444',
-                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                  '& .MuiSvgIcon-root': { color: 'white' },
+                  height: '42px',
+                  fontSize: '14px',
+                  fontWeight: 500,
+                  textTransform: 'none',
+                  padding: '10px 16px',
+                  minWidth: '200px',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: 1,
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.1)'
+                  }
                 }}
               >
-                {dateRangeOptions.map((option) => (
-                  <MenuItem key={option.value} value={option.value}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+                <Box sx={{ fontSize: '16px' }}>📅</Box>
+                <Box sx={{ flex: 1, textAlign: 'left' }}>
+                  {customStartDate === customEndDate ?
+                    new Date(customStartDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    }) :
+                    `${new Date(customStartDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric'
+                    })} - ${new Date(customEndDate).toLocaleDateString('en-US', {
+                      month: 'short',
+                      day: 'numeric',
+                      year: 'numeric'
+                    })}`
+                  }
+                </Box>
+                <Box sx={{
+                  fontSize: '12px',
+                  opacity: 0.7,
+                  transform: showCustomDatePicker ? 'rotate(180deg)' : 'rotate(0deg)',
+                  transition: 'transform 0.2s ease'
+                }}>
+                  ▼
+                </Box>
+              </Button>
 
-            <Tooltip title="Force Refresh (NEW SIMPLIFIED Analytics)">
+              {/* Calendar Dropdown */}
+              {showCustomDatePicker && (
+                <Box sx={{
+                  position: 'absolute',
+                  top: '50px',
+                  left: 0,
+                  zIndex: 1000,
+                  background: 'rgba(42, 42, 42, 0.95)',
+                  backdropFilter: 'blur(20px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '16px',
+                  padding: '20px',
+                  boxShadow: '0 12px 40px rgba(0, 0, 0, 0.4)',
+                  minWidth: '320px'
+                }}>
+                  <Typography variant="h6" sx={{
+                    color: 'white',
+                    fontWeight: 600,
+                    mb: 2,
+                    textAlign: 'center',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent'
+                  }}>
+                    Select Date Range
+                  </Typography>
+
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    textAlign: 'center',
+                    mb: 3,
+                    fontSize: '13px'
+                  }}>
+                    Click a date to start, click another to set range
+                  </Typography>
+
+                  {/* Calendar Grid */}
+                  <CalendarGrid
+                    startDate={customStartDate}
+                    endDate={customEndDate}
+                    onDateSelect={(start, end) => {
+                      setCustomStartDate(start);
+                      setCustomEndDate(end);
+
+                      // Auto-apply the date range
+                      const customRange = `custom_${start}_${end}`;
+                      console.log('📅 Calendar: Applying date range:', customRange);
+                      setIsChartLoading(true);
+                      setDateRange(customRange);
+
+                      // Fetch analytics with the specific date range
+                      fetchAnalyticsWithDateRange(customRange, start, end).then(() => {
+                        console.log('📅 Calendar: Analytics fetch completed for range:', customRange);
+                        fetchTopContentWithCustomRange(contentFilter, customRange, start, end);
+                      }).catch(error => {
+                        console.error('📅 Calendar: Analytics fetch failed:', error);
+                        setIsChartLoading(false);
+                      });
+
+                      // Close calendar after selection
+                      setTimeout(() => setShowCustomDatePicker(false), 300);
+                    }}
+                  />
+                </Box>
+              )}
+            </Box>
+
+            {/* Modern Refresh Button */}
+            <Tooltip title="Refresh Analytics Data" arrow>
               <IconButton
                 onClick={() => {
                   console.log('🔄 FRONTEND: FORCE REFRESH - Clearing all caches and fetching new data...');
@@ -927,90 +1408,34 @@ const Analytics = () => {
                   fetchAnalytics();
                 }}
                 sx={{
+                  width: '42px',
+                  height: '42px',
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
                   color: 'white',
-                  bgcolor: '#FF6B00',
-                  border: '1px solid #FF6B00',
-                  '&:hover': { bgcolor: '#E55A00' }
+                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.3s ease',
+                  boxShadow: '0 4px 16px rgba(102, 126, 234, 0.2)',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(102, 126, 234, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.2)'
+                  }
                 }}
               >
-                <RefreshIcon />
+                <RefreshIcon sx={{ fontSize: '20px' }} />
               </IconButton>
             </Tooltip>
           </Box>
         </Box>
 
-        {/* Custom Date Range Picker */}
-        {showCustomDatePicker && (
-          <Box sx={{ mb: 4, p: 3, bgcolor: "#2A2A2A", borderRadius: 2, border: "1px solid #444" }}>
-            <Typography variant="h6" sx={{ color: "white", mb: 2 }}>
-              Select Custom Date Range
-            </Typography>
-            <Box sx={{ display: "flex", gap: 2, alignItems: "center", flexWrap: "wrap" }}>
-              <Box>
-                <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
-                  Start Date
-                </Typography>
-                <input
-                  type="date"
-                  value={customStartDate}
-                  onChange={(e) => setCustomStartDate(e.target.value)}
-                  style={{
-                    backgroundColor: "#333",
-                    border: "1px solid #444",
-                    borderRadius: "4px",
-                    color: "white",
-                    padding: "8px 12px",
-                    fontSize: "14px",
-                  }}
-                />
-              </Box>
-              <Box>
-                <Typography variant="body2" sx={{ color: "#888", mb: 1 }}>
-                  End Date (Optional for single day)
-                </Typography>
-                <input
-                  type="date"
-                  value={customEndDate}
-                  onChange={(e) => setCustomEndDate(e.target.value)}
-                  style={{
-                    backgroundColor: "#333",
-                    border: "1px solid #444",
-                    borderRadius: "4px",
-                    color: "white",
-                    padding: "8px 12px",
-                    fontSize: "14px",
-                  }}
-                />
-              </Box>
-              <Box sx={{ display: "flex", gap: 1, mt: 2 }}>
-                <Button
-                  variant="contained"
-                  onClick={handleApplyCustomRange}
-                  disabled={!customStartDate}
-                  sx={{
-                    bgcolor: "#ffb300",
-                    color: "black",
-                    "&:hover": { bgcolor: "#e6a000" },
-                    "&:disabled": { bgcolor: "#666", color: "#999" },
-                  }}
-                >
-                  Apply {customEndDate ? "Range" : "Single Day"}
-                </Button>
-                <Button
-                  variant="outlined"
-                  onClick={() => setShowCustomDatePicker(false)}
-                  sx={{
-                    color: "#888",
-                    borderColor: "#444",
-                    "&:hover": { borderColor: "#666" },
-                  }}
-                >
-                  Cancel
-                </Button>
-              </Box>
-            </Box>
-          </Box>
-        )}
+
 
         {error && (
           <Alert
@@ -1476,183 +1901,313 @@ const Analytics = () => {
                     </Button>
                   </Box>
 
-                  {/* Content List */}
+                  {/* Modern Content Grid */}
                   <Box>
                     {!analyticsData || !analyticsData.topVideos || analyticsData.topVideos.length === 0 ? (
                       <Box sx={{
                         textAlign: 'center',
-                        py: 4,
-                        bgcolor: '#2A2A2A',
-                        borderRadius: '8px',
-                        border: '1px solid #333'
+                        py: 6,
+                        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                        borderRadius: '16px',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        backdropFilter: 'blur(10px)'
                       }}>
-                        <Typography variant="body2" sx={{ color: '#888', mb: 1 }}>
-                          {loading ? 'Loading top content...' : 'No content available for this period'}
+                        <Box sx={{
+                          fontSize: '48px',
+                          mb: 2,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent'
+                        }}>
+                          📊
+                        </Box>
+                        <Typography variant="h6" sx={{ color: 'white', mb: 1, fontWeight: 600 }}>
+                          {loading ? 'Loading your top content...' : 'No content available'}
                         </Typography>
                         {!loading && (
-                          <Typography variant="caption" sx={{ color: '#666' }}>
+                          <Typography variant="body2" sx={{ color: '#888' }}>
                             Try adjusting the date range or check your content in the Content tab
                           </Typography>
                         )}
                       </Box>
                     ) : (
-                      (analyticsData.topVideos || []).map((content, index) => (
-                        <Box
-                          key={content.id || index}
-                          onClick={() => navigate(`/content/video/${content.id}`)}
-                          sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: 1.5,
-                            p: 1.5,
-                            mb: 0.5,
-                            bgcolor: '#2A2A2A',
-                            borderRadius: '6px',
-                            border: '1px solid #333',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s ease',
-                            width: '100%',
-                            maxWidth: '100%',
-                            overflow: 'hidden',
-                            '&:hover': {
-                              bgcolor: '#333',
-                              transform: 'translateY(-1px)',
-                              boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
-                            }
-                          }}
-                        >
-                          {/* Compact Rank */}
-                          <Typography variant="body2" sx={{
-                            background: index < 3 ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' : 'none',
-                            color: index < 3 ? 'transparent' : '#888',
-                            WebkitBackgroundClip: index < 3 ? 'text' : 'none',
-                            WebkitTextFillColor: index < 3 ? 'transparent' : '#888',
-                            minWidth: 16,
-                            fontWeight: index < 3 ? 600 : 400,
-                            fontSize: '12px'
-                          }}>
-                            {index + 1}
-                          </Typography>
-
-                          {/* Extra Compact Thumbnail */}
-                          <Box sx={{ position: 'relative' }}>
-                            <Box
-                              component="img"
-                              src={content.highThumbnail || content.mediumThumbnail || content.thumbnail || content.preview || `https://img.youtube.com/vi/${content.url?.split('v=')[1] || content.url?.split('/').pop()}/maxresdefault.jpg`}
-                              sx={{
-                                width: 50,
-                                height: 32,
-                                borderRadius: '3px',
-                                objectFit: 'cover',
-                                border: '1px solid #333',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  border: '1px solid #667eea',
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                      <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                        {(analyticsData.topVideos || []).slice(0, 10).map((content, index) => (
+                          <Box
+                            key={content.id || index}
+                            onClick={() => navigate(`/content/video/${content.id}`)}
+                            sx={{
+                              position: 'relative',
+                              background: index === 0
+                                ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)'
+                                : 'rgba(42, 42, 42, 0.8)',
+                              borderRadius: '8px',
+                              border: index === 0
+                                ? '1px solid rgba(102, 126, 234, 0.3)'
+                                : '1px solid #333',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              overflow: 'hidden',
+                              backdropFilter: 'blur(10px)',
+                              boxShadow: index === 0
+                                ? '0 4px 16px rgba(102, 126, 234, 0.2)'
+                                : '0 2px 8px rgba(0, 0, 0, 0.1)',
+                              '&:hover': {
+                                transform: 'translateY(-2px)',
+                                boxShadow: index === 0
+                                  ? '0 8px 24px rgba(102, 126, 234, 0.3)'
+                                  : '0 6px 16px rgba(102, 126, 234, 0.2)',
+                                border: '1px solid rgba(102, 126, 234, 0.4)',
+                                '& .rank-badge': {
+                                  transform: 'scale(1.05)'
+                                },
+                                '& .thumbnail': {
                                   transform: 'scale(1.02)'
+                                },
+                                '& .play-overlay': {
+                                  opacity: 1
                                 }
-                              }}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <Box
-                              sx={{
-                                width: 50,
-                                height: 32,
-                                bgcolor: content.type === 'short' ? '#4CAF50' : '#2196F3',
-                                borderRadius: '3px',
-                                border: '1px solid #333',
-                                display: 'none',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '14px'
-                              }}
-                            >
-                              {content.type === 'short' ? '🎯' : '📺'}
-                            </Box>
-
-                            {/* Duration overlay */}
-                            {content.duration && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  bottom: 1,
-                                  right: 1,
-                                  bgcolor: 'rgba(0,0,0,0.8)',
-                                  color: 'white',
-                                  px: 0.3,
-                                  borderRadius: '2px',
-                                  fontSize: '8px',
-                                  fontWeight: 500
-                                }}
-                              >
-                                {content.duration}
+                              }
+                            }}
+                          >
+                            {/* Top Performer Badge */}
+                            {index === 0 && (
+                              <Box sx={{
+                                position: 'absolute',
+                                top: -1,
+                                right: 12,
+                                background: 'linear-gradient(135deg, #FFD700 0%, #FFA500 100%)',
+                                color: '#000',
+                                px: 1.5,
+                                py: 0.25,
+                                borderRadius: '0 0 8px 8px',
+                                fontSize: '10px',
+                                fontWeight: 700,
+                                textTransform: 'uppercase',
+                                letterSpacing: '0.5px',
+                                zIndex: 2
+                              }}>
+                                🏆 #1
                               </Box>
                             )}
-                          </Box>
 
-                          {/* Extra Compact Content Info - Fixed Width */}
-                          <Box sx={{
-                            width: '280px',
-                            minWidth: '280px',
-                            maxWidth: '280px',
-                            mr: 1,
-                            overflow: 'hidden'
-                          }}>
-                            <Typography variant="body2" sx={{
-                              color: 'white',
-                              fontWeight: 500,
-                              mb: 0.3,
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              fontSize: '12px',
-                              lineHeight: 1.2,
-                              width: '100%'
-                            }}>
-                              {content.title || 'Untitled Video'}
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                              color: '#888',
-                              fontSize: '10px',
-                              overflow: 'hidden',
-                              textOverflow: 'ellipsis',
-                              whiteSpace: 'nowrap',
-                              width: '100%',
-                              display: 'block'
-                            }}>
-                              {content.type && (
-                                <Box component="span" sx={{ mr: 0.5 }}>
-                                  {content.type === 'short' ? '📱' : '🎬'} •
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, p: 2, minHeight: '80px' }}>
+                              {/* Compact Rank Badge */}
+                              <Box
+                                className="rank-badge"
+                                sx={{
+                                  width: 28,
+                                  height: 28,
+                                  borderRadius: '50%',
+                                  background: index < 3
+                                    ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                    : 'linear-gradient(135deg, #4a4a4a 0%, #2a2a2a 100%)',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  color: 'white',
+                                  fontWeight: 700,
+                                  fontSize: '12px',
+                                  boxShadow: index < 3
+                                    ? '0 2px 8px rgba(102, 126, 234, 0.3)'
+                                    : '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                  transition: 'all 0.2s ease',
+                                  flexShrink: 0
+                                }}
+                              >
+                                {index + 1}
+                              </Box>
+
+                              {/* Compact Thumbnail */}
+                              <Box sx={{ position: 'relative', flexShrink: 0 }}>
+                                <Box
+                                  className="thumbnail"
+                                  component="img"
+                                  src={content.highThumbnail || content.mediumThumbnail || content.thumbnail || content.preview || `https://img.youtube.com/vi/${content.url?.split('v=')[1] || content.url?.split('/').pop()}/maxresdefault.jpg`}
+                                  sx={{
+                                    width: 60,
+                                    height: 34,
+                                    borderRadius: '6px',
+                                    objectFit: 'cover',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    transition: 'all 0.2s ease',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                  }}
+                                  onError={(e) => {
+                                    e.target.style.display = 'none';
+                                    e.target.nextSibling.style.display = 'flex';
+                                  }}
+                                />
+                                <Box
+                                  sx={{
+                                    width: 60,
+                                    height: 34,
+                                    background: content.type === 'short'
+                                      ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                                      : 'linear-gradient(135deg, #2196F3 0%, #1976d2 100%)',
+                                    borderRadius: '6px',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    display: 'none',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    fontSize: '16px',
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                  }}
+                                >
+                                  {content.type === 'short' ? '🎯' : '📺'}
                                 </Box>
-                              )}
-                              {content.account_name || 'Unknown Account'} • {content.posted_date ? new Date(content.posted_date).toLocaleDateString() : 'Unknown'}
-                            </Typography>
-                          </Box>
 
-                          {/* Extra Compact Views */}
-                          <Box sx={{ textAlign: 'right', minWidth: 45 }}>
-                            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, fontSize: '11px' }}>
-                              {formatNumber(content.views)}
-                            </Typography>
-                          </Box>
+                                {/* Play Overlay */}
+                                <Box
+                                  className="play-overlay"
+                                  sx={{
+                                    position: 'absolute',
+                                    top: '50%',
+                                    left: '50%',
+                                    transform: 'translate(-50%, -50%)',
+                                    width: 20,
+                                    height: 20,
+                                    borderRadius: '50%',
+                                    background: 'rgba(0, 0, 0, 0.8)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    opacity: 0,
+                                    transition: 'all 0.2s ease',
+                                    backdropFilter: 'blur(10px)'
+                                  }}
+                                >
+                                  <Typography sx={{ color: 'white', fontSize: '10px', ml: 0.25 }}>▶</Typography>
+                                </Box>
 
-                          {/* Extra Compact Engagement */}
-                          <Box sx={{ textAlign: 'right', minWidth: 60 }}>
-                            <Typography variant="body2" sx={{ color: 'white', fontWeight: 600, mb: 0.3, fontSize: '11px' }}>
-                              {content.likes && content.views ?
-                                ((content.likes / content.views) * 100).toFixed(1) + '%' :
-                                'N/A'
-                              }
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: '#888', fontSize: '9px' }}>
-                              {content.likes?.toLocaleString() || '0'} likes
-                            </Typography>
+                                {/* Duration Badge */}
+                                {content.duration && (
+                                  <Box
+                                    sx={{
+                                      position: 'absolute',
+                                      bottom: 2,
+                                      right: 2,
+                                      background: 'rgba(0, 0, 0, 0.9)',
+                                      color: 'white',
+                                      px: 0.5,
+                                      py: 0.125,
+                                      borderRadius: '3px',
+                                      fontSize: '8px',
+                                      fontWeight: 600
+                                    }}
+                                  >
+                                    {content.duration}
+                                  </Box>
+                                )}
+
+                                {/* Content Type Badge */}
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    top: 2,
+                                    left: 2,
+                                    background: content.type === 'short'
+                                      ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                                      : 'linear-gradient(135deg, #2196F3 0%, #1976d2 100%)',
+                                    color: 'white',
+                                    px: 0.5,
+                                    py: 0.125,
+                                    borderRadius: '3px',
+                                    fontSize: '7px',
+                                    fontWeight: 700,
+                                    textTransform: 'uppercase',
+                                    letterSpacing: '0.25px'
+                                  }}
+                                >
+                                  {content.type === 'short' ? 'S' : 'V'}
+                                </Box>
+                              </Box>
+
+                              {/* Compact Content Info - Fixed Width */}
+                              <Box sx={{
+                                width: '220px',
+                                minWidth: '220px',
+                                maxWidth: '220px',
+                                overflow: 'hidden'
+                              }}>
+                                <Typography variant="body2" sx={{
+                                  color: 'white',
+                                  fontWeight: 600,
+                                  mb: 0.3,
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  fontSize: '12px',
+                                  lineHeight: 1.2
+                                }}>
+                                  {content.title || 'Untitled Video'}
+                                </Typography>
+
+                                <Typography variant="caption" sx={{
+                                  color: '#888',
+                                  fontSize: '10px',
+                                  overflow: 'hidden',
+                                  textOverflow: 'ellipsis',
+                                  whiteSpace: 'nowrap',
+                                  display: 'block'
+                                }}>
+                                  {content.type && (
+                                    <Box component="span" sx={{ mr: 0.5 }}>
+                                      {content.type === 'short' ? '📱' : '🎬'} •
+                                    </Box>
+                                  )}
+                                  {content.account_name || 'Unknown Account'} • {content.posted_date ? new Date(content.posted_date).toLocaleDateString() : 'Unknown'}
+                                </Typography>
+                              </Box>
+
+                              {/* Spacer */}
+                              <Box sx={{ flex: 1 }} />
+
+                              {/* Far Right Metrics - Compact */}
+                              <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 1.5,
+                                flexShrink: 0
+                              }}>
+                                {/* Views */}
+                                <Box sx={{ textAlign: 'right', minWidth: 50 }}>
+                                  <Typography variant="body2" sx={{
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '11px',
+                                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent'
+                                  }}>
+                                    {formatNumber(content.views)}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#888', fontSize: '8px' }}>
+                                    views
+                                  </Typography>
+                                </Box>
+
+                                {/* Engagement */}
+                                <Box sx={{ textAlign: 'right', minWidth: 55 }}>
+                                  <Typography variant="body2" sx={{
+                                    color: 'white',
+                                    fontWeight: 600,
+                                    fontSize: '11px'
+                                  }}>
+                                    {content.likes && content.views ?
+                                      ((content.likes / content.views) * 100).toFixed(1) + '%' :
+                                      'N/A'
+                                    }
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#888', fontSize: '8px' }}>
+                                    {content.likes?.toLocaleString() || '0'} likes
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
                           </Box>
-                        </Box>
-                      ))
+                        ))}
+                      </Box>
                     )}
                   </Box>
 

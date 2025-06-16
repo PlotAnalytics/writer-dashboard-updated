@@ -94,8 +94,9 @@ export const AuthProvider = ({ children }) => {
 
       try {
         localStorage.setItem('token', newToken);
+        localStorage.setItem('username', userName); // Store username for Dashboard compatibility
       } catch (error) {
-        console.warn('Failed to save token to localStorage:', error);
+        console.warn('Failed to save token/username to localStorage:', error);
       }
       setToken(newToken);
       setUser(userData);
@@ -128,8 +129,9 @@ export const AuthProvider = ({ children }) => {
     try {
       localStorage.removeItem('token');
       localStorage.removeItem('writerId');
+      localStorage.removeItem('username');
     } catch (error) {
-      console.warn('Failed to remove token/writerId from localStorage:', error);
+      console.warn('Failed to remove token/writerId/username from localStorage:', error);
     }
     setToken(null);
     setUser(null);

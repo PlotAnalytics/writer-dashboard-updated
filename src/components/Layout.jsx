@@ -47,6 +47,10 @@ const Layout = ({ children }) => {
   const [anchorEl, setAnchorEl] = useState(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
 
+  // Debug logging for user data
+  console.log('🔍 Layout - Current user:', user);
+  console.log('🔍 Layout - WriterId from localStorage:', localStorage.getItem('writerId'));
+
   const menuItems = [
     {
       text: 'Dashboard',
@@ -166,7 +170,7 @@ const Layout = ({ children }) => {
                 </Typography>
                 <Box display="flex" alignItems="center" gap={1}>
                   <Chip
-                    label={`ID: ${user?.writerId || 'N/A'}`}
+                    label={`ID: ${user?.writerId || localStorage.getItem('writerId') || 'N/A'}`}
                     size="small"
                     sx={{
                       bgcolor: 'rgba(255, 255, 255, 0.1)',
