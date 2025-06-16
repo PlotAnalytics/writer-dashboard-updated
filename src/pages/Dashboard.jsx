@@ -402,36 +402,36 @@ const Dashboard = () => {
               position: 'absolute',
               top: '10%',
               left: '15%',
-              width: '8px',
-              height: '8px',
+              width: '12px',
+              height: '12px',
               borderRadius: '50%',
               background: '#FFD700',
-              animation: 'firecracker1 1.2s ease-out',
+              animation: 'firecracker1 3s ease-out',
               '@keyframes firecracker1': {
                 '0%': { opacity: 0, transform: 'scale(0)' },
-                '20%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 20px #FFD700' },
-                '40%': {
+                '10%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 30px #FFD700' },
+                '30%': {
                   opacity: 1,
-                  transform: 'scale(1.5)',
-                  boxShadow: '0 0 30px #FFD700, 0 0 40px #FF6B35, 0 0 50px #FF1744'
+                  transform: 'scale(3)',
+                  boxShadow: '0 0 60px #FFD700, 0 0 80px #FF6B35, 0 0 100px #FF1744'
                 },
-                '60%': { opacity: 0.8, transform: 'scale(0.8)' },
+                '60%': { opacity: 0.8, transform: 'scale(2)' },
                 '100%': { opacity: 0, transform: 'scale(0)' }
               },
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: '-4px',
-                left: '-4px',
-                right: '-4px',
-                bottom: '-4px',
+                top: '-8px',
+                left: '-8px',
+                right: '-8px',
+                bottom: '-8px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,215,0,0.6) 0%, transparent 70%)',
-                animation: 'sparkle1 1.2s ease-out',
+                background: 'radial-gradient(circle, rgba(255,215,0,0.8) 0%, transparent 70%)',
+                animation: 'sparkle1 3s ease-out',
                 '@keyframes sparkle1': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
-                  '30%': { opacity: 1, transform: 'scale(2)' },
-                  '100%': { opacity: 0, transform: 'scale(4)' }
+                  '20%': { opacity: 1, transform: 'scale(4)' },
+                  '100%': { opacity: 0, transform: 'scale(8)' }
                 }
               }
             }} />
@@ -441,36 +441,36 @@ const Dashboard = () => {
               position: 'absolute',
               top: '15%',
               right: '20%',
-              width: '6px',
-              height: '6px',
+              width: '10px',
+              height: '10px',
               borderRadius: '50%',
               background: '#FF6B35',
-              animation: 'firecracker2 1.4s ease-out 0.3s both',
+              animation: 'firecracker2 3.5s ease-out 1s both',
               '@keyframes firecracker2': {
                 '0%': { opacity: 0, transform: 'scale(0)' },
-                '25%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 15px #FF6B35' },
-                '50%': {
+                '15%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 25px #FF6B35' },
+                '35%': {
                   opacity: 1,
-                  transform: 'scale(1.8)',
-                  boxShadow: '0 0 25px #FF6B35, 0 0 35px #FFD700, 0 0 45px #FF1744'
+                  transform: 'scale(2.5)',
+                  boxShadow: '0 0 50px #FF6B35, 0 0 70px #FFD700, 0 0 90px #FF1744'
                 },
-                '75%': { opacity: 0.6, transform: 'scale(0.6)' },
+                '65%': { opacity: 0.7, transform: 'scale(1.5)' },
                 '100%': { opacity: 0, transform: 'scale(0)' }
               },
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: '-3px',
-                left: '-3px',
-                right: '-3px',
-                bottom: '-3px',
+                top: '-6px',
+                left: '-6px',
+                right: '-6px',
+                bottom: '-6px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,107,53,0.6) 0%, transparent 70%)',
-                animation: 'sparkle2 1.4s ease-out 0.3s both',
+                background: 'radial-gradient(circle, rgba(255,107,53,0.8) 0%, transparent 70%)',
+                animation: 'sparkle2 3.5s ease-out 1s both',
                 '@keyframes sparkle2': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
-                  '40%': { opacity: 1, transform: 'scale(2.5)' },
-                  '100%': { opacity: 0, transform: 'scale(5)' }
+                  '25%': { opacity: 1, transform: 'scale(3)' },
+                  '100%': { opacity: 0, transform: 'scale(7)' }
                 }
               }
             }} />
@@ -480,36 +480,36 @@ const Dashboard = () => {
               position: 'absolute',
               bottom: '20%',
               left: '10%',
-              width: '7px',
-              height: '7px',
+              width: '14px',
+              height: '14px',
               borderRadius: '50%',
               background: '#FF1744',
-              animation: 'firecracker3 1.6s ease-out 0.6s both',
+              animation: 'firecracker3 4s ease-out 2s both',
               '@keyframes firecracker3': {
                 '0%': { opacity: 0, transform: 'scale(0)' },
-                '30%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 18px #FF1744' },
-                '60%': {
+                '20%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 35px #FF1744' },
+                '40%': {
                   opacity: 1,
-                  transform: 'scale(2)',
-                  boxShadow: '0 0 28px #FF1744, 0 0 38px #FFD700, 0 0 48px #FF6B35'
+                  transform: 'scale(3.5)',
+                  boxShadow: '0 0 70px #FF1744, 0 0 90px #FFD700, 0 0 110px #FF6B35'
                 },
-                '80%': { opacity: 0.7, transform: 'scale(0.7)' },
+                '70%': { opacity: 0.8, transform: 'scale(2)' },
                 '100%': { opacity: 0, transform: 'scale(0)' }
               },
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: '-3px',
-                left: '-3px',
-                right: '-3px',
-                bottom: '-3px',
+                top: '-10px',
+                left: '-10px',
+                right: '-10px',
+                bottom: '-10px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(255,23,68,0.6) 0%, transparent 70%)',
-                animation: 'sparkle3 1.6s ease-out 0.6s both',
+                background: 'radial-gradient(circle, rgba(255,23,68,0.9) 0%, transparent 70%)',
+                animation: 'sparkle3 4s ease-out 2s both',
                 '@keyframes sparkle3': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
-                  '50%': { opacity: 1, transform: 'scale(3)' },
-                  '100%': { opacity: 0, transform: 'scale(6)' }
+                  '30%': { opacity: 1, transform: 'scale(4)' },
+                  '100%': { opacity: 0, transform: 'scale(9)' }
                 }
               }
             }} />
@@ -519,36 +519,76 @@ const Dashboard = () => {
               position: 'absolute',
               bottom: '25%',
               right: '15%',
-              width: '9px',
-              height: '9px',
+              width: '16px',
+              height: '16px',
               borderRadius: '50%',
               background: '#9C27B0',
-              animation: 'firecracker4 1.3s ease-out 0.9s both',
+              animation: 'firecracker4 3.8s ease-out 3s both',
               '@keyframes firecracker4': {
                 '0%': { opacity: 0, transform: 'scale(0)' },
-                '20%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 22px #9C27B0' },
-                '45%': {
+                '12%': { opacity: 1, transform: 'scale(1)', boxShadow: '0 0 40px #9C27B0' },
+                '35%': {
                   opacity: 1,
-                  transform: 'scale(1.6)',
-                  boxShadow: '0 0 32px #9C27B0, 0 0 42px #FFD700, 0 0 52px #FF6B35'
+                  transform: 'scale(4)',
+                  boxShadow: '0 0 80px #9C27B0, 0 0 100px #FFD700, 0 0 120px #FF6B35'
                 },
-                '70%': { opacity: 0.8, transform: 'scale(0.9)' },
+                '65%': { opacity: 0.9, transform: 'scale(2.5)' },
                 '100%': { opacity: 0, transform: 'scale(0)' }
               },
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: '-4px',
-                left: '-4px',
-                right: '-4px',
-                bottom: '-4px',
+                top: '-12px',
+                left: '-12px',
+                right: '-12px',
+                bottom: '-12px',
                 borderRadius: '50%',
-                background: 'radial-gradient(circle, rgba(156,39,176,0.6) 0%, transparent 70%)',
-                animation: 'sparkle4 1.3s ease-out 0.9s both',
+                background: 'radial-gradient(circle, rgba(156,39,176,0.9) 0%, transparent 70%)',
+                animation: 'sparkle4 3.8s ease-out 3s both',
                 '@keyframes sparkle4': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
-                  '35%': { opacity: 1, transform: 'scale(2.2)' },
-                  '100%': { opacity: 0, transform: 'scale(4.5)' }
+                  '25%': { opacity: 1, transform: 'scale(5)' },
+                  '100%': { opacity: 0, transform: 'scale(10)' }
+                }
+              }
+            }} />
+
+            {/* Test Firecracker - Center - Always Visible */}
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: '20px',
+              height: '20px',
+              borderRadius: '50%',
+              background: '#00E676',
+              animation: 'testFirecracker 5s ease-out 0.5s both',
+              '@keyframes testFirecracker': {
+                '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
+                '10%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 50px #00E676' },
+                '30%': {
+                  opacity: 1,
+                  transform: 'translate(-50%, -50%) scale(5)',
+                  boxShadow: '0 0 100px #00E676, 0 0 150px #FFD700, 0 0 200px #FF1744'
+                },
+                '60%': { opacity: 0.8, transform: 'translate(-50%, -50%) scale(3)' },
+                '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' }
+              },
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: '-15px',
+                left: '-15px',
+                right: '-15px',
+                bottom: '-15px',
+                borderRadius: '50%',
+                background: 'radial-gradient(circle, rgba(0,230,118,0.9) 0%, transparent 70%)',
+                animation: 'testSparkle 5s ease-out 0.5s both',
+                '@keyframes testSparkle': {
+                  '0%': { opacity: 0, transform: 'scale(0)' },
+                  '20%': { opacity: 1, transform: 'scale(6)' },
+                  '100%': { opacity: 0, transform: 'scale(12)' }
                 }
               }
             }} />
