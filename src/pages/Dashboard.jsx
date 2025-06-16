@@ -563,7 +563,7 @@ const Dashboard = () => {
               height: '20px',
               borderRadius: '50%',
               background: '#00E676',
-              animation: 'testFirecracker 5s ease-out 0.5s both',
+              animation: 'testFirecracker 5s ease-out 0.5s infinite',
               '@keyframes testFirecracker': {
                 '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
                 '10%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 50px #00E676' },
@@ -584,13 +584,27 @@ const Dashboard = () => {
                 bottom: '-15px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(0,230,118,0.9) 0%, transparent 70%)',
-                animation: 'testSparkle 5s ease-out 0.5s both',
+                animation: 'testSparkle 5s ease-out 0.5s infinite',
                 '@keyframes testSparkle': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
                   '20%': { opacity: 1, transform: 'scale(6)' },
                   '100%': { opacity: 0, transform: 'scale(12)' }
                 }
               }
+            }} />
+
+            {/* Always Visible Test Dot - Simple */}
+            <Box sx={{
+              position: 'absolute',
+              top: '20%',
+              right: '30%',
+              width: '30px',
+              height: '30px',
+              borderRadius: '50%',
+              background: '#FF0000',
+              opacity: 1,
+              zIndex: 10,
+              boxShadow: '0 0 20px #FF0000',
             }} />
           </Box>
 
