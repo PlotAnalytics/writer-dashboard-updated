@@ -770,15 +770,15 @@ const PreviousSubmissions = ({
                   overflow: 'hidden',
                   transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                   backdropFilter: 'blur(8px)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12), 0 4px 16px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(102, 126, 234, 0.15)',
-                  transform: 'translateY(-2px)',
+                  boxShadow: '0 4px 12px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(102, 126, 234, 0.2)',
+                  transform: 'translateY(0px)',
                 }}
                 sx={{
                   '&:hover': {
                     background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%)',
                     borderColor: 'rgba(102, 126, 234, 0.4)',
-                    transform: 'translateY(-6px)',
-                    boxShadow: '0 16px 48px rgba(0, 0, 0, 0.15), 0 8px 24px rgba(0, 0, 0, 0.1), 0 4px 16px rgba(102, 126, 234, 0.25)',
+                    transform: 'translateY(-4px)',
+                    boxShadow: '0 8px 24px rgba(0, 0, 0, 0.3), 0 4px 12px rgba(0, 0, 0, 0.2), 0 2px 6px rgba(102, 126, 234, 0.3)',
                   }
                 }}
               >
