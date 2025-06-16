@@ -340,24 +340,24 @@ const PreviousSubmissions = ({
           <Button
             startIcon={<FilterIcon />}
             onClick={handleFilterClick}
-            size="medium"
+            size="small"
             sx={{
               background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
               color: 'white',
               border: 'none',
-              fontWeight: '600',
-              borderRadius: '12px',
-              px: 4,
-              py: 1.5,
-              fontSize: '14px',
+              fontWeight: '500',
+              borderRadius: '8px',
+              px: 3,
+              py: 1,
+              fontSize: '13px',
               textTransform: 'none',
-              boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
+              boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
               '&:hover': {
                 background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)'
+                transform: 'translateY(-1px)',
+                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)'
               },
-              transition: 'all 0.3s ease'
+              transition: 'all 0.2s ease'
             }}
           >
             Filters
@@ -365,25 +365,25 @@ const PreviousSubmissions = ({
           <Button
             startIcon={<SortIcon />}
             onClick={handleSortClick}
-            size="medium"
+            size="small"
             sx={{
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-              backdropFilter: 'blur(10px)',
-              color: 'white',
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              fontWeight: '600',
-              borderRadius: '12px',
-              px: 4,
-              py: 1.5,
-              fontSize: '14px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              backdropFilter: 'blur(5px)',
+              color: 'rgba(255, 255, 255, 0.9)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              fontWeight: '500',
+              borderRadius: '8px',
+              px: 3,
+              py: 1,
+              fontSize: '13px',
               textTransform: 'none',
               '&:hover': {
-                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%)',
-                borderColor: 'rgba(102, 126, 234, 0.4)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)'
+                background: 'rgba(102, 126, 234, 0.1)',
+                borderColor: 'rgba(102, 126, 234, 0.3)',
+                transform: 'translateY(-1px)',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.15)'
               },
-              transition: 'all 0.3s ease'
+              transition: 'all 0.2s ease'
             }}
           >
             Sort By {sortBy}
@@ -410,28 +410,29 @@ const PreviousSubmissions = ({
           }}
           sx={{
             '& .MuiOutlinedInput-root': {
-              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(102, 126, 234, 0.3)',
-              borderRadius: '16px',
-              transition: 'all 0.3s ease',
-              height: '56px',
+              background: 'rgba(255, 255, 255, 0.04)',
+              backdropFilter: 'blur(5px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '10px',
+              transition: 'all 0.2s ease',
+              height: '44px',
               '& fieldset': { border: 'none' },
               '&:hover': {
-                border: '1px solid rgba(102, 126, 234, 0.5)',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 6px 20px rgba(102, 126, 234, 0.15)',
+                border: '1px solid rgba(102, 126, 234, 0.3)',
+                background: 'rgba(255, 255, 255, 0.06)',
+                boxShadow: '0 2px 8px rgba(102, 126, 234, 0.1)',
               },
               '&.Mui-focused': {
-                border: '1px solid #667eea',
-                transform: 'translateY(-2px)',
-                boxShadow: '0 8px 25px rgba(102, 126, 234, 0.25)',
+                border: '1px solid rgba(102, 126, 234, 0.5)',
+                background: 'rgba(255, 255, 255, 0.08)',
+                boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
               },
             },
             '& .MuiInputBase-input': {
-              color: 'white',
-              fontSize: '16px',
-              fontWeight: '500',
+              color: 'rgba(255, 255, 255, 0.9)',
+              fontSize: '14px',
+              fontWeight: '400',
+              padding: '12px 14px',
               '&::placeholder': {
                 color: 'rgba(255, 255, 255, 0.5)',
                 opacity: 1,
@@ -763,19 +764,19 @@ const PreviousSubmissions = ({
                 style={{
                   backgroundColor: styles.bg,
                   border: `1px solid ${styles.border}`,
-                  borderRadius: '16px',
-                  padding: '24px',
+                  borderRadius: '12px',
+                  padding: '18px',
                   position: 'relative',
                   overflow: 'hidden',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(10px)',
+                  transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                  backdropFilter: 'blur(5px)',
                 }}
                 sx={{
                   '&:hover': {
                     bgcolor: styles.hoverBg,
                     borderColor: styles.hoverBorder,
-                    transform: 'translateY(-2px)',
-                    boxShadow: `0 8px 32px ${styles.shadow}`,
+                    transform: 'translateY(-1px)',
+                    boxShadow: `0 4px 16px ${styles.shadow}`,
                   },
                   '&::before': {
                     content: '""',
@@ -783,31 +784,31 @@ const PreviousSubmissions = ({
                     top: 0,
                     left: 0,
                     right: 0,
-                    height: '4px',
+                    height: '3px',
                     bgcolor: styles.base,
-                    borderRadius: '16px 16px 0 0',
+                    borderRadius: '12px 12px 0 0',
                   },
                   '&::after': {
                     content: '""',
                     position: 'absolute',
                     top: 0,
                     left: 0,
-                    width: '4px',
+                    width: '3px',
                     height: '100%',
                     bgcolor: styles.base,
-                    borderRadius: '16px 0 0 16px',
+                    borderRadius: '12px 0 0 12px',
                   }
                 }}
               >
-              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+              <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                 <Typography
                   variant="h6"
                   sx={{
-                    color: 'white',
-                    fontWeight: '600',
+                    color: 'rgba(255, 255, 255, 0.9)',
+                    fontWeight: '500',
                     flex: 1,
                     mr: 2,
-                    fontSize: '1rem',
+                    fontSize: '0.95rem',
                     lineHeight: 1.3,
                     display: '-webkit-box',
                     WebkitLineClamp: 2,
@@ -824,20 +825,20 @@ const PreviousSubmissions = ({
                   style={{
                     backgroundColor: styles.base,
                     color: 'white',
-                    fontWeight: '600',
-                    fontSize: '0.75rem',
-                    height: '26px',
-                    borderRadius: '13px',
+                    fontWeight: '500',
+                    fontSize: '0.7rem',
+                    height: '22px',
+                    borderRadius: '11px',
                     border: `1px solid ${styles.base}`,
-                    boxShadow: `0 2px 8px ${styles.chipShadow}`,
+                    boxShadow: `0 1px 4px ${styles.chipShadow}`,
                   }}
                   sx={{
                     '& .MuiChip-label': {
-                      px: 1.5
+                      px: 1.2
                     },
                     '&:hover': {
-                      transform: 'scale(1.05)',
-                      boxShadow: `0 4px 12px ${styles.chipHoverShadow}`,
+                      transform: 'scale(1.02)',
+                      boxShadow: `0 2px 6px ${styles.chipHoverShadow}`,
                     },
                     transition: 'all 0.2s ease'
                   }}
@@ -847,9 +848,9 @@ const PreviousSubmissions = ({
               <Typography
                 variant="body2"
                 sx={{
-                  color: 'rgba(255, 255, 255, 0.6)',
-                  mb: 2.5,
-                  fontSize: '0.85rem'
+                  color: 'rgba(255, 255, 255, 0.5)',
+                  mb: 2,
+                  fontSize: '0.8rem'
                 }}
               >
                 Submitted on {new Date(submission.created_at).toLocaleDateString()}
@@ -865,16 +866,17 @@ const PreviousSubmissions = ({
                       sx={{
                         bgcolor: '#E6B800',
                         color: 'black',
-                        fontWeight: '600',
-                        fontSize: '0.8rem',
-                        borderRadius: '10px',
-                        px: 2,
-                        py: 0.8,
+                        fontWeight: '500',
+                        fontSize: '0.75rem',
+                        borderRadius: '8px',
+                        px: 1.5,
+                        py: 0.6,
                         textTransform: 'none',
+                        boxShadow: '0 1px 4px rgba(230, 184, 0, 0.3)',
                         '&:hover': {
                           bgcolor: '#D4A600',
                           transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 12px rgba(230, 184, 0, 0.4)'
+                          boxShadow: '0 2px 8px rgba(230, 184, 0, 0.4)'
                         },
                         transition: 'all 0.2s ease'
                       }}
@@ -889,16 +891,17 @@ const PreviousSubmissions = ({
                       sx={{
                         bgcolor: 'rgba(156, 39, 176, 0.8)',
                         color: 'white',
-                        fontWeight: '600',
-                        fontSize: '0.8rem',
-                        borderRadius: '10px',
-                        px: 2,
-                        py: 0.8,
+                        fontWeight: '500',
+                        fontSize: '0.75rem',
+                        borderRadius: '8px',
+                        px: 1.5,
+                        py: 0.6,
                         textTransform: 'none',
+                        boxShadow: '0 1px 4px rgba(156, 39, 176, 0.3)',
                         '&:hover': {
                           bgcolor: 'rgba(156, 39, 176, 1)',
                           transform: 'translateY(-1px)',
-                          boxShadow: '0 4px 12px rgba(156, 39, 176, 0.4)'
+                          boxShadow: '0 2px 8px rgba(156, 39, 176, 0.4)'
                         },
                         transition: 'all 0.2s ease'
                       }}
@@ -915,15 +918,15 @@ const PreviousSubmissions = ({
           {sortedSubmissions.length === 0 && (
             <Box sx={{
               textAlign: 'center',
-              py: 8,
-              bgcolor: 'rgba(255, 255, 255, 0.02)',
-              borderRadius: '16px',
-              border: '1px dashed rgba(255, 255, 255, 0.1)'
+              py: 6,
+              bgcolor: 'rgba(255, 255, 255, 0.01)',
+              borderRadius: '12px',
+              border: '1px dashed rgba(255, 255, 255, 0.08)'
             }}>
               <Typography sx={{
-                color: 'rgba(255, 255, 255, 0.5)',
-                fontSize: '0.95rem',
-                fontWeight: '500'
+                color: 'rgba(255, 255, 255, 0.4)',
+                fontSize: '0.9rem',
+                fontWeight: '400'
               }}>
                 {statusFilter === 'All' ? 'No submissions found' : `No ${statusFilter.toLowerCase()} submissions found`}
               </Typography>
