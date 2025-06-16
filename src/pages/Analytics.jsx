@@ -1637,7 +1637,7 @@ const Analytics = () => {
                       bgcolor: '#4fc3f7'
                     }} />
                     <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
-                      BigQuery
+                      YouTube Analytics
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1648,7 +1648,7 @@ const Analytics = () => {
                       backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px)'
                     }} />
                     <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
-                      InfluxDB
+                      Rough Estimate
                     </Typography>
                   </Box>
                 </Box>
@@ -1736,8 +1736,8 @@ const Analytics = () => {
                         const isInfluxDB = dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation' || dailyTotalPoint.source?.includes('InfluxDB');
 
                         const statusIndicator = isInfluxDB
-                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 InfluxDB (Real-time)</div>'
-                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ BigQuery (Confirmed)</div>';
+                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 Rough Estimate (Real-time)</div>'
+                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ YouTube Analytics (Confirmed)</div>';
 
                         return `
                           <div style="min-width: 250px; max-width: 350px;">
@@ -1845,7 +1845,7 @@ const Analytics = () => {
                       // Add BigQuery series (solid line) if there's data
                       if (bigQueryData.some(val => val !== null)) {
                         series.push({
-                          name: 'BigQuery Data',
+                          name: 'YouTube Analytics',
                           data: bigQueryData,
                           type: 'line',
                           smooth: true,
@@ -1881,7 +1881,7 @@ const Analytics = () => {
                       // Add InfluxDB series (dotted line) if there's data
                       if (influxData.some(val => val !== null)) {
                         series.push({
-                          name: 'InfluxDB Data',
+                          name: 'Rough Estimate',
                           data: influxData,
                           type: 'line',
                           smooth: true,
