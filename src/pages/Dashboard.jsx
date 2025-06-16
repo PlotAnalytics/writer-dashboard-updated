@@ -553,59 +553,47 @@ const Dashboard = () => {
               }
             }} />
 
-            {/* Test Firecracker - Center - Always Visible */}
+            {/* Firecracker 5 - Center - Green */}
             <Box sx={{
               position: 'absolute',
               top: '50%',
               left: '50%',
               transform: 'translate(-50%, -50%)',
-              width: '20px',
-              height: '20px',
+              width: '18px',
+              height: '18px',
               borderRadius: '50%',
               background: '#00E676',
-              animation: 'testFirecracker 5s ease-out 0.5s infinite',
-              '@keyframes testFirecracker': {
+              animation: 'firecracker5 4.2s ease-out 4s both',
+              '@keyframes firecracker5': {
                 '0%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' },
-                '10%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 50px #00E676' },
-                '30%': {
+                '12%': { opacity: 1, transform: 'translate(-50%, -50%) scale(1)', boxShadow: '0 0 45px #00E676' },
+                '35%': {
                   opacity: 1,
-                  transform: 'translate(-50%, -50%) scale(5)',
-                  boxShadow: '0 0 100px #00E676, 0 0 150px #FFD700, 0 0 200px #FF1744'
+                  transform: 'translate(-50%, -50%) scale(4.5)',
+                  boxShadow: '0 0 90px #00E676, 0 0 120px #FFD700, 0 0 150px #FF1744'
                 },
-                '60%': { opacity: 0.8, transform: 'translate(-50%, -50%) scale(3)' },
+                '65%': { opacity: 0.7, transform: 'translate(-50%, -50%) scale(2.5)' },
                 '100%': { opacity: 0, transform: 'translate(-50%, -50%) scale(0)' }
               },
               '&::before': {
                 content: '""',
                 position: 'absolute',
-                top: '-15px',
-                left: '-15px',
-                right: '-15px',
-                bottom: '-15px',
+                top: '-12px',
+                left: '-12px',
+                right: '-12px',
+                bottom: '-12px',
                 borderRadius: '50%',
                 background: 'radial-gradient(circle, rgba(0,230,118,0.9) 0%, transparent 70%)',
-                animation: 'testSparkle 5s ease-out 0.5s infinite',
-                '@keyframes testSparkle': {
+                animation: 'sparkle5 4.2s ease-out 4s both',
+                '@keyframes sparkle5': {
                   '0%': { opacity: 0, transform: 'scale(0)' },
-                  '20%': { opacity: 1, transform: 'scale(6)' },
-                  '100%': { opacity: 0, transform: 'scale(12)' }
+                  '25%': { opacity: 1, transform: 'scale(5)' },
+                  '100%': { opacity: 0, transform: 'scale(10)' }
                 }
               }
             }} />
 
-            {/* Always Visible Test Dot - Simple */}
-            <Box sx={{
-              position: 'absolute',
-              top: '20%',
-              right: '30%',
-              width: '30px',
-              height: '30px',
-              borderRadius: '50%',
-              background: '#FF0000',
-              opacity: 1,
-              zIndex: 10,
-              boxShadow: '0 0 20px #FF0000',
-            }} />
+
           </Box>
 
           <Typography variant="h4" fontWeight="700" sx={{
