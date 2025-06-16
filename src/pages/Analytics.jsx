@@ -1627,16 +1627,31 @@ const Analytics = () => {
               <Typography variant="h6" sx={{ color: 'white', fontWeight: 600 }}>
                 Daily Views Chart
               </Typography>
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                <Box sx={{
-                  
-                }}>
-                  <Box sx={{
-                    
-                  }} />
-                 
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                {/* Legend for line types */}
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{
+                      width: 20,
+                      height: 2,
+                      bgcolor: '#4fc3f7'
+                    }} />
+                    <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
+                      Finalized
+                    </Typography>
+                  </Box>
+                  <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                    <Box sx={{
+                      width: 20,
+                      height: 2,
+                      bgcolor: '#FF9800',
+                      backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px)'
+                    }} />
+                    <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
+                      Real-time
+                    </Typography>
+                  </Box>
                 </Box>
-                
               </Box>
             </Box>
 
@@ -1716,11 +1731,24 @@ const Analytics = () => {
                         const views = formatNumber(dailyTotalPoint.views);
                         const uniqueVideos = dailyTotalPoint.unique_videos || 0;
 
+                        // Check if this is real-time data
+                        const now = new Date();
+                        const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+                        const cutoffDate = new Date(easternTime);
+                        cutoffDate.setDate(cutoffDate.getDate() - 3);
+                        const cutoffDateString = cutoffDate.toISOString().split('T')[0];
+                        const isRealTime = date > cutoffDateString || dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation';
+
+                        const statusIndicator = isRealTime
+                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 Real-time estimate</div>'
+                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ Finalized data</div>';
+
                         return `
                           <div style="min-width: 250px; max-width: 350px;">
                             <div style="font-size: 12px; color: #ccc; margin-bottom: 4px;">${dayjs(date).format('MMM D, YYYY')}</div>
                             <div style="font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 6px;">${views} total views</div>
                             <div style="font-size: 12px; color: #888;">${uniqueVideos} videos posted</div>
+                            ${statusIndicator}
                           </div>
                         `;
                       },
@@ -1762,52 +1790,102 @@ const Analytics = () => {
                         lineStyle: { color: '#424242', type: 'dashed' }
                       }
                     },
-                    series: [{
-                      data: analyticsData.aggregatedViewsData?.map(item => item.views) || [],
-                      type: analyticsData.aggregatedViewsData?.length === 1 ? 'bar' : 'line', // Use bar chart for single date, line for multiple
-                      smooth: analyticsData.aggregatedViewsData?.length > 1,
-                      lineStyle: {
-                        color: '#4fc3f7',
-                        width: 3
-                      },
-                      itemStyle: {
-                        color: '#4fc3f7' // For bar chart (single date)
-                      },
-                      areaStyle: analyticsData.aggregatedViewsData?.length > 1 ? {
-                        color: {
-                          type: 'linear',
-                          x: 0,
-                          y: 0,
-                          x2: 0,
-                          y2: 1,
-                          colorStops: [
-                            { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
-                            { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
-                          ],
-                        },
-                      } : undefined,
-                      symbol: 'circle',
-                      symbolSize: (_, params) => {
-                        const dataPoint = analyticsData.aggregatedViewsData?.[params.dataIndex];
-                        // Larger symbols for InfluxDB fallback data
-                        if (dataPoint?.source === 'InfluxDB_Hourly_Aggregation') {
-                          return 8; // Larger for fallback data
-                        }
-                        return 6; // Normal size for BigQuery data
-                      },
-                      itemStyle: {
-                        color: (params) => {
-                          const dataPoint = analyticsData.aggregatedViewsData?.[params.dataIndex];
-                          // Color code by data source
-                          if (dataPoint?.source === 'InfluxDB_Hourly_Aggregation') {
-                            return '#FF9800'; // Orange for InfluxDB fallback
+                    series: (() => {
+                      const data = analyticsData.aggregatedViewsData || [];
+                      const isMultipleData = data.length > 1;
+                      const isSingleDate = data.length === 1;
+
+                      // Calculate cutoff for real-time data (last 3 days in Eastern Time)
+                      const now = new Date();
+                      const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
+                      const cutoffDate = new Date(easternTime);
+                      cutoffDate.setDate(cutoffDate.getDate() - 3);
+                      const cutoffDateString = cutoffDate.toISOString().split('T')[0];
+
+                      if (isSingleDate) {
+                        // Single date - use bar chart
+                        return [{
+                          data: data.map(item => item.views),
+                          type: 'bar',
+                          itemStyle: {
+                            color: '#4fc3f7'
                           }
-                          return '#4fc3f7'; // Blue for BigQuery
-                        },
-                        borderColor: '#fff',
-                        borderWidth: 1
+                        }];
                       }
-                    }]
+
+                      // Multiple dates - create separate series for solid and dotted lines
+                      const solidLineData = [];
+                      const dottedLineData = [];
+
+                      data.forEach((item, index) => {
+                        const itemDate = item.time;
+                        const isRealTime = itemDate > cutoffDateString || item.source === 'InfluxDB_Hourly_Aggregation';
+
+                        if (isRealTime) {
+                          // Real-time data (dotted line)
+                          dottedLineData.push(item.views);
+                          solidLineData.push(null); // null to break the solid line
+                        } else {
+                          // Finalized data (solid line)
+                          solidLineData.push(item.views);
+                          dottedLineData.push(null); // null to break the dotted line
+                        }
+                      });
+
+                      return [
+                        // Solid line for finalized data
+                        {
+                          data: solidLineData,
+                          type: 'line',
+                          smooth: true,
+                          lineStyle: {
+                            color: '#4fc3f7',
+                            width: 3,
+                            type: 'solid'
+                          },
+                          areaStyle: {
+                            color: {
+                              type: 'linear',
+                              x: 0,
+                              y: 0,
+                              x2: 0,
+                              y2: 1,
+                              colorStops: [
+                                { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                              ],
+                            },
+                          },
+                          symbol: 'circle',
+                          symbolSize: 6,
+                          itemStyle: {
+                            color: '#4fc3f7',
+                            borderColor: '#fff',
+                            borderWidth: 1
+                          },
+                          connectNulls: false
+                        },
+                        // Dotted line for real-time data
+                        {
+                          data: dottedLineData,
+                          type: 'line',
+                          smooth: true,
+                          lineStyle: {
+                            color: '#FF9800',
+                            width: 3,
+                            type: 'dashed' // Dotted line for real-time data
+                          },
+                          symbol: 'circle',
+                          symbolSize: 8, // Slightly larger for real-time data
+                          itemStyle: {
+                            color: '#FF9800', // Orange for real-time data
+                            borderColor: '#fff',
+                            borderWidth: 1
+                          },
+                          connectNulls: false
+                        }
+                      ];
+                    })()]
                   }}
                   style={{ height: '100%', width: '100%' }}
                 />
