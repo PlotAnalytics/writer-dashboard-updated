@@ -432,15 +432,13 @@ const Dashboard = () => {
           }}>
             <Box>
               <Typography
-                variant="h5"
-                fontWeight="700"
+                variant="h6"
+                fontWeight="600"
                 sx={{
-                  color: 'white',
-                  mb: 4,
-                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                  backgroundClip: 'text',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  mb: 3,
+                  fontSize: '18px',
+                  letterSpacing: '0.5px'
                 }}
               >
                 New Script Submission
@@ -466,34 +464,29 @@ const Dashboard = () => {
                 component="form"
                 onSubmit={handleSubmit}
                 sx={{
-                  background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                  backdropFilter: 'blur(20px)',
-                  p: 4,
-                  borderRadius: '20px',
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.02)',
+                  backdropFilter: 'blur(8px)',
+                  p: 3,
+                  borderRadius: '12px',
+                  border: '1px solid rgba(255, 255, 255, 0.06)',
+                  boxShadow: '0 2px 12px rgba(0, 0, 0, 0.1)',
                   width: '100%',
                   maxWidth: '600px',
-                  position: 'relative',
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '1px',
-                    background: 'linear-gradient(90deg, transparent 0%, rgba(102, 126, 234, 0.5) 50%, transparent 100%)',
-                    borderRadius: '20px 20px 0 0',
-                  }
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    boxShadow: '0 4px 16px rgba(0, 0, 0, 0.15)',
+                  },
                 }}
               >
                 {/* Modern Title Field */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    mb: 2,
-                    fontWeight: '600',
-                    fontSize: '14px'
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.5,
+                    fontWeight: '500',
+                    fontSize: '13px'
                   }}>
                     Title
                   </Typography>
@@ -506,26 +499,28 @@ const Dashboard = () => {
                     size="medium"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
-                        transition: 'all 0.3s ease',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
                         '& fieldset': { border: 'none' },
                         '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
                         },
                         '&.Mui-focused': {
-                          border: '1px solid #667eea',
-                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                         },
                       },
                       '& .MuiInputBase-input': {
-                        color: 'white',
-                        fontSize: '16px',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '14px',
+                        padding: '12px 14px',
                         '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.5)',
+                          color: 'rgba(255, 255, 255, 0.4)',
                         }
                       },
                     }}
@@ -533,37 +528,42 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Modern Type Section */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    mb: 2,
-                    fontWeight: '600',
-                    fontSize: '14px'
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.5,
+                    fontWeight: '500',
+                    fontSize: '13px'
                   }}>
                     Type
                   </Typography>
-                  <Box sx={{ display: 'flex', gap: 3, alignItems: 'center' }}>
+                  <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <FormControl size="medium" sx={{ minWidth: '200px' }} required>
                       <Select
                         value={prefixType}
                         onChange={handleTypeChange}
                         displayEmpty
                         sx={{
-                          background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                          backdropFilter: 'blur(10px)',
-                          border: '1px solid rgba(255, 255, 255, 0.2)',
-                          borderRadius: '12px',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
                           '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
                           '&:hover': {
-                            border: '1px solid rgba(102, 126, 234, 0.5)',
-                            boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
                           },
                           '&.Mui-focused': {
-                            border: '1px solid #667eea',
-                            boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                           },
-                          '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
-                          '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                          '& .MuiSelect-select': {
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            fontSize: '14px',
+                            padding: '12px 14px'
+                          },
+                          '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
                         <MenuItem value="Trope">Trope</MenuItem>
@@ -574,35 +574,40 @@ const Dashboard = () => {
                     </FormControl>
 
                     {prefixType === "Trope" && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                         <Typography variant="body2" sx={{
-                          color: 'rgba(255, 255, 255, 0.9)',
-                          fontWeight: '600',
-                          fontSize: '14px'
+                          color: 'rgba(255, 255, 255, 0.8)',
+                          fontWeight: '500',
+                          fontSize: '13px'
                         }}>
                           Number
                         </Typography>
-                        <FormControl size="medium" sx={{ minWidth: '120px' }}>
+                        <FormControl size="small" sx={{ minWidth: '100px' }}>
                           <Select
                             value={prefixNumber}
                             onChange={(e) => setPrefixNumber(e.target.value)}
                             displayEmpty
                             sx={{
-                              background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                              backdropFilter: 'blur(10px)',
-                              border: '1px solid rgba(255, 255, 255, 0.2)',
-                              borderRadius: '12px',
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              backdropFilter: 'blur(5px)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '8px',
                               '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
                               '&:hover': {
-                                border: '1px solid rgba(102, 126, 234, 0.5)',
-                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                                border: '1px solid rgba(102, 126, 234, 0.3)',
+                                background: 'rgba(255, 255, 255, 0.06)',
                               },
                               '&.Mui-focused': {
-                                border: '1px solid #667eea',
-                                boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                                border: '1px solid rgba(102, 126, 234, 0.5)',
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                               },
-                              '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
-                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                              '& .MuiSelect-select': {
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                fontSize: '14px',
+                                padding: '8px 12px'
+                              },
+                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                             }}
                           >
                             <MenuItem value="Choose" disabled>
@@ -621,27 +626,28 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Modern Trope Display Box */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: 3 }}>
                   <Box
                     sx={{
-                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
-                      border: '1px solid rgba(102, 126, 234, 0.3)',
-                      borderRadius: '12px',
-                      padding: '16px 20px',
-                      fontSize: '15px',
+                      background: 'rgba(102, 126, 234, 0.05)',
+                      border: '1px solid rgba(102, 126, 234, 0.15)',
+                      borderRadius: '8px',
+                      padding: '12px 16px',
+                      fontSize: '13px',
                       width: '100%',
-                      minHeight: '56px',
+                      minHeight: '44px',
                       display: 'flex',
                       alignItems: 'center',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap',
-                      color: 'rgba(255, 255, 255, 0.9)',
-                      fontWeight: '500',
-                      backdropFilter: 'blur(10px)',
-                      transition: 'all 0.3s ease',
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      backdropFilter: 'blur(5px)',
+                      transition: 'all 0.2s ease',
                       '&:hover': {
-                        boxShadow: '0 4px 15px rgba(102, 126, 234, 0.2)',
+                        background: 'rgba(102, 126, 234, 0.08)',
+                        color: 'rgba(255, 255, 255, 0.8)',
                       }
                     }}
                   >
@@ -654,12 +660,12 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Modern Structure Field */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    mb: 2,
-                    fontWeight: '600',
-                    fontSize: '14px'
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.5,
+                    fontWeight: '500',
+                    fontSize: '13px'
                   }}>
                     Structure
                   </Typography>
@@ -669,21 +675,26 @@ const Dashboard = () => {
                       onChange={(e) => setSelectedStructure(e.target.value)}
                       displayEmpty
                       sx={{
-                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
                         '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
                         '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
                         },
                         '&.Mui-focused': {
-                          border: '1px solid #667eea',
-                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                         },
-                        '& .MuiSelect-select': { color: 'white', fontSize: '16px' },
-                        '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' },
+                        '& .MuiSelect-select': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '12px 14px'
+                        },
+                        '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                       }}
                     >
                       <MenuItem value="">-- No structure selected --</MenuItem>
@@ -697,12 +708,12 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Modern Google Doc Link Field */}
-                <Box sx={{ mb: 4 }}>
+                <Box sx={{ mb: 3 }}>
                   <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.9)',
-                    mb: 2,
-                    fontWeight: '600',
-                    fontSize: '14px'
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.5,
+                    fontWeight: '500',
+                    fontSize: '13px'
                   }}>
                     Google Doc Link
                   </Typography>
@@ -716,26 +727,28 @@ const Dashboard = () => {
                     size="medium"
                     sx={{
                       '& .MuiOutlinedInput-root': {
-                        background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 255, 255, 0.2)',
-                        borderRadius: '12px',
-                        transition: 'all 0.3s ease',
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
                         '& fieldset': { border: 'none' },
                         '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          boxShadow: '0 4px 15px rgba(102, 126, 234, 0.1)',
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
                         },
                         '&.Mui-focused': {
-                          border: '1px solid #667eea',
-                          boxShadow: '0 4px 20px rgba(102, 126, 234, 0.2)',
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                         },
                       },
                       '& .MuiInputBase-input': {
-                        color: 'white',
-                        fontSize: '16px',
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '14px',
+                        padding: '12px 14px',
                         '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.5)',
+                          color: 'rgba(255, 255, 255, 0.4)',
                         }
                       },
                     }}
@@ -750,20 +763,20 @@ const Dashboard = () => {
                   sx={{
                     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                     color: 'white',
-                    fontWeight: '700',
-                    fontSize: '16px',
-                    py: 2,
-                    borderRadius: '12px',
+                    fontWeight: '600',
+                    fontSize: '14px',
+                    py: 1.5,
+                    borderRadius: '8px',
                     textTransform: 'none',
-                    boxShadow: '0 4px 15px rgba(102, 126, 234, 0.4)',
-                    transition: 'all 0.3s ease',
+                    boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                    transition: 'all 0.2s ease',
                     '&:hover': {
                       background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
-                      boxShadow: '0 6px 20px rgba(102, 126, 234, 0.6)',
-                      transform: 'translateY(-2px)',
+                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                      transform: 'translateY(-1px)',
                     },
                     '&:disabled': {
-                      background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
+                      background: 'rgba(255, 255, 255, 0.1)',
                       color: 'rgba(255, 255, 255, 0.5)',
                       boxShadow: 'none',
                       transform: 'none',
