@@ -397,20 +397,27 @@ const Dashboard = () => {
         }}>
           <Typography variant="h4" fontWeight="700" sx={{
             color: 'white',
-            mb: 1,
+            mb: 4,
             background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             backgroundClip: 'text',
             WebkitBackgroundClip: 'text',
             WebkitTextFillColor: 'transparent',
+            fontSize: { xs: '22px', sm: '26px', md: '28px' },
+            textAlign: 'center',
+            letterSpacing: '0.5px',
+            animation: 'fadeInUp 0.8s ease-out',
+            '@keyframes fadeInUp': {
+              '0%': {
+                opacity: 0,
+                transform: 'translateY(30px)',
+              },
+              '100%': {
+                opacity: 1,
+                transform: 'translateY(0)',
+              },
+            },
           }}>
             Welcome, {writer?.name || user?.name || 'Writer'}! What are we writing today?
-          </Typography>
-          <Typography variant="body1" sx={{
-            color: 'rgba(255, 255, 255, 0.7)',
-            fontSize: '16px',
-            fontWeight: 500
-          }}>
-            Writer ID: {writer?.id || user?.writerId || 'N/A'}
           </Typography>
         </Box>
 

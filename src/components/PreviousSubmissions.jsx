@@ -302,7 +302,9 @@ const PreviousSubmissions = ({
         alignItems: 'center',
         mb: 3,
         pb: 2,
-        borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
+        borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+        flexWrap: 'wrap',
+        gap: 2
       }}>
         <Typography
           variant="h6"
@@ -310,12 +312,13 @@ const PreviousSubmissions = ({
           sx={{
             color: 'white',
             fontSize: '1.1rem',
-            letterSpacing: '0.5px'
+            letterSpacing: '0.5px',
+            flex: '0 0 auto'
           }}
         >
           Previous Submissions
         </Typography>
-        <Box sx={{ display: 'flex', gap: 2 }}>
+        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center', flex: '1 1 auto', justifyContent: 'flex-end' }}>
           <IconButton
             onClick={onRefresh}
             size="small"
@@ -323,9 +326,9 @@ const PreviousSubmissions = ({
               background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%)',
               backdropFilter: 'blur(10px)',
               color: 'white',
-              borderRadius: '12px',
-              width: 40,
-              height: 40,
+              borderRadius: '10px',
+              width: 36,
+              height: 36,
               border: '1px solid rgba(255, 255, 255, 0.2)',
               '&:hover': {
                 background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)',
@@ -347,11 +350,12 @@ const PreviousSubmissions = ({
               border: 'none',
               fontWeight: '500',
               borderRadius: '8px',
-              px: 3,
-              py: 1,
-              fontSize: '13px',
+              px: 2.5,
+              py: 0.8,
+              fontSize: '12px',
               textTransform: 'none',
               boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+              minWidth: 'auto',
               '&:hover': {
                 background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
                 transform: 'translateY(-1px)',
@@ -373,10 +377,11 @@ const PreviousSubmissions = ({
               border: '1px solid rgba(255, 255, 255, 0.1)',
               fontWeight: '500',
               borderRadius: '8px',
-              px: 3,
-              py: 1,
-              fontSize: '13px',
+              px: 2.5,
+              py: 0.8,
+              fontSize: '12px',
               textTransform: 'none',
+              minWidth: 'auto',
               '&:hover': {
                 background: 'rgba(102, 126, 234, 0.1)',
                 borderColor: 'rgba(102, 126, 234, 0.3)',
