@@ -208,7 +208,7 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
     // 1. Get BigQuery daily totals from youtube_video_report_historical (EXACTLY as QA script)
     try {
-      // Use daily totals query EXACTLY as QA script - EXCLUDE LAST 2 DAYS IN EASTERN TIME
+      // Use daily totals query EXACTLY as QA script - EXCLUDE LAST 3 DAYS IN EASTERN TIME
       const dailyTotalsQuery = `
         SELECT
           est_date,
@@ -967,6 +967,7 @@ async function getBigQueryAnalyticsOverview(
       FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
       WHERE writer_name = @writer_name
         AND est_date BETWEEN @start_date AND @end_date
+        AND est_date <= DATE_SUB(CURRENT_DATE("America/New_York"), INTERVAL 3 DAY)
         AND writer_name IS NOT NULL
         AND views IS NOT NULL
       GROUP BY est_date
