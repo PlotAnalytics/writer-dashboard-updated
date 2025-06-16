@@ -1637,7 +1637,7 @@ const Analytics = () => {
                       bgcolor: '#4fc3f7'
                     }} />
                     <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
-                      Finalized
+                      BigQuery
                     </Typography>
                   </Box>
                   <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -1648,7 +1648,7 @@ const Analytics = () => {
                       backgroundImage: 'repeating-linear-gradient(90deg, transparent, transparent 2px, #1a1a1a 2px, #1a1a1a 4px)'
                     }} />
                     <Typography variant="caption" sx={{ color: '#888', fontSize: '11px' }}>
-                      Real-time
+                      InfluxDB
                     </Typography>
                   </Box>
                 </Box>
@@ -1731,17 +1731,13 @@ const Analytics = () => {
                         const views = formatNumber(dailyTotalPoint.views);
                         const uniqueVideos = dailyTotalPoint.unique_videos || 0;
 
-                        // Check if this is real-time data
-                        const now = new Date();
-                        const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-                        const cutoffDate = new Date(easternTime);
-                        cutoffDate.setDate(cutoffDate.getDate() - 3);
-                        const cutoffDateString = cutoffDate.toISOString().split('T')[0];
-                        const isRealTime = date > cutoffDateString || dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation';
+                        // Check data source
+                        const isBigQuery = dailyTotalPoint.source === 'BigQuery_Daily_Totals' || dailyTotalPoint.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !dailyTotalPoint.source?.includes('InfluxDB');
+                        const isInfluxDB = dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation' || dailyTotalPoint.source?.includes('InfluxDB');
 
-                        const statusIndicator = isRealTime
-                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 Real-time estimate</div>'
-                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ Finalized data</div>';
+                        const statusIndicator = isInfluxDB
+                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 InfluxDB (Real-time)</div>'
+                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ BigQuery (Confirmed)</div>';
 
                         return `
                           <div style="min-width: 250px; max-width: 350px;">
@@ -1795,13 +1791,6 @@ const Analytics = () => {
                       const isMultipleData = data.length > 1;
                       const isSingleDate = data.length === 1;
 
-                      // Calculate cutoff for real-time data (last 3 days in Eastern Time)
-                      const now = new Date();
-                      const easternTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}));
-                      const cutoffDate = new Date(easternTime);
-                      cutoffDate.setDate(cutoffDate.getDate() - 3);
-                      const cutoffDateString = cutoffDate.toISOString().split('T')[0];
-
                       if (isSingleDate) {
                         // Single date - use bar chart
                         return [{
@@ -1813,29 +1802,36 @@ const Analytics = () => {
                         }];
                       }
 
-                      // Multiple dates - create separate series for solid and dotted lines
-                      const solidLineData = [];
-                      const dottedLineData = [];
+                      // Multiple dates - separate BigQuery and InfluxDB data
+                      const bigQueryData = [];
+                      const influxData = [];
 
                       data.forEach((item, index) => {
-                        const itemDate = item.time;
-                        const isRealTime = itemDate > cutoffDateString || item.source === 'InfluxDB_Hourly_Aggregation';
+                        const isBigQuery = item.source === 'BigQuery_Daily_Totals' || item.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !item.source?.includes('InfluxDB');
+                        const isInfluxDB = item.source === 'InfluxDB_Hourly_Aggregation' || item.source?.includes('InfluxDB');
 
-                        if (isRealTime) {
-                          // Real-time data (dotted line)
-                          dottedLineData.push(item.views);
-                          solidLineData.push(null); // null to break the solid line
+                        if (isBigQuery) {
+                          // BigQuery data (solid line)
+                          bigQueryData.push(item.views);
+                          influxData.push(null); // null to break the dotted line
+                        } else if (isInfluxDB) {
+                          // InfluxDB data (dotted line)
+                          influxData.push(item.views);
+                          bigQueryData.push(null); // null to break the solid line
                         } else {
-                          // Finalized data (solid line)
-                          solidLineData.push(item.views);
-                          dottedLineData.push(null); // null to break the dotted line
+                          // Default to BigQuery if source is unclear
+                          bigQueryData.push(item.views);
+                          influxData.push(null);
                         }
                       });
 
-                      return [
-                        // Solid line for finalized data
-                        {
-                          data: solidLineData,
+                      const series = [];
+
+                      // Add BigQuery series (solid line) if there's data
+                      if (bigQueryData.some(val => val !== null)) {
+                        series.push({
+                          name: 'BigQuery Data',
+                          data: bigQueryData,
                           type: 'line',
                           smooth: true,
                           lineStyle: {
@@ -1864,27 +1860,33 @@ const Analytics = () => {
                             borderWidth: 1
                           },
                           connectNulls: false
-                        },
-                        // Dotted line for real-time data
-                        {
-                          data: dottedLineData,
+                        });
+                      }
+
+                      // Add InfluxDB series (dotted line) if there's data
+                      if (influxData.some(val => val !== null)) {
+                        series.push({
+                          name: 'InfluxDB Data',
+                          data: influxData,
                           type: 'line',
                           smooth: true,
                           lineStyle: {
                             color: '#FF9800',
                             width: 3,
-                            type: 'dashed' // Dotted line for real-time data
+                            type: 'dashed' // Dotted line for InfluxDB data
                           },
                           symbol: 'circle',
-                          symbolSize: 8, // Slightly larger for real-time data
+                          symbolSize: 8, // Slightly larger for InfluxDB data
                           itemStyle: {
-                            color: '#FF9800', // Orange for real-time data
+                            color: '#FF9800', // Orange for InfluxDB data
                             borderColor: '#fff',
                             borderWidth: 1
                           },
                           connectNulls: false
-                        }
-                      ];
+                        });
+                      }
+
+                      return series;
                     })()
                   }}
                   style={{ height: '100%', width: '100%' }}
