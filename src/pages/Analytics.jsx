@@ -1806,6 +1806,16 @@ const Analytics = () => {
                       const bigQueryData = [];
                       const influxData = [];
 
+                      // Find the split point between BigQuery and InfluxDB data
+                      let splitIndex = -1;
+                      for (let i = 0; i < data.length; i++) {
+                        const isInfluxDB = data[i].source === 'InfluxDB_Hourly_Aggregation' || data[i].source?.includes('InfluxDB');
+                        if (isInfluxDB) {
+                          splitIndex = i;
+                          break;
+                        }
+                      }
+
                       data.forEach((item, index) => {
                         const isBigQuery = item.source === 'BigQuery_Daily_Totals' || item.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !item.source?.includes('InfluxDB');
                         const isInfluxDB = item.source === 'InfluxDB_Hourly_Aggregation' || item.source?.includes('InfluxDB');
@@ -1813,7 +1823,12 @@ const Analytics = () => {
                         if (isBigQuery) {
                           // BigQuery data (solid line)
                           bigQueryData.push(item.views);
-                          influxData.push(null); // null to break the dotted line
+                          // For InfluxDB array: put null except for the last BigQuery point to connect
+                          if (splitIndex !== -1 && index === splitIndex - 1) {
+                            influxData.push(item.views); // Connect the lines at transition point
+                          } else {
+                            influxData.push(null);
+                          }
                         } else if (isInfluxDB) {
                           // InfluxDB data (dotted line)
                           influxData.push(item.views);
@@ -1882,7 +1897,7 @@ const Analytics = () => {
                             borderColor: '#fff',
                             borderWidth: 1
                           },
-                          connectNulls: false
+                          connectNulls: true
                         });
                       }
 

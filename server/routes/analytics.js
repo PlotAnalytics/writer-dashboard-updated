@@ -216,8 +216,8 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
           SUM(CAST(views AS INT64)) AS total_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
         WHERE writer_name = @writer_name
-          AND est_date BETWEEN @start_date AND @end_date
-          AND DATE(est_date) <= DATE_SUB(CURRENT_DATE("America/New_York"), INTERVAL 3 DAY)
+          AND DATE(est_date) BETWEEN @start_date AND @end_date
+          AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
           AND writer_name IS NOT NULL
           AND views IS NOT NULL
         GROUP BY est_date
@@ -394,7 +394,7 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     console.log(`📊 Adding InfluxDB daily data for missing dates (dotted line visualization)...`);
 
     // Create a set of dates we already have BigQuery data for
-    const existingDates = new Set(allData.map(item => item.time.value));
+    const existingDates = new Set(allData.map(item => item.time.value.split('T')[0]));
     console.log(`📊 Existing dates from BigQuery:`, Array.from(existingDates).slice(0, 5));
 
     // Generate all dates in the range to find missing ones
@@ -981,58 +981,139 @@ async function getBigQueryAnalyticsOverview(
       console.log(`📅 Using PREDEFINED date range: ${finalStartDate} → ${finalEndDate}`);
     }
 
-    // ———————————————— 4) QA: Raw Views from BigQuery ————————————————
-    const rawViewsQuery = `
-      SELECT
-        est_date,
-        video_id,
-        video_title,
-        views,
-        account_name
-      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-      WHERE writer_name = @writer_name
-        AND est_date BETWEEN @start_date AND @end_date
-        AND writer_name IS NOT NULL
-        AND views IS NOT NULL
-      ORDER BY est_date DESC, views DESC;
-  
-    `;
-    const [rawViewsRows] = await bigquery.query({
-      query: rawViewsQuery,
-      params: {
-        writer_name: writerName,
-        start_date:  finalStartDate,
-        end_date:    finalEndDate,
-        
-      }
-    });
-    console.log(`📋 Raw Views (${rawViewsRows.length} rows):`);
-    console.table(rawViewsRows);
+    // ———————————————— 4) Determine data source strategy ————————————————
+    const today = new Date();
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(today.getDate() - 3);
+    const threeDaysAgoStr = threeDaysAgo.toISOString().slice(0, 10);
 
-    // ——— Daily totals via BigQuery ———
-    const dailyTotalsQuery = `
-      SELECT
-        est_date,
-        COUNT(DISTINCT video_id)    AS unique_videos,
-        SUM(CAST(views AS INT64))   AS total_views
-      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-      WHERE writer_name = @writer_name
-        AND est_date BETWEEN @start_date AND @end_date
-        AND DATE(est_date) <= DATE_SUB(CURRENT_DATE("America/New_York"), INTERVAL 3 DAY)
-        AND writer_name IS NOT NULL
-        AND views IS NOT NULL
-      GROUP BY est_date
-      ORDER BY est_date DESC
-      LIMIT 30;
-    `;
-    const [dailyTotalsRows] = await bigquery.query({
-      query: dailyTotalsQuery,
-      params: {
-        writer_name: writerName,
-        start_date:  finalStartDate,
-        end_date:    finalEndDate
+    const requestStartDate = new Date(finalStartDate);
+    const requestEndDate = new Date(finalEndDate);
+
+    let useBigQuery = false;
+    let useInfluxDB = false;
+    let bigQueryEndDate = finalEndDate;
+
+    if (requestEndDate <= threeDaysAgo) {
+      // Entire range is in BigQuery territory (before last 3 days)
+      useBigQuery = true;
+      useInfluxDB = false;
+      console.log(`📊 Data source strategy: BigQuery ONLY (range ends ${finalEndDate}, cutoff is ${threeDaysAgoStr})`);
+    } else if (requestStartDate > threeDaysAgo) {
+      // Entire range is in InfluxDB territory (last 3 days)
+      useBigQuery = false;
+      useInfluxDB = true;
+      console.log(`📊 Data source strategy: InfluxDB ONLY (range starts ${finalStartDate}, cutoff is ${threeDaysAgoStr})`);
+    } else {
+      // Range spans both territories
+      useBigQuery = true;
+      useInfluxDB = true;
+      bigQueryEndDate = threeDaysAgoStr; // Limit BigQuery to before last 3 days
+      console.log(`📊 Data source strategy: BOTH (BigQuery until ${threeDaysAgoStr}, InfluxDB from ${threeDaysAgoStr})`);
+    }
+
+    console.log(`🔍 Date range analysis: {
+      finalStartDate: '${finalStartDate}',
+      finalEndDate: '${finalEndDate}',
+      threeDaysAgoStr: '${threeDaysAgoStr}',
+      useBigQuery: ${useBigQuery},
+      useInfluxDB: ${useInfluxDB},
+      bigQueryEndDate: '${bigQueryEndDate}'
+    }`);
+
+    // ———————————————— 5) QA: Raw Views from BigQuery ————————————————
+
+    let rawViewsRows = [];
+    if (useBigQuery) {
+      const rawViewsQuery = `
+        SELECT
+          est_date,
+          video_id,
+          video_title,
+          views,
+          account_name
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+        WHERE writer_name = @writer_name
+          AND DATE(est_date) >= @start_date
+          AND DATE(est_date) <= @end_date
+          ${useBigQuery && useInfluxDB ? 'AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)' : ''}
+          AND writer_name IS NOT NULL
+          AND views IS NOT NULL
+        ORDER BY est_date DESC, views DESC;
+
+      `;
+      const [bigQueryRawRows] = await bigquery.query({
+        query: rawViewsQuery,
+        params: {
+          writer_name: writerName,
+          start_date: finalStartDate,
+          end_date: bigQueryEndDate,
+        }
+      });
+      rawViewsRows = bigQueryRawRows;
+    }
+    console.log(`📋 Raw Views (${rawViewsRows.length} rows):`);
+    console.table(rawViewsRows.slice(0, 100).map(row => ({
+      est_date: row.est_date,
+      video_id: row.video_id,
+      video_title: row.video_title,
+      views: row.views,
+      account_name: row.account_name
+    })));
+
+    console.log('✅ Raw views processing completed successfully');
+    console.log('🔍 About to start daily totals query...');
+
+    // ——— Daily totals via BigQuery (exclude last 3 days, use date picker range) ———
+    console.log('🔍 Executing BigQuery daily totals query...');
+
+    let dailyTotalsRows = [];
+    if (useBigQuery) {
+      try {
+        // Smart daily totals query - only exclude last 3 days if using both sources
+        const dailyTotalsQuery = `
+          SELECT
+            est_date,
+            COUNT(DISTINCT video_id) AS unique_videos,
+            SUM(CAST(views AS INT64)) AS total_views
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+          WHERE writer_name = @writer_name
+            AND DATE(est_date) BETWEEN @start_date AND @end_date
+            ${useBigQuery && useInfluxDB ? 'AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)' : ''}
+            AND writer_name IS NOT NULL
+            AND views IS NOT NULL
+          GROUP BY est_date
+          ORDER BY est_date DESC
+          LIMIT 30;
+        `;
+
+        console.log(`🔍 BigQuery DAILY TOTALS query (smart filtering):`, dailyTotalsQuery);
+        console.log(`🔍 BigQuery params:`, {
+          writer_name: writerName,
+          start_date: finalStartDate,
+          end_date: bigQueryEndDate
+        });
+
+        const [bigQueryRows] = await bigquery.query({
+          query: dailyTotalsQuery,
+          params: {
+            writer_name: writerName,
+            start_date: finalStartDate,
+            end_date: bigQueryEndDate
+          }
+        });
+
+        dailyTotalsRows = bigQueryRows;
+        console.log(`📊 BigQuery returned ${bigQueryRows.length} daily totals from youtube_video_report_historical`);
+
+      } catch (bigQueryError) {
+        console.error('❌ BigQuery daily totals error:', bigQueryError);
+        // Continue with empty array if BigQuery fails
+        dailyTotalsRows = [];
       }
-    });
+    }
+
+    console.log('✅ Daily totals query completed successfully');
     console.log(`📋 Daily Totals (${dailyTotalsRows.length} days):`);
     console.table(dailyTotalsRows);
 
@@ -1046,82 +1127,74 @@ async function getBigQueryAnalyticsOverview(
     console.log(`   Unique Videos:    ${uniqueVideos}`);
     console.log(`   Unique Dates:     ${uniqueDates}`);
 
-    // ———————————————— 5) Find missing dates ————————————————
-    const seenDates = new Set(rawViewsRows.map(r => r.est_date));
-    const missingDates = [];
-    for (let d = new Date(finalStartDate); d <= new Date(finalEndDate); d.setDate(d.getDate() + 1)) {
-      const ds = d.toISOString().slice(0, 10);
-      if (!seenDates.has(ds)) missingDates.push(ds);
-    }
-    console.log(`⚠️ Missing dates (${missingDates.length}):`, missingDates);
+    console.log('🎯 DAILY TOTALS PROCESSING COMPLETED SUCCESSFULLY!');
+    console.log('🚀 REACHED INFLUXDB SECTION - About to start InfluxDB integration...');
 
-    // ———————————————— 6) InfluxDB fallback for missing dates ————————————————
-    const fallbackData = [];
-    if (missingDates.length) {
-      console.log('📊 InfluxDB fallback: hourly → daily for missing dates');
-      const InfluxService = require('../services/influxService');
-      const influx       = new InfluxService();
+    // ———————————————— 6) Get InfluxDB data (real-time data) ————————————————
+    const influxData = [];
+    if (useInfluxDB) {
+      try {
+        console.log('📊 Fetching InfluxDB data for real-time data...');
+        console.log('📊 About to initialize InfluxDB service...');
+        const InfluxService = require('../services/influxService');
+        const influx = new InfluxService();
+        console.log('📊 InfluxDB service initialized successfully');
 
-      for (const date of missingDates) {
-        // Convert EST date to UTC range for InfluxDB query
-        // The 'date' parameter is in EST format (YYYY-MM-DD)
-        const estDate = new Date(date + 'T00:00:00-05:00'); // EST date start
-        const utcStartDate = new Date(estDate.getTime() + (5 * 60 * 60 * 1000)); // Convert to UTC
-        const utcEndDate = new Date(utcStartDate.getTime() + (24 * 60 * 60 * 1000) - 1); // End of day in UTC
-
-        const startRFC = utcStartDate.toISOString();
-        const stopRFC = utcEndDate.toISOString();
-
-        const flux = `
-          from(bucket:"youtube_api")
-            |> range(start: ${startRFC}, stop: ${stopRFC})
-            |> filter(fn: r =>
-                 r["_measurement"] == "views" and
-                 r["writerId"]      == "${writerId}"
-               )
-            |> aggregateWindow(every: 1h, fn: sum, createEmpty: true)
-            |> keep(columns: ["_time","_value"])
-        `;
-
-        let hourly;
-        try {
-          hourly = await influx.queryFlux(flux);
-        } catch (err) {
-          console.error(`❌ Influx error for ${date} (EST):`, err.message);
-          continue;
+        // Determine the range for InfluxDB based on the request
+        let influxRange = '3d'; // default
+        if (!useBigQuery) {
+          // If only using InfluxDB, calculate the range from the custom dates
+          const startDate = new Date(finalStartDate);
+          const endDate = new Date(finalEndDate);
+          const daysDiff = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24)) + 1;
+          influxRange = `${daysDiff}d`;
+          console.log(`📊 InfluxDB-only mode: using ${influxRange} range for custom dates ${finalStartDate} to ${finalEndDate}`);
         }
 
-        console.log(`\n📅 Hourly views for ${date} (EST, UTC query: ${startRFC} to ${stopRFC}):`);
-        console.table(
-          hourly.map(r => ({
-            hour_utc: new Date(r._time).toISOString().slice(11,13) + ':00',
-            hour_est: new Date(new Date(r._time).getTime() - (5 * 60 * 60 * 1000)).toISOString().slice(11,13) + ':00',
-            views: r._value
-          }))
-        );
+        // Use the existing getDashboardAnalytics method
+        const hourlyData = await influx.getDashboardAnalytics(influxRange, writerId);
+        console.log(`📊 InfluxDB returned ${hourlyData.length} daily data points`);
 
-        const dailySum = hourly.reduce((sum, r) => sum + (r._value || 0), 0);
-        fallbackData.push({ date, views: dailySum }); // date is already in EST format
-        console.log(`📊 InfluxDB fallback for ${date} (EST): ${dailySum} views`);
+        // Filter InfluxDB data to match the requested date range
+        hourlyData.forEach(point => {
+          const estDate = point.date.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+          // Only include dates within the requested range
+          if (estDate >= finalStartDate && estDate <= finalEndDate) {
+            influxData.push({
+              date: estDate,
+              views: point.views,
+              source: 'InfluxDB_RealTime'
+            });
+          }
+        });
+
+        // Sort by date
+        influxData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+        console.log(`📊 InfluxDB daily aggregates (EST, filtered):`, influxData);
+
+      } catch (err) {
+        console.error('❌ InfluxDB error in getBigQueryAnalyticsOverview:', err.message);
+        console.error('❌ InfluxDB error stack:', err.stack);
       }
-      console.log(`✅ Fallback provided ${fallbackData.length} days`);
     }
 
-    // ———————————————— 7) Transform DAILY TOTALS data for frontend (EXACTLY as QA script) ————————————————
-    // Use DAILY TOTALS BigQuery data for chart - EXACTLY as QA script
+    // ———————————————— 6) Transform DAILY TOTALS data for frontend ————————————————
+    // Use DAILY TOTALS BigQuery data for chart (solid lines)
     const dailyTotalsData = dailyTotalsRows.map(row => ({
       time: row.est_date.value,
       views: parseInt(row.total_views || 0),
       unique_videos: parseInt(row.unique_videos || 0),
-      source: 'BigQuery_Daily_Totals'
+      source: 'BigQuery'
     }));
 
-    // Add fallback data for missing dates (only if needed)
-    fallbackData.forEach(item => {
+    // Add InfluxDB real-time data (dotted lines)
+    influxData.forEach(item => {
       dailyTotalsData.push({
         time: item.date,
         views: item.views,
-        source: 'InfluxDB_Hourly_Aggregation'
+        source: 'InfluxDB'
       });
     });
 
@@ -1140,10 +1213,10 @@ async function getBigQueryAnalyticsOverview(
     // Calculate final total views including fallback data
     const finalTotalViews = dailyTotalsData.reduce((sum, item) => sum + item.views, 0);
 
-    console.log(`📊 DAILY TOTALS Overview complete: ${dailyTotalsData.length} data points (EXACTLY as QA script)`);
-    console.log(`📊 Final total views (including fallback): ${finalTotalViews.toLocaleString()}`);
+    console.log(`📊 Analytics Overview complete: ${dailyTotalsData.length} data points`);
+    console.log(`📊 Final total views (BigQuery + InfluxDB): ${finalTotalViews.toLocaleString()}`);
     console.log(`📊 BigQuery total views: ${totalViews.toLocaleString()}`);
-    console.log(`📊 Fallback data points: ${fallbackData.length}`);
+    console.log(`📊 InfluxDB data points: ${influxData.length}`);
 
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
@@ -1157,19 +1230,19 @@ async function getBigQueryAnalyticsOverview(
         lowestDay: dailyTotalsData.length > 0 ? Math.min(...dailyTotalsData.map(d => d.views)) : 0
       },
       metadata: {
-        source: 'QA Script: BigQuery youtube_video_report_historical DAILY TOTALS + InfluxDB hourly fallback',
-        dataSource: 'BigQuery: youtube_video_report_historical (DAILY TOTALS) + InfluxDB fallback',
+        source: 'BigQuery youtube_video_report_historical (solid lines) + InfluxDB last 3 days (dotted lines)',
+        dataSource: 'BigQuery: all historical data + InfluxDB: last 3 days real-time',
         lastUpdated: new Date().toISOString(),
         range: range,
         bigQueryIntegrated: true,
-        qaScriptImplemented: true,
+        influxDBIntegrated: true,
         tableUsed: 'youtube_video_report_historical',
-        usesDailyTotals: true
+        influxDBDays: 3
       },
       // Keep raw data for debugging
       rawViews: rawViewsRows,
       dailyTotals: dailyTotalsRows,
-      fallbackData: fallbackData
+      influxData: influxData
     };
   }
   catch (err) {
@@ -1356,7 +1429,7 @@ router.get('/debug-bigquery-raw', async (req, res) => {
         SUM(CAST(statistics_view_count AS INT64)) AS views
       FROM \`${projectId}.${analyticsDataset}.${analyticsTable}\`
       WHERE writer_id = @writer_id
-        AND snapshot_date BETWEEN @start_date AND @end_date
+        AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
         AND writer_id IS NOT NULL
         AND statistics_view_count IS NOT NULL
       GROUP BY snapshot_date
@@ -1506,7 +1579,7 @@ router.get('/debug-data-comparison', async (req, res) => {
             SUM(CAST(statistics_view_count AS INT64)) AS views
           FROM \`${projectId}.${analyticsDataset}.${analyticsTable}\`
           WHERE writer_id = @writer_id
-            AND snapshot_date BETWEEN @start_date AND @end_date
+            AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
             AND writer_id IS NOT NULL
             AND statistics_view_count IS NOT NULL
           GROUP BY snapshot_date
@@ -1684,7 +1757,7 @@ router.get('/debug-30days-june5', async (req, res) => {
             SUM(CAST(statistics_view_count AS INT64)) AS views
           FROM \`${projectId}.${dataset}.${table}\`
           WHERE writer_id = @writer_id
-            AND snapshot_date BETWEEN @start_date AND @end_date
+            AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
             AND writer_id IS NOT NULL
             AND statistics_view_count IS NOT NULL
           GROUP BY snapshot_date
@@ -1860,6 +1933,15 @@ async function handleAnalyticsRequest(req, res) {
 
     if (writerId) {
       try {
+        console.log('🔥 About to call getBigQueryAnalyticsOverview with params:', {
+          writerId,
+          range,
+          writerName,
+          limit: 100,
+          customStartDate,
+          customEndDate
+        });
+
         // Use BigQuery for analytics overview with writer name from PostgreSQL
         const analyticsData = await getBigQueryAnalyticsOverview(
           writerId,
