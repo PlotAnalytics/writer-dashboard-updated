@@ -777,26 +777,6 @@ const PreviousSubmissions = ({
                     borderColor: 'rgba(102, 126, 234, 0.4)',
                     transform: 'translateY(-1px)',
                     boxShadow: '0 4px 16px rgba(102, 126, 234, 0.2)',
-                  },
-                  '&::before': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    height: '3px',
-                    background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '12px 12px 0 0',
-                  },
-                  '&::after': {
-                    content: '""',
-                    position: 'absolute',
-                    top: 0,
-                    left: 0,
-                    width: '3px',
-                    height: '100%',
-                    background: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)',
-                    borderRadius: '12px 0 0 12px',
                   }
                 }}
               >
@@ -823,14 +803,14 @@ const PreviousSubmissions = ({
                   size="small"
                   className={chipClass}
                   style={{
-                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%)',
+                    backgroundColor: styles.base,
                     color: 'white',
                     fontWeight: '500',
                     fontSize: '0.7rem',
                     height: '22px',
                     borderRadius: '11px',
-                    border: '1px solid rgba(102, 126, 234, 0.3)',
-                    boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)',
+                    border: `1px solid ${styles.base}`,
+                    boxShadow: `0 1px 4px ${styles.chipShadow}`,
                   }}
                   sx={{
                     '& .MuiChip-label': {
@@ -838,8 +818,7 @@ const PreviousSubmissions = ({
                     },
                     '&:hover': {
                       transform: 'scale(1.02)',
-                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%)',
-                      boxShadow: '0 2px 6px rgba(102, 126, 234, 0.4)',
+                      boxShadow: `0 2px 6px ${styles.chipHoverShadow}`,
                     },
                     transition: 'all 0.2s ease'
                   }}
