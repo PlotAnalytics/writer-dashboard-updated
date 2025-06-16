@@ -762,21 +762,21 @@ const PreviousSubmissions = ({
                 key={submission.id}
                 className={statusClass}
                 style={{
-                  backgroundColor: styles.bg,
-                  border: `1px solid ${styles.border}`,
+                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                  border: '1px solid rgba(102, 126, 234, 0.2)',
                   borderRadius: '12px',
                   padding: '18px',
                   position: 'relative',
                   overflow: 'hidden',
                   transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
-                  backdropFilter: 'blur(5px)',
+                  backdropFilter: 'blur(8px)',
                 }}
                 sx={{
                   '&:hover': {
-                    bgcolor: styles.hoverBg,
-                    borderColor: styles.hoverBorder,
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.12) 0%, rgba(118, 75, 162, 0.12) 100%)',
+                    borderColor: 'rgba(102, 126, 234, 0.4)',
                     transform: 'translateY(-1px)',
-                    boxShadow: `0 4px 16px ${styles.shadow}`,
+                    boxShadow: '0 4px 16px rgba(102, 126, 234, 0.2)',
                   },
                   '&::before': {
                     content: '""',
@@ -785,7 +785,7 @@ const PreviousSubmissions = ({
                     left: 0,
                     right: 0,
                     height: '3px',
-                    bgcolor: styles.base,
+                    background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
                     borderRadius: '12px 12px 0 0',
                   },
                   '&::after': {
@@ -795,7 +795,7 @@ const PreviousSubmissions = ({
                     left: 0,
                     width: '3px',
                     height: '100%',
-                    bgcolor: styles.base,
+                    background: 'linear-gradient(180deg, #667eea 0%, #764ba2 100%)',
                     borderRadius: '12px 0 0 12px',
                   }
                 }}
@@ -823,14 +823,14 @@ const PreviousSubmissions = ({
                   size="small"
                   className={chipClass}
                   style={{
-                    backgroundColor: styles.base,
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.8) 0%, rgba(118, 75, 162, 0.8) 100%)',
                     color: 'white',
                     fontWeight: '500',
                     fontSize: '0.7rem',
                     height: '22px',
                     borderRadius: '11px',
-                    border: `1px solid ${styles.base}`,
-                    boxShadow: `0 1px 4px ${styles.chipShadow}`,
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)',
                   }}
                   sx={{
                     '& .MuiChip-label': {
@@ -838,7 +838,8 @@ const PreviousSubmissions = ({
                     },
                     '&:hover': {
                       transform: 'scale(1.02)',
-                      boxShadow: `0 2px 6px ${styles.chipHoverShadow}`,
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.9) 0%, rgba(118, 75, 162, 0.9) 100%)',
+                      boxShadow: '0 2px 6px rgba(102, 126, 234, 0.4)',
                     },
                     transition: 'all 0.2s ease'
                   }}
