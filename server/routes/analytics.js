@@ -982,10 +982,18 @@ async function getBigQueryAnalyticsOverview(
     }
 
     // ———————————————— 4) Determine data source strategy ————————————————
-    const today = new Date();
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 3);
+    // Use EST timezone to match BigQuery data (consistent across all users)
+    const nowEST = new Date();
+    // Convert to EST: UTC - 5 hours (EST) or UTC - 4 hours (EDT)
+    // For simplicity, use UTC - 5 hours (EST)
+    const estOffset = -5 * 60; // EST is UTC-5
+    const nowESTTime = new Date(nowEST.getTime() + (estOffset * 60 * 1000));
+
+    const threeDaysAgo = new Date(nowESTTime);
+    threeDaysAgo.setDate(nowESTTime.getDate() - 3);
     const threeDaysAgoStr = threeDaysAgo.toISOString().slice(0, 10);
+
+    console.log(`🕐 Timezone calculation: Server local time: ${nowEST.toISOString()}, EST time: ${nowESTTime.toISOString()}, 3 days ago (EST): ${threeDaysAgoStr}`);
 
     const requestStartDate = new Date(finalStartDate);
     const requestEndDate = new Date(finalEndDate);
