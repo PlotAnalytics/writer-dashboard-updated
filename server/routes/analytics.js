@@ -244,8 +244,11 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
       console.log(`📊 BigQuery returned ${bigQueryRows.length} daily totals from youtube_video_report_historical`);
 
       // Transform BigQuery daily totals data EXACTLY as QA script
+      // FIX: Convert BigQuery date to string to prevent timezone shifts
       const bigQueryData = bigQueryRows.map(row => ({
-        time: { value: row.est_date.value },
+        time: { value: row.est_date.value instanceof Date ?
+          row.est_date.value.toISOString().split('T')[0] :
+          row.est_date.value },
         views: parseInt(row.total_views || 0),
         unique_videos: parseInt(row.unique_videos || 0),
         source: 'BigQuery_Daily_Totals'
@@ -1206,8 +1209,11 @@ async function getBigQueryAnalyticsOverview(
 
     // ———————————————— 6) Transform DAILY TOTALS data for frontend ————————————————
     // Use DAILY TOTALS BigQuery data for chart (solid lines)
+    // FIX: Convert BigQuery date to string to prevent timezone shifts
     const dailyTotalsData = dailyTotalsRows.map(row => ({
-      time: row.est_date.value,
+      time: row.est_date.value instanceof Date ?
+        row.est_date.value.toISOString().split('T')[0] :
+        row.est_date.value,
       views: parseInt(row.total_views || 0),
       unique_videos: parseInt(row.unique_videos || 0),
       source: 'BigQuery'
@@ -1475,8 +1481,11 @@ router.get('/debug-bigquery-raw', async (req, res) => {
     console.log(`🔍 DEBUG: BigQuery returned ${bigQueryRows.length} rows`);
 
     // Show raw data
+    // FIX: Convert BigQuery date to string to prevent timezone shifts
     const rawData = bigQueryRows.map(row => ({
-      date: row.time.value,
+      date: row.time.value instanceof Date ?
+        row.time.value.toISOString().split('T')[0] :
+        row.time.value,
       absoluteViews: parseInt(row.views || 0)
     }));
 
@@ -1620,7 +1629,9 @@ router.get('/debug-data-comparison', async (req, res) => {
         });
 
         const bigQueryRaw = bigQueryRows.map(row => ({
-          date: row.time.value,
+          date: row.time.value instanceof Date ?
+            row.time.value.toISOString().split('T')[0] :
+            row.time.value,
           absoluteViews: parseInt(row.views || 0)
         }));
 
@@ -1800,7 +1811,9 @@ router.get('/debug-30days-june5', async (req, res) => {
         });
 
         const bigQueryRaw = bigQueryRows.map(row => ({
-          date: row.time.value,
+          date: row.time.value instanceof Date ?
+            row.time.value.toISOString().split('T')[0] :
+            row.time.value,
           absoluteViews: parseInt(row.views || 0)
         }));
 
@@ -2197,10 +2210,15 @@ router.get('/channel', authenticateToken, async (req, res) => {
         const bigQueryData = await getBigQueryViews(writerId, startDateStr, endDateStr, influxService);
 
         // Transform BigQuery data for chart
+        // FIX: Convert BigQuery date to string to prevent timezone shifts
         chartData = bigQueryData.map(row => ({
-          date: row.time.value,
+          date: row.time.value instanceof Date ?
+            row.time.value.toISOString().split('T')[0] :
+            row.time.value,
           views: row.views,
-          timestamp: new Date(row.time.value).getTime()
+          timestamp: new Date(row.time.value instanceof Date ?
+            row.time.value.toISOString().split('T')[0] :
+            row.time.value).getTime()
         })).sort((a, b) => a.timestamp - b.timestamp);
 
         // Calculate total views
@@ -2618,8 +2636,11 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
       console.log(`📊 BigQuery returned ${bigQueryRows.length} rows for writer ${writer_id}`);
 
       // Transform data to match WriterAnalytics component format
+      // FIX: Convert BigQuery date to string to prevent timezone shifts
       const transformedData = bigQueryRows.map(row => ({
-        time: { value: row.time.value }, // Keep the BigQuery date format
+        time: { value: row.time.value instanceof Date ?
+          row.time.value.toISOString().split('T')[0] :
+          row.time.value },
         views: parseInt(row.views)
       }));
 
