@@ -982,25 +982,17 @@ async function getBigQueryAnalyticsOverview(
     }
 
     // ———————————————— 4) Determine data source strategy ————————————————
-    // Use EST timezone to match BigQuery data (consistent across all users)
-    // Account for EDT (Daylight Saving Time) - currently in effect
-    const nowUTC = new Date();
-    // EDT is UTC-4 (March to November), EST is UTC-5 (November to March)
-    // Since it's June, use EDT (UTC-4)
-    const edtOffset = -4 * 60; // EDT is UTC-4
-    const nowEDTTime = new Date(nowUTC.getTime() + (edtOffset * 60 * 1000));
+    // FIXED APPROACH: Always use 3 days ago from current UTC date
+    // No timezone conversions, no seasonal changes - simple and consistent
+    const today = new Date();
+    const threeDaysAgo = new Date(today);
+    threeDaysAgo.setDate(today.getDate() - 3);
+    const cutoffDateStr = threeDaysAgo.toISOString().slice(0, 10);
 
-    // Use 2.5 days instead of 3 to be more conservative and ensure June 13th is included
-    const cutoffDaysAgo = new Date(nowEDTTime);
-    cutoffDaysAgo.setDate(nowEDTTime.getDate() - 2.5);
-    cutoffDaysAgo.setHours(12, 0, 0, 0); // Set to noon to avoid edge cases
-    const cutoffDateStr = cutoffDaysAgo.toISOString().slice(0, 10);
-
-    console.log(`🕐 Timezone calculation:
-      Server UTC time: ${nowUTC.toISOString()}
-      EDT time: ${nowEDTTime.toISOString()}
-      Cutoff date (2.5 days ago): ${cutoffDateStr}
-      This ensures June 13th data is always included for all users`);
+    console.log(`📅 FIXED cutoff calculation:
+      Today (UTC): ${today.toISOString().slice(0, 10)}
+      Cutoff (3 days ago): ${cutoffDateStr}
+      Simple, consistent, no timezone complexity`);
 
     const requestStartDate = new Date(finalStartDate);
     const requestEndDate = new Date(finalEndDate);
