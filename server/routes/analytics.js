@@ -1020,8 +1020,11 @@ async function getBigQueryAnalyticsOverview(
       // Range spans both territories
       useBigQuery = true;
       useInfluxDB = true;
-      bigQueryEndDate = cutoffDateStr; // Limit BigQuery to before cutoff
-      console.log(`📊 Data source strategy: BOTH (BigQuery until ${cutoffDateStr}, InfluxDB from ${cutoffDateStr})`);
+      // BigQuery should end BEFORE cutoff date (one day before)
+      const bigQueryCutoff = new Date(cutoffDateObj);
+      bigQueryCutoff.setDate(bigQueryCutoff.getDate() - 1);
+      bigQueryEndDate = bigQueryCutoff.toISOString().slice(0, 10);
+      console.log(`📊 Data source strategy: BOTH (BigQuery until ${bigQueryEndDate}, InfluxDB from ${cutoffDateStr})`);
     }
 
     console.log(`🔍 Date range analysis: {
@@ -1091,7 +1094,7 @@ async function getBigQueryAnalyticsOverview(
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
           WHERE writer_name = @writer_name
             AND DATE(est_date) BETWEEN @start_date AND @end_date
-            ${useBigQuery && useInfluxDB ? `AND DATE(est_date) <= '${cutoffDateStr}'` : ''}
+            ${useBigQuery && useInfluxDB ? `AND DATE(est_date) <= '${bigQueryEndDate}'` : ''}
             AND writer_name IS NOT NULL
             AND views IS NOT NULL
           GROUP BY est_date
@@ -1169,8 +1172,8 @@ async function getBigQueryAnalyticsOverview(
 
         // Filter InfluxDB data to start from cutoff date (where BigQuery ends)
         const influxStartDate = useBigQuery ?
-          // If using both sources, start InfluxDB from day after cutoff
-          new Date(new Date(cutoffDateStr).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10) :
+          // If using both sources, start InfluxDB from cutoff date (not day after)
+          cutoffDateStr :
           // If InfluxDB only, use the user's start date
           finalStartDate;
 
