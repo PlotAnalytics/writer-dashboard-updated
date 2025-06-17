@@ -982,17 +982,21 @@ async function getBigQueryAnalyticsOverview(
     }
 
     // ———————————————— 4) Determine data source strategy ————————————————
-    // FIXED APPROACH: Always use 3 days ago from current UTC date
-    // No timezone conversions, no seasonal changes - simple and consistent
-    const today = new Date();
-    const threeDaysAgo = new Date(today);
-    threeDaysAgo.setDate(today.getDate() - 3);
+    // FIXED APPROACH: Always use EST timezone (matches BigQuery data and user timezone)
+    // Convert current time to EST, then calculate 3 days ago - simple and consistent
+    const nowUTC = new Date();
+    const estOffset = -5 * 60; // EST is always UTC-5 (fixed, no DST changes)
+    const nowEST = new Date(nowUTC.getTime() + (estOffset * 60 * 1000));
+
+    const threeDaysAgo = new Date(nowEST);
+    threeDaysAgo.setDate(nowEST.getDate() - 3);
     const cutoffDateStr = threeDaysAgo.toISOString().slice(0, 10);
 
-    console.log(`📅 FIXED cutoff calculation:
-      Today (UTC): ${today.toISOString().slice(0, 10)}
-      Cutoff (3 days ago): ${cutoffDateStr}
-      Simple, consistent, no timezone complexity`);
+    console.log(`📅 FIXED EST cutoff calculation:
+      Current UTC: ${nowUTC.toISOString()}
+      Current EST: ${nowEST.toISOString()}
+      Cutoff (3 days ago EST): ${cutoffDateStr}
+      Fixed EST timezone - matches BigQuery data and users`);
 
     const requestStartDate = new Date(finalStartDate);
     const requestEndDate = new Date(finalEndDate);
