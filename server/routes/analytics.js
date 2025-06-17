@@ -982,58 +982,69 @@ async function getBigQueryAnalyticsOverview(
     }
 
     // ———————————————— 4) Determine data source strategy ————————————————
-    // FIXED APPROACH: Always use EST timezone (matches BigQuery data and user timezone)
-    // Calculate current EST time by subtracting 5 hours from UTC
+    // SIMPLE APPROACH: Calculate exact cutoff dates
+    // Today in EST, then calculate what dates to show
     const nowUTC = new Date();
     const nowEST = new Date(nowUTC.getTime() - (5 * 60 * 60 * 1000)); // Subtract 5 hours for EST
+    const todayEST = nowEST.toISOString().slice(0, 10);
 
-    const threeDaysAgo = new Date(nowEST);
-    threeDaysAgo.setDate(nowEST.getDate() - 3);
-    const cutoffDateStr = threeDaysAgo.toISOString().slice(0, 10);
+    // BigQuery: Show until 3 days ago (exclude last 3 days)
+    const bigQueryLastDay = new Date(nowEST);
+    bigQueryLastDay.setDate(nowEST.getDate() - 3);
+    const bigQueryEndDate = bigQueryLastDay.toISOString().slice(0, 10);
 
-    console.log(`📅 FIXED EST cutoff calculation:
+    // InfluxDB: Show from 2 days ago onwards (last 3 days)
+    const influxFirstDay = new Date(nowEST);
+    influxFirstDay.setDate(nowEST.getDate() - 2);
+    const influxStartDate = influxFirstDay.toISOString().slice(0, 10);
+
+    console.log(`📅 SIMPLE EST date calculation:
       Current UTC: ${nowUTC.toISOString()}
       Current EST: ${nowEST.toISOString()}
-      Cutoff (3 days ago EST): ${cutoffDateStr}
-      Fixed EST timezone - matches BigQuery data and users`);
+      Today EST: ${todayEST}
+      BigQuery ends: ${bigQueryEndDate} (exclude last 3 days)
+      InfluxDB starts: ${influxStartDate} (last 3 days)`);
 
     const requestStartDate = new Date(finalStartDate);
     const requestEndDate = new Date(finalEndDate);
 
     let useBigQuery = false;
     let useInfluxDB = false;
-    let bigQueryEndDate = finalEndDate;
+    let finalBigQueryEndDate = finalEndDate;
+    let finalInfluxStartDate = influxStartDate;
 
-    const cutoffDateObj = new Date(cutoffDateStr);
+    const bigQueryCutoffDate = new Date(bigQueryEndDate);
+    const influxCutoffDate = new Date(influxStartDate);
 
-    if (requestEndDate <= cutoffDateObj) {
-      // Entire range is in BigQuery territory (before cutoff)
+    if (requestEndDate <= bigQueryCutoffDate) {
+      // Entire range is in BigQuery territory
       useBigQuery = true;
       useInfluxDB = false;
-      console.log(`📊 Data source strategy: BigQuery ONLY (range ends ${finalEndDate}, cutoff is ${cutoffDateStr})`);
-    } else if (requestStartDate > cutoffDateObj) {
-      // Entire range is in InfluxDB territory (after cutoff)
+      finalBigQueryEndDate = finalEndDate;
+      console.log(`📊 Data source strategy: BigQuery ONLY (range ends ${finalEndDate}, BigQuery covers until ${bigQueryEndDate})`);
+    } else if (requestStartDate >= influxCutoffDate) {
+      // Entire range is in InfluxDB territory
       useBigQuery = false;
       useInfluxDB = true;
-      console.log(`📊 Data source strategy: InfluxDB ONLY (range starts ${finalStartDate}, cutoff is ${cutoffDateStr})`);
+      console.log(`📊 Data source strategy: InfluxDB ONLY (range starts ${finalStartDate}, InfluxDB covers from ${influxStartDate})`);
     } else {
       // Range spans both territories
       useBigQuery = true;
       useInfluxDB = true;
-      // BigQuery should end BEFORE cutoff date (one day before)
-      const bigQueryCutoff = new Date(cutoffDateObj);
-      bigQueryCutoff.setDate(bigQueryCutoff.getDate() - 1);
-      bigQueryEndDate = bigQueryCutoff.toISOString().slice(0, 10);
-      console.log(`📊 Data source strategy: BOTH (BigQuery until ${bigQueryEndDate}, InfluxDB from ${cutoffDateStr})`);
+      finalBigQueryEndDate = bigQueryEndDate;
+      finalInfluxStartDate = influxStartDate;
+      console.log(`📊 Data source strategy: BOTH (BigQuery until ${bigQueryEndDate}, InfluxDB from ${influxStartDate})`);
     }
 
     console.log(`🔍 Date range analysis: {
       finalStartDate: '${finalStartDate}',
       finalEndDate: '${finalEndDate}',
-      cutoffDateStr: '${cutoffDateStr}',
+      bigQueryEndDate: '${bigQueryEndDate}',
+      influxStartDate: '${influxStartDate}',
       useBigQuery: ${useBigQuery},
       useInfluxDB: ${useInfluxDB},
-      bigQueryEndDate: '${bigQueryEndDate}'
+      finalBigQueryEndDate: '${finalBigQueryEndDate}',
+      finalInfluxStartDate: '${finalInfluxStartDate}'
     }`);
 
     // ———————————————— 5) QA: Raw Views from BigQuery ————————————————
@@ -1062,7 +1073,7 @@ async function getBigQueryAnalyticsOverview(
         params: {
           writer_name: writerName,
           start_date: finalStartDate,
-          end_date: bigQueryEndDate,
+          end_date: finalBigQueryEndDate,
         }
       });
       rawViewsRows = bigQueryRawRows;
@@ -1094,7 +1105,7 @@ async function getBigQueryAnalyticsOverview(
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
           WHERE writer_name = @writer_name
             AND DATE(est_date) BETWEEN @start_date AND @end_date
-            ${useBigQuery && useInfluxDB ? `AND DATE(est_date) <= '${bigQueryEndDate}'` : ''}
+            ${useBigQuery && useInfluxDB ? `AND DATE(est_date) <= '${finalBigQueryEndDate}'` : ''}
             AND writer_name IS NOT NULL
             AND views IS NOT NULL
           GROUP BY est_date
@@ -1106,7 +1117,7 @@ async function getBigQueryAnalyticsOverview(
         console.log(`🔍 BigQuery params:`, {
           writer_name: writerName,
           start_date: finalStartDate,
-          end_date: bigQueryEndDate
+          end_date: finalBigQueryEndDate
         });
 
         const [bigQueryRows] = await bigquery.query({
@@ -1114,7 +1125,7 @@ async function getBigQueryAnalyticsOverview(
           params: {
             writer_name: writerName,
             start_date: finalStartDate,
-            end_date: bigQueryEndDate
+            end_date: finalBigQueryEndDate
           }
         });
 
@@ -1170,20 +1181,20 @@ async function getBigQueryAnalyticsOverview(
         const hourlyData = await influx.getDashboardAnalytics(influxRange, writerId);
         console.log(`📊 InfluxDB returned ${hourlyData.length} daily data points`);
 
-        // Filter InfluxDB data to start from cutoff date (where BigQuery ends)
-        const influxStartDate = useBigQuery ?
-          // If using both sources, start InfluxDB from cutoff date (not day after)
-          cutoffDateStr :
+        // Filter InfluxDB data using the calculated start date
+        const influxFilterStartDate = useBigQuery ?
+          // If using both sources, use the calculated InfluxDB start date
+          finalInfluxStartDate :
           // If InfluxDB only, use the user's start date
           finalStartDate;
 
-        console.log(`📊 InfluxDB date filtering: start=${influxStartDate}, end=${finalEndDate}, cutoff=${cutoffDateStr}`);
+        console.log(`📊 InfluxDB date filtering: start=${influxFilterStartDate}, end=${finalEndDate}`);
 
         hourlyData.forEach(point => {
           const estDate = point.date.toISOString().split('T')[0]; // YYYY-MM-DD format
 
           // Include dates from InfluxDB start date to end date
-          if (estDate >= influxStartDate && estDate <= finalEndDate) {
+          if (estDate >= influxFilterStartDate && estDate <= finalEndDate) {
             influxData.push({
               date: estDate,
               views: point.views,
