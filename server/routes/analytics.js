@@ -208,20 +208,20 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
     // 1. Get BigQuery daily totals from youtube_video_report_historical (EXACTLY as QA script)
     try {
-      // Use daily totals query EXACTLY as QA script - EXCLUDE LAST 3 DAYS IN EASTERN TIME
+      // SIMPLIFIED: Use date_day field instead of est_date to avoid timezone issues
       const dailyTotalsQuery = `
         SELECT
-          est_date,
+          date_day,
           COUNT(DISTINCT video_id) AS unique_videos,
           SUM(CAST(views AS INT64)) AS total_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
         WHERE writer_name = @writer_name
-          AND DATE(est_date) BETWEEN @start_date AND @end_date
-          AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
+          AND date_day BETWEEN @start_date AND @end_date
+          AND date_day <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)
           AND writer_name IS NOT NULL
           AND views IS NOT NULL
-        GROUP BY est_date
-        ORDER BY est_date DESC
+        GROUP BY date_day
+        ORDER BY date_day DESC
         LIMIT 30;
       `;
 
@@ -243,12 +243,9 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
       console.log(`📊 BigQuery returned ${bigQueryRows.length} daily totals from youtube_video_report_historical`);
 
-      // Transform BigQuery daily totals data EXACTLY as QA script
-      // FIX: Convert BigQuery date to string to prevent timezone shifts
+      // Transform BigQuery daily totals data - SIMPLIFIED with date_day
       const bigQueryData = bigQueryRows.map(row => ({
-        time: { value: row.est_date.value instanceof Date ?
-          row.est_date.value.toISOString().split('T')[0] :
-          row.est_date.value },
+        time: { value: row.date_day }, // date_day is already a string, no timezone issues!
         views: parseInt(row.total_views || 0),
         unique_videos: parseInt(row.unique_videos || 0),
         source: 'BigQuery_Daily_Totals'
@@ -1046,19 +1043,19 @@ async function getBigQueryAnalyticsOverview(
     if (useBigQuery) {
       const rawViewsQuery = `
         SELECT
-          est_date,
+          date_day,
           video_id,
           video_title,
           views,
           account_name
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
         WHERE writer_name = @writer_name
-          AND DATE(est_date) >= @start_date
-          AND DATE(est_date) <= @end_date
-          ${useBigQuery && useInfluxDB ? 'AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)' : ''}
+          AND date_day >= @start_date
+          AND date_day <= @end_date
+          ${useBigQuery && useInfluxDB ? 'AND date_day <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)' : ''}
           AND writer_name IS NOT NULL
           AND views IS NOT NULL
-        ORDER BY est_date DESC, views DESC;
+        ORDER BY date_day DESC, views DESC;
 
       `;
       const [bigQueryRawRows] = await bigquery.query({
@@ -1073,7 +1070,7 @@ async function getBigQueryAnalyticsOverview(
     }
     console.log(`📋 Raw Views (${rawViewsRows.length} rows):`);
     console.table(rawViewsRows.slice(0, 100).map(row => ({
-      est_date: row.est_date,
+      date_day: row.date_day,
       video_id: row.video_id,
       video_title: row.video_title,
       views: row.views,
@@ -1089,20 +1086,20 @@ async function getBigQueryAnalyticsOverview(
     let dailyTotalsRows = [];
     if (useBigQuery) {
       try {
-        // REVERTED: Original working query logic
+        // SIMPLIFIED: Use date_day field to avoid timezone issues
         const dailyTotalsQuery = `
           SELECT
-            est_date,
+            date_day,
             COUNT(DISTINCT video_id) AS unique_videos,
             SUM(CAST(views AS INT64)) AS total_views
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
           WHERE writer_name = @writer_name
-            AND DATE(est_date) BETWEEN @start_date AND @end_date
-            ${useBigQuery && useInfluxDB ? `AND DATE(est_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
+            AND date_day BETWEEN @start_date AND @end_date
+            ${useBigQuery && useInfluxDB ? `AND date_day <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
             AND writer_name IS NOT NULL
             AND views IS NOT NULL
-          GROUP BY est_date
-          ORDER BY est_date DESC
+          GROUP BY date_day
+          ORDER BY date_day DESC
           LIMIT 30;
         `;
 
@@ -1209,11 +1206,9 @@ async function getBigQueryAnalyticsOverview(
 
     // ———————————————— 6) Transform DAILY TOTALS data for frontend ————————————————
     // Use DAILY TOTALS BigQuery data for chart (solid lines)
-    // FIX: Convert BigQuery date to string to prevent timezone shifts
+    // SIMPLIFIED: date_day is already a string, no timezone conversion needed!
     const dailyTotalsData = dailyTotalsRows.map(row => ({
-      time: row.est_date.value instanceof Date ?
-        row.est_date.value.toISOString().split('T')[0] :
-        row.est_date.value,
+      time: row.date_day, // Simple string field, no .value needed!
       views: parseInt(row.total_views || 0),
       unique_videos: parseInt(row.unique_videos || 0),
       source: 'BigQuery'
