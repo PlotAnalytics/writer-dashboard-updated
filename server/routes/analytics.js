@@ -982,26 +982,26 @@ async function getBigQueryAnalyticsOverview(
     }
 
     // ———————————————— 4) Determine data source strategy ————————————————
-    // SIMPLE APPROACH: Calculate exact cutoff dates
-    // Today in EST, then calculate what dates to show
+    // CORRECT APPROACH: Use EDT (Eastern Daylight Time) which is UTC-4 during summer
+    // BigQuery data is in Eastern timezone, so we need to match that
     const nowUTC = new Date();
-    const nowEST = new Date(nowUTC.getTime() - (5 * 60 * 60 * 1000)); // Subtract 5 hours for EST
-    const todayEST = nowEST.toISOString().slice(0, 10);
+    const nowEDT = new Date(nowUTC.getTime() - (4 * 60 * 60 * 1000)); // Subtract 4 hours for EDT
+    const todayEDT = nowEDT.toISOString().slice(0, 10);
 
     // BigQuery: Show until 3 days ago (exclude last 3 days)
-    const bigQueryLastDay = new Date(nowEST);
-    bigQueryLastDay.setDate(nowEST.getDate() - 3);
+    const bigQueryLastDay = new Date(nowEDT);
+    bigQueryLastDay.setDate(nowEDT.getDate() - 3);
     const bigQueryEndDate = bigQueryLastDay.toISOString().slice(0, 10);
 
     // InfluxDB: Show from 2 days ago onwards (last 3 days)
-    const influxFirstDay = new Date(nowEST);
-    influxFirstDay.setDate(nowEST.getDate() - 2);
+    const influxFirstDay = new Date(nowEDT);
+    influxFirstDay.setDate(nowEDT.getDate() - 2);
     const influxStartDate = influxFirstDay.toISOString().slice(0, 10);
 
-    console.log(`📅 SIMPLE EST date calculation:
+    console.log(`📅 CORRECT EDT date calculation:
       Current UTC: ${nowUTC.toISOString()}
-      Current EST: ${nowEST.toISOString()}
-      Today EST: ${todayEST}
+      Current EDT: ${nowEDT.toISOString()}
+      Today EDT: ${todayEDT}
       BigQuery ends: ${bigQueryEndDate} (exclude last 3 days)
       InfluxDB starts: ${influxStartDate} (last 3 days)`);
 
