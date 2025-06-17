@@ -208,10 +208,10 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
     // 1. Get BigQuery daily totals from youtube_video_report_historical (EXACTLY as QA script)
     try {
-      // SIMPLIFIED: Use date_day field instead of est_date to avoid timezone issues
+      // CONVERT date_day to string in SQL to prevent timezone issues
       const dailyTotalsQuery = `
         SELECT
-          date_day,
+          FORMAT_DATE('%Y-%m-%d', date_day) as date_string,
           COUNT(DISTINCT video_id) AS unique_videos,
           SUM(CAST(views AS INT64)) AS total_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
@@ -243,9 +243,9 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
       console.log(`📊 BigQuery returned ${bigQueryRows.length} daily totals from youtube_video_report_historical`);
 
-      // Transform BigQuery daily totals data - SIMPLIFIED with date_day
+      // Transform BigQuery daily totals data - using FORMAT_DATE string
       const bigQueryData = bigQueryRows.map(row => ({
-        time: { value: row.date_day }, // date_day is already a string, no timezone issues!
+        time: { value: row.date_string }, // FORMAT_DATE returns a string, no timezone issues!
         views: parseInt(row.total_views || 0),
         unique_videos: parseInt(row.unique_videos || 0),
         source: 'BigQuery_Daily_Totals'
@@ -1043,7 +1043,7 @@ async function getBigQueryAnalyticsOverview(
     if (useBigQuery) {
       const rawViewsQuery = `
         SELECT
-          date_day,
+          FORMAT_DATE('%Y-%m-%d', date_day) as date_string,
           video_id,
           video_title,
           views,
@@ -1070,7 +1070,7 @@ async function getBigQueryAnalyticsOverview(
     }
     console.log(`📋 Raw Views (${rawViewsRows.length} rows):`);
     console.table(rawViewsRows.slice(0, 100).map(row => ({
-      date_day: row.date_day,
+      date_string: row.date_string,
       video_id: row.video_id,
       video_title: row.video_title,
       views: row.views,
@@ -1086,10 +1086,10 @@ async function getBigQueryAnalyticsOverview(
     let dailyTotalsRows = [];
     if (useBigQuery) {
       try {
-        // SIMPLIFIED: Use date_day field to avoid timezone issues
+        // CONVERT date_day to string in SQL to prevent timezone issues
         const dailyTotalsQuery = `
           SELECT
-            date_day,
+            FORMAT_DATE('%Y-%m-%d', date_day) as date_string,
             COUNT(DISTINCT video_id) AS unique_videos,
             SUM(CAST(views AS INT64)) AS total_views
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
@@ -1206,9 +1206,9 @@ async function getBigQueryAnalyticsOverview(
 
     // ———————————————— 6) Transform DAILY TOTALS data for frontend ————————————————
     // Use DAILY TOTALS BigQuery data for chart (solid lines)
-    // SIMPLIFIED: date_day is already a string, no timezone conversion needed!
+    // FORMAT_DATE returns a string, no timezone conversion needed!
     const dailyTotalsData = dailyTotalsRows.map(row => ({
-      time: row.date_day, // Simple string field, no .value needed!
+      time: row.date_string, // FORMAT_DATE string, no timezone issues!
       views: parseInt(row.total_views || 0),
       unique_videos: parseInt(row.unique_videos || 0),
       source: 'BigQuery'
