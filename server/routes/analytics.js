@@ -983,10 +983,9 @@ async function getBigQueryAnalyticsOverview(
 
     // ———————————————— 4) Determine data source strategy ————————————————
     // FIXED APPROACH: Always use EST timezone (matches BigQuery data and user timezone)
-    // Convert current time to EST, then calculate 3 days ago - simple and consistent
+    // Calculate current EST time by subtracting 5 hours from UTC
     const nowUTC = new Date();
-    const estOffset = -5 * 60; // EST is always UTC-5 (fixed, no DST changes)
-    const nowEST = new Date(nowUTC.getTime() + (estOffset * 60 * 1000));
+    const nowEST = new Date(nowUTC.getTime() - (5 * 60 * 60 * 1000)); // Subtract 5 hours for EST
 
     const threeDaysAgo = new Date(nowEST);
     threeDaysAgo.setDate(nowEST.getDate() - 3);
