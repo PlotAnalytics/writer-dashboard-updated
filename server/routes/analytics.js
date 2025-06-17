@@ -1168,12 +1168,20 @@ async function getBigQueryAnalyticsOverview(
         const hourlyData = await influx.getDashboardAnalytics(influxRange, writerId);
         console.log(`📊 InfluxDB returned ${hourlyData.length} daily data points`);
 
-        // Filter InfluxDB data to match the requested date range
+        // Filter InfluxDB data to start from cutoff date (where BigQuery ends)
+        const influxStartDate = useBigQuery ?
+          // If using both sources, start InfluxDB from day after cutoff
+          new Date(new Date(cutoffDateStr).getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10) :
+          // If InfluxDB only, use the user's start date
+          finalStartDate;
+
+        console.log(`📊 InfluxDB date filtering: start=${influxStartDate}, end=${finalEndDate}, cutoff=${cutoffDateStr}`);
+
         hourlyData.forEach(point => {
           const estDate = point.date.toISOString().split('T')[0]; // YYYY-MM-DD format
 
-          // Only include dates within the requested range
-          if (estDate >= finalStartDate && estDate <= finalEndDate) {
+          // Include dates from InfluxDB start date to end date
+          if (estDate >= influxStartDate && estDate <= finalEndDate) {
             influxData.push({
               date: estDate,
               views: point.views,
