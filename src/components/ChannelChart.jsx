@@ -108,13 +108,12 @@ const ChannelChart = ({ data, totalViews, progressToTarget, avgDailyViews, dateR
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      // Format the date for tooltip display
-      const formattedDate = new Date(label).toLocaleDateString('en-US', {
-        weekday: 'short',
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric'
-      });
+      // Format the date for tooltip display - avoid timezone conversion
+      // Parse the date string directly to avoid timezone issues
+      const dateStr = label; // Should be in YYYY-MM-DD format
+      const [year, month, day] = dateStr.split('-');
+      const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      const formattedDate = `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
 
       return (
         <Box sx={{
@@ -247,7 +246,11 @@ const ChannelChart = ({ data, totalViews, progressToTarget, avgDailyViews, dateR
                 color: 'white',
                 borderBottom: '1px solid #444'
               }}>
-                {new Date(row.date).toLocaleDateString()}
+                {(() => {
+                  const [year, month, day] = row.date.split('-');
+                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                  return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+                })()}
               </td>
               <td style={{
                 padding: '12px',
@@ -449,7 +452,13 @@ const ChannelChart = ({ data, totalViews, progressToTarget, avgDailyViews, dateR
             alignItems: 'center'
           }}>
             <Typography variant="body2" sx={{ color: '#888' }}>
-              Latest: {new Date(data[data.length - 1]?.date).toLocaleDateString()}
+              Latest: {(() => {
+                const dateStr = data[data.length - 1]?.date;
+                if (!dateStr) return 'N/A';
+                const [year, month, day] = dateStr.split('-');
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                return `${monthNames[parseInt(month) - 1]} ${parseInt(day)}, ${year}`;
+              })()}
             </Typography>
             <Typography variant="h6" sx={{ color: '#4FC3F7' }}>
               {formatNumber(data[data.length - 1]?.views || 0)}
