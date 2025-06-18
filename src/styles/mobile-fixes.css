@@ -1,0 +1,421 @@
+/* Critical mobile fixes for layout issues */
+
+/* Force viewport constraints on all elements */
+@media (max-width: 768px) {
+  /* Global viewport constraints */
+  *, *::before, *::after {
+    box-sizing: border-box !important;
+  }
+
+  html {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  body {
+    overflow-x: hidden !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Root container fixes */
+  #root {
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Main layout container */
+  .MuiBox-root {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Typography size fixes for mobile */
+  h1, .MuiTypography-h1 {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h2, .MuiTypography-h2 {
+    font-size: 1.25rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h3, .MuiTypography-h3 {
+    font-size: 1.1rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h4, .MuiTypography-h4 {
+    font-size: 1rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h5, .MuiTypography-h5 {
+    font-size: 0.9rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  h6, .MuiTypography-h6 {
+    font-size: 0.8rem !important;
+    line-height: 1.4 !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  /* Large display text fixes */
+  .analytics-large-number,
+  .metric-display,
+  .big-number {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Welcome message specific fix */
+  .welcome-text,
+  .page-title {
+    font-size: 1.1rem !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+    padding: 0.5rem !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Container padding fixes */
+  .MuiContainer-root {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+    max-width: 100vw !important;
+    width: 100% !important;
+  }
+
+  /* Card fixes */
+  .MuiCard-root {
+    margin: 0.5rem 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+
+  .MuiCardContent-root {
+    padding: 0.75rem !important;
+  }
+
+  /* Form field fixes */
+  .MuiTextField-root,
+  .MuiFormControl-root {
+    width: 100% !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .MuiInputBase-root {
+    font-size: 0.875rem !important;
+  }
+
+  /* Button fixes */
+  .MuiButton-root {
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
+    min-height: 36px !important;
+  }
+
+  /* Navigation fixes */
+  .MuiAppBar-root {
+    padding: 0 0.5rem !important;
+  }
+
+  .MuiToolbar-root {
+    min-height: 56px !important;
+    padding: 0 0.5rem !important;
+  }
+
+  /* Drawer fixes */
+  .MuiDrawer-paper {
+    width: 280px !important;
+    max-width: 85vw !important;
+  }
+
+  /* Main content area fixes */
+  main {
+    padding: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* Specific page fixes */
+  .dashboard-page,
+  .analytics-page,
+  .content-page {
+    padding: 0.5rem !important;
+    width: 100% !important;
+    max-width: 100vw !important;
+  }
+
+  /* Chart container fixes */
+  .chart-container,
+  .recharts-wrapper,
+  .echarts-for-react {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: 250px !important;
+    overflow: hidden !important;
+  }
+
+  /* Table fixes */
+  .MuiTable-root {
+    font-size: 0.75rem !important;
+  }
+
+  .MuiTableCell-root {
+    padding: 0.5rem !important;
+    font-size: 0.75rem !important;
+  }
+
+  /* Dialog fixes */
+  .MuiDialog-paper {
+    margin: 0.5rem !important;
+    width: calc(100vw - 1rem) !important;
+    max-width: none !important;
+    max-height: calc(100vh - 1rem) !important;
+  }
+
+  /* Menu fixes */
+  .MuiMenu-paper {
+    max-width: calc(100vw - 1rem) !important;
+  }
+
+  /* Chip fixes */
+  .MuiChip-root {
+    font-size: 0.7rem !important;
+    height: 24px !important;
+  }
+
+  /* Tab fixes */
+  .MuiTab-root {
+    font-size: 0.75rem !important;
+    min-width: auto !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+
+  /* Progress bar fixes */
+  .MuiLinearProgress-root {
+    height: 4px !important;
+  }
+
+  /* Alert fixes */
+  .MuiAlert-root {
+    font-size: 0.75rem !important;
+    padding: 0.5rem !important;
+  }
+
+  /* Tooltip fixes */
+  .MuiTooltip-tooltip {
+    font-size: 0.7rem !important;
+    padding: 0.25rem 0.5rem !important;
+  }
+
+  /* Badge fixes */
+  .MuiBadge-badge {
+    font-size: 0.6rem !important;
+    min-width: 16px !important;
+    height: 16px !important;
+  }
+
+  /* Icon button fixes */
+  .MuiIconButton-root {
+    padding: 0.5rem !important;
+    width: 40px !important;
+    height: 40px !important;
+  }
+
+  /* Fab fixes */
+  .MuiFab-root {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  /* Stepper fixes */
+  .MuiStepper-root {
+    padding: 0.5rem 0 !important;
+  }
+
+  .MuiStepLabel-label {
+    font-size: 0.75rem !important;
+  }
+
+  /* Accordion fixes */
+  .MuiAccordionSummary-content {
+    margin: 0.5rem 0 !important;
+  }
+
+  .MuiAccordionDetails-root {
+    padding: 0.5rem !important;
+  }
+
+  /* List fixes */
+  .MuiListItem-root {
+    padding: 0.5rem !important;
+  }
+
+  .MuiListItemText-primary {
+    font-size: 0.875rem !important;
+  }
+
+  .MuiListItemText-secondary {
+    font-size: 0.75rem !important;
+  }
+
+  /* Breadcrumb fixes */
+  .MuiBreadcrumbs-root {
+    font-size: 0.75rem !important;
+  }
+
+  /* Pagination fixes */
+  .MuiPagination-root {
+    font-size: 0.75rem !important;
+  }
+
+  /* Rating fixes */
+  .MuiRating-root {
+    font-size: 1rem !important;
+  }
+
+  /* Slider fixes */
+  .MuiSlider-root {
+    height: 4px !important;
+  }
+
+  /* Switch fixes */
+  .MuiSwitch-root {
+    width: 42px !important;
+    height: 26px !important;
+  }
+
+  /* Checkbox and radio fixes */
+  .MuiCheckbox-root,
+  .MuiRadio-root {
+    padding: 0.5rem !important;
+  }
+
+  /* Avatar fixes */
+  .MuiAvatar-root {
+    width: 32px !important;
+    height: 32px !important;
+    font-size: 0.875rem !important;
+  }
+
+  /* Speed dial fixes */
+  .MuiSpeedDial-root {
+    bottom: 16px !important;
+    right: 16px !important;
+  }
+
+  /* Backdrop fixes */
+  .MuiBackdrop-root {
+    background-color: rgba(0, 0, 0, 0.7) !important;
+  }
+
+  /* Critical layout fixes for specific components */
+  .dashboard-welcome-message,
+  .analytics-title,
+  .content-title {
+    font-size: 1.1rem !important;
+    line-height: 1.3 !important;
+    text-align: center !important;
+    padding: 0.5rem !important;
+    margin-bottom: 1rem !important;
+    word-break: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+
+  /* Large number displays */
+  .analytics-big-number,
+  .metric-value,
+  .stats-number {
+    font-size: 1.5rem !important;
+    line-height: 1.2 !important;
+    font-weight: 600 !important;
+  }
+
+  /* Progress indicators */
+  .progress-indicator {
+    font-size: 0.875rem !important;
+    margin-top: 0.25rem !important;
+  }
+
+  /* Form section fixes */
+  .form-section {
+    padding: 0.75rem !important;
+    margin-bottom: 1rem !important;
+    width: 100% !important;
+  }
+
+  /* Video card specific fixes */
+  .video-card-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    width: 100% !important;
+    margin-bottom: 0.75rem !important;
+  }
+
+  .video-thumbnail-mobile {
+    width: 100% !important;
+    height: 120px !important;
+    object-fit: cover !important;
+  }
+
+  .video-info-mobile {
+    padding: 0.5rem !important;
+    flex: 1 !important;
+  }
+
+  .video-title-mobile {
+    font-size: 0.875rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.25rem !important;
+    font-weight: 500 !important;
+  }
+
+  .video-meta-mobile {
+    font-size: 0.75rem !important;
+    color: rgba(255, 255, 255, 0.7) !important;
+    line-height: 1.2 !important;
+  }
+
+  /* Filter and search fixes */
+  .filter-container-mobile {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1rem !important;
+    width: 100% !important;
+  }
+
+  .search-input-mobile {
+    width: 100% !important;
+    margin-bottom: 0.5rem !important;
+  }
+
+  .filter-buttons-mobile {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: 0.5rem !important;
+    width: 100% !important;
+  }
+
+  .filter-button-mobile {
+    flex: 1 !important;
+    min-width: 0 !important;
+    font-size: 0.75rem !important;
+    padding: 0.5rem 0.75rem !important;
+  }
+}
