@@ -10,6 +10,7 @@ import Analytics from './pages/Analytics.jsx';
 import Content from './pages/Content.jsx';
 import VideoAnalytics from './pages/VideoAnalytics.jsx';
 import Settings from './pages/Settings.jsx';
+import './styles/mobile-responsive.css';
 
 const darkTheme = createTheme({
   palette: {
@@ -31,6 +32,31 @@ const darkTheme = createTheme({
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
+    // Mobile-friendly typography scaling
+    h4: {
+      '@media (max-width:768px)': {
+        fontSize: '1.5rem',
+      },
+    },
+    h5: {
+      '@media (max-width:768px)': {
+        fontSize: '1.25rem',
+      },
+    },
+    h6: {
+      '@media (max-width:768px)': {
+        fontSize: '1.1rem',
+      },
+    },
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 768,
+      lg: 1200,
+      xl: 1536,
+    },
   },
   components: {
     MuiButton: {
@@ -38,6 +64,11 @@ const darkTheme = createTheme({
         root: {
           textTransform: 'none',
           borderRadius: 8,
+          '@media (max-width:768px)': {
+            padding: '8px 16px',
+            fontSize: '14px',
+            minWidth: 'auto',
+          },
         },
       },
     },
@@ -45,6 +76,72 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
+          '@media (max-width:768px)': {
+            marginBottom: '16px',
+          },
+        },
+      },
+    },
+    MuiCardContent: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:768px)': {
+            padding: '16px',
+            '&:last-child': {
+              paddingBottom: '16px',
+            },
+          },
+        },
+      },
+    },
+    MuiIconButton: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:768px)': {
+            padding: '8px',
+          },
+        },
+      },
+    },
+    MuiTab: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:768px)': {
+            minHeight: '40px',
+            padding: '6px 12px',
+            fontSize: '14px',
+            minWidth: 'auto',
+          },
+        },
+      },
+    },
+    MuiFormControl: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:768px)': {
+            marginBottom: '16px',
+            width: '100%',
+          },
+        },
+      },
+    },
+    MuiDialog: {
+      styleOverrides: {
+        paper: {
+          '@media (max-width:768px)': {
+            margin: '16px',
+            width: 'calc(100vw - 32px)',
+            maxWidth: 'none',
+          },
+        },
+      },
+    },
+    MuiAppBar: {
+      styleOverrides: {
+        root: {
+          '@media (max-width:768px)': {
+            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+          },
         },
       },
     },

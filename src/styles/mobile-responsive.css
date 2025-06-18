@@ -1,0 +1,344 @@
+/* Mobile Responsive Styles - Only affects mobile devices */
+/* Keeps desktop version unchanged while making mobile-friendly */
+
+/* Mobile breakpoints */
+@media (max-width: 768px) {
+  /* Global mobile adjustments */
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Typography adjustments for mobile */
+  .MuiTypography-h4 {
+    font-size: 1.5rem !important;
+  }
+  
+  .MuiTypography-h5 {
+    font-size: 1.25rem !important;
+  }
+  
+  .MuiTypography-h6 {
+    font-size: 1.1rem !important;
+  }
+
+  /* Card adjustments for mobile */
+  .MuiCard-root {
+    margin-bottom: 16px !important;
+    border-radius: 12px !important;
+  }
+
+  .MuiCardContent-root {
+    padding: 16px !important;
+  }
+
+  /* Chart container adjustments */
+  .recharts-wrapper,
+  .echarts-for-react {
+    width: 100% !important;
+    height: 300px !important;
+    min-height: 300px !important;
+  }
+
+  /* Analytics page specific adjustments */
+  .analytics-overview-cards {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    gap: 16px !important;
+  }
+
+  .analytics-chart-container {
+    height: 350px !important;
+    margin-bottom: 20px !important;
+  }
+
+  /* Form controls for mobile */
+  .MuiFormControl-root {
+    margin-bottom: 16px !important;
+    width: 100% !important;
+  }
+
+  .MuiSelect-root {
+    font-size: 14px !important;
+  }
+
+  /* Button adjustments */
+  .MuiButton-root {
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+    min-width: auto !important;
+  }
+
+  .MuiIconButton-root {
+    padding: 8px !important;
+  }
+
+  /* Tab adjustments */
+  .MuiTabs-root {
+    min-height: 40px !important;
+  }
+
+  .MuiTab-root {
+    min-height: 40px !important;
+    padding: 6px 12px !important;
+    font-size: 14px !important;
+    min-width: auto !important;
+  }
+
+  /* Calendar adjustments */
+  .calendar-grid {
+    font-size: 14px !important;
+  }
+
+  .calendar-day {
+    height: 32px !important;
+    font-size: 12px !important;
+  }
+
+  /* Progress bar adjustments */
+  .MuiLinearProgress-root {
+    height: 6px !important;
+    border-radius: 3px !important;
+  }
+
+  /* Alert adjustments */
+  .MuiAlert-root {
+    font-size: 14px !important;
+    padding: 8px 16px !important;
+  }
+
+  /* Chip adjustments */
+  .MuiChip-root {
+    height: 24px !important;
+    font-size: 12px !important;
+  }
+
+  /* Table adjustments for mobile */
+  .MuiTable-root {
+    font-size: 14px !important;
+  }
+
+  .MuiTableCell-root {
+    padding: 8px !important;
+    font-size: 14px !important;
+  }
+
+  /* Content page video cards */
+  .video-card {
+    margin-bottom: 12px !important;
+  }
+
+  .video-thumbnail {
+    height: 120px !important;
+  }
+
+  /* Analytics widgets */
+  .analytics-widget {
+    padding: 12px !important;
+    margin-bottom: 12px !important;
+  }
+
+  .widget-title {
+    font-size: 16px !important;
+    margin-bottom: 8px !important;
+  }
+
+  .widget-value {
+    font-size: 24px !important;
+  }
+
+  .widget-subtitle {
+    font-size: 12px !important;
+  }
+
+  /* Date picker adjustments */
+  .react-datepicker-wrapper {
+    width: 100% !important;
+  }
+
+  .react-datepicker__input-container input {
+    width: 100% !important;
+    padding: 12px !important;
+    font-size: 14px !important;
+  }
+
+  /* Loading states */
+  .loading-container {
+    padding: 20px !important;
+    text-align: center !important;
+  }
+
+  .loading-text {
+    font-size: 14px !important;
+    margin-top: 12px !important;
+  }
+
+  /* Error states */
+  .error-container {
+    padding: 16px !important;
+    text-align: center !important;
+  }
+
+  /* Tooltip adjustments */
+  .MuiTooltip-tooltip {
+    font-size: 12px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Menu adjustments */
+  .MuiMenu-paper {
+    max-width: calc(100vw - 32px) !important;
+  }
+
+  .MuiMenuItem-root {
+    padding: 8px 16px !important;
+    font-size: 14px !important;
+  }
+
+  /* Dialog adjustments */
+  .MuiDialog-paper {
+    margin: 16px !important;
+    width: calc(100vw - 32px) !important;
+    max-width: none !important;
+  }
+
+  .MuiDialogTitle-root {
+    padding: 16px !important;
+    font-size: 18px !important;
+  }
+
+  .MuiDialogContent-root {
+    padding: 16px !important;
+  }
+
+  .MuiDialogActions-root {
+    padding: 8px 16px 16px !important;
+  }
+
+  /* Specific component adjustments */
+  .analytics-overview-section {
+    margin-bottom: 20px !important;
+  }
+
+  .top-content-section {
+    margin-bottom: 20px !important;
+  }
+
+  .chart-legend {
+    font-size: 12px !important;
+    flex-wrap: wrap !important;
+  }
+
+  .chart-legend-item {
+    margin: 4px 8px 4px 0 !important;
+    font-size: 12px !important;
+  }
+
+  /* Video analytics page */
+  .video-analytics-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 12px !important;
+  }
+
+  .video-analytics-controls {
+    width: 100% !important;
+    flex-direction: column !important;
+    gap: 12px !important;
+  }
+
+  /* Settings page */
+  .settings-section {
+    margin-bottom: 20px !important;
+  }
+
+  .settings-form {
+    padding: 16px !important;
+  }
+
+  /* Content management */
+  .content-filters {
+    flex-direction: column !important;
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+
+  .content-grid {
+    grid-template-columns: 1fr !important;
+    gap: 12px !important;
+  }
+
+  /* Responsive text sizing */
+  .mobile-text-sm {
+    font-size: 12px !important;
+  }
+
+  .mobile-text-md {
+    font-size: 14px !important;
+  }
+
+  .mobile-text-lg {
+    font-size: 16px !important;
+  }
+
+  /* Responsive spacing */
+  .mobile-p-1 {
+    padding: 8px !important;
+  }
+
+  .mobile-p-2 {
+    padding: 16px !important;
+  }
+
+  .mobile-m-1 {
+    margin: 8px !important;
+  }
+
+  .mobile-m-2 {
+    margin: 16px !important;
+  }
+
+  .mobile-mb-1 {
+    margin-bottom: 8px !important;
+  }
+
+  .mobile-mb-2 {
+    margin-bottom: 16px !important;
+  }
+
+  /* Hide elements on mobile if needed */
+  .desktop-only {
+    display: none !important;
+  }
+
+  /* Show elements only on mobile */
+  .mobile-only {
+    display: block !important;
+  }
+}
+
+/* Tablet adjustments (768px - 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+  .recharts-wrapper,
+  .echarts-for-react {
+    height: 400px !important;
+  }
+
+  .analytics-overview-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+
+  .content-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+}
+
+/* Hide mobile-only elements on desktop */
+@media (min-width: 769px) {
+  .mobile-only {
+    display: none !important;
+  }
+
+  .desktop-only {
+    display: block !important;
+  }
+}
