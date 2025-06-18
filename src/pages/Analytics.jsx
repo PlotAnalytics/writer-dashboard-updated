@@ -2039,7 +2039,13 @@ const Analytics = () => {
                         {(analyticsData.topVideos || []).slice(0, 10).map((content, index) => (
                           <Box
                             key={content.id || index}
-                            onClick={() => navigate(`/content/video/${content.id}`)}
+                            onClick={(event) => {
+                              // Don't navigate if clicking on thumbnail
+                              if (event.target.closest('.video-thumbnail-analytics')) {
+                                return;
+                              }
+                              navigate(`/content/video/${content.id}`);
+                            }}
                             sx={{
                               position: 'relative',
                               background: index === 0
@@ -2125,7 +2131,7 @@ const Analytics = () => {
                               {/* Compact Thumbnail */}
                               <Box sx={{ position: 'relative', flexShrink: 0 }}>
                                 <Box
-                                  className="thumbnail"
+                                  className="video-thumbnail-analytics"
                                   component="img"
                                   src={content.highThumbnail || content.mediumThumbnail || content.thumbnail || content.preview || `https://img.youtube.com/vi/${content.url?.split('v=')[1] || content.url?.split('/').pop()}/maxresdefault.jpg`}
                                   sx={{
@@ -2135,7 +2141,19 @@ const Analytics = () => {
                                     objectFit: 'cover',
                                     border: '1px solid rgba(255, 255, 255, 0.1)',
                                     transition: 'all 0.2s ease',
-                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                    cursor: 'pointer',
+                                    '&:hover': {
+                                      transform: 'scale(1.05)',
+                                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                                      border: '1px solid rgba(102, 126, 234, 0.5)'
+                                    }
+                                  }}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    if (content.url) {
+                                      window.open(content.url, '_blank');
+                                    }
                                   }}
                                   onError={(e) => {
                                     e.target.style.display = 'none';
@@ -2143,6 +2161,7 @@ const Analytics = () => {
                                   }}
                                 />
                                 <Box
+                                  className="video-thumbnail-analytics"
                                   sx={{
                                     width: 60,
                                     height: 34,
@@ -2155,7 +2174,20 @@ const Analytics = () => {
                                     alignItems: 'center',
                                     justifyContent: 'center',
                                     fontSize: '16px',
-                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)'
+                                    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s ease',
+                                    '&:hover': {
+                                      transform: 'scale(1.05)',
+                                      boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                                      border: '1px solid rgba(102, 126, 234, 0.5)'
+                                    }
+                                  }}
+                                  onClick={(event) => {
+                                    event.stopPropagation();
+                                    if (content.url) {
+                                      window.open(content.url, '_blank');
+                                    }
                                   }}
                                 >
                                   {content.type === 'short' ? '🎯' : '📺'}
@@ -2436,6 +2468,7 @@ const Analytics = () => {
                           {/* Enhanced Video Thumbnail with Preview */}
                           <Box sx={{ position: 'relative', mb: 3 }}>
                             <Box
+                              className="video-thumbnail-analytics-large"
                               component="img"
                               src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
                               sx={{
@@ -2459,6 +2492,7 @@ const Analytics = () => {
                               }}
                             />
                             <Box
+                              className="video-thumbnail-analytics-large"
                               sx={{
                                 width: '100%',
                                 height: 140,
@@ -2469,7 +2503,13 @@ const Analytics = () => {
                                 alignItems: 'center',
                                 justifyContent: 'center',
                                 fontSize: '50px',
-                                cursor: 'pointer'
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                '&:hover': {
+                                  border: '2px solid #667eea',
+                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                  transform: 'scale(1.02)'
+                                }
                               }}
                               onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
                             >

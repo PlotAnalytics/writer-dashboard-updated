@@ -361,7 +361,18 @@ const Content = () => {
     if (event.target.closest('input[type="checkbox"]') || event.target.closest('[data-testid="MoreVertIcon"]')) {
       return;
     }
+    // Don't navigate if clicking on thumbnail (it should go to YouTube)
+    if (event.target.closest('.video-thumbnail')) {
+      return;
+    }
     navigate(`/content/video/${videoId}`);
+  };
+
+  const handleThumbnailClick = (videoUrl, event) => {
+    event.stopPropagation(); // Prevent card click
+    if (videoUrl) {
+      window.open(videoUrl, '_blank');
+    }
   };
 
   return (
@@ -789,20 +800,29 @@ const Content = () => {
                       {/* Thumbnail */}
                       <Box sx={{ position: 'relative' }}>
                         <Box
+                          className="video-thumbnail"
                           component="img"
                           src={item.preview || `https://img.youtube.com/vi/${item.url?.split('v=')[1]}/maxresdefault.jpg`}
                           sx={{
                             width: 60,
                             height: 40,
                             borderRadius: '4px',
-                            objectFit: 'cover'
+                            objectFit: 'cover',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.05)',
+                              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                            }
                           }}
+                          onClick={(event) => handleThumbnailClick(item.url, event)}
                           onError={(e) => {
                             e.target.style.display = 'none';
                             e.target.nextSibling.style.display = 'flex';
                           }}
                         />
                         <Box
+                          className="video-thumbnail"
                           sx={{
                             width: 60,
                             height: 40,
@@ -812,8 +832,15 @@ const Content = () => {
                             alignItems: 'center',
                             justifyContent: 'center',
                             fontSize: '20px',
-                            color: '#888'
+                            color: '#888',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              transform: 'scale(1.05)',
+                              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                            }
                           }}
+                          onClick={(event) => handleThumbnailClick(item.url, event)}
                         >
                           🎬
                         </Box>

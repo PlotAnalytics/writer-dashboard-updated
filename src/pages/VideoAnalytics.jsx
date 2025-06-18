@@ -1306,9 +1306,6 @@ const VideoAnalytics = () => {
                                 if (name === "audienceRetention") {
                                   return [`${value}%`, "This Video"];
                                 }
-                                if (name === "relativePerformance") {
-                                  return [`${value}%`, "vs YouTube Average"];
-                                }
                                 return [`${value}%`, name];
                               }}
                               labelFormatter={(label) => `${Math.round(label)} seconds into video`}
@@ -1336,24 +1333,7 @@ const VideoAnalytics = () => {
                               name="audienceRetention"
                             />
 
-                            {/* Secondary Line: Relative Performance vs YouTube Average */}
-                            {Array.isArray(videoData.retentionData) && videoData.retentionData.some(point => point.relative_retention_performance) && (
-                              <Line
-                                type="monotone"
-                                dataKey="relativePerformance"
-                                stroke="#FFB300"
-                                strokeWidth={2}
-                                strokeDasharray="6,3"
-                                dot={false}
-                                activeDot={{
-                                  r: 4,
-                                  stroke: "#FFB300",
-                                  strokeWidth: 2,
-                                  fill: "#FFB300"
-                                }}
-                                name="relativePerformance"
-                              />
-                            )}
+                            {/* Secondary Line: Relative Performance vs YouTube Average - REMOVED */}
 
                             {/* Reference Line at 30 seconds */}
                             <ReferenceLine
@@ -1426,25 +1406,6 @@ const VideoAnalytics = () => {
                           This Video
                         </Typography>
                       </Box>
-                      {Array.isArray(videoData.retentionData) && videoData.retentionData.some(point => point.relative_retention_performance) && (
-                        <Box
-                          sx={{ display: "flex", alignItems: "center", gap: 1 }}
-                        >
-                          <Box
-                            sx={{
-                              width: 24,
-                              height: 3,
-                              bgcolor: "#FFB300",
-                              borderRadius: 1,
-                              backgroundImage:
-                                "repeating-linear-gradient(90deg, #FFB300 0, #FFB300 6px, transparent 6px, transparent 9px)",
-                            }}
-                          />
-                          <Typography variant="body2" sx={{ color: "#FFB300", fontWeight: 500 }}>
-                            vs YouTube Average
-                          </Typography>
-                        </Box>
-                      )}
                       <Box
                         sx={{ display: "flex", alignItems: "center", gap: 1 }}
                       >
