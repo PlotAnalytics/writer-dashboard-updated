@@ -2547,7 +2547,6 @@ router.get('/channel', authenticateToken, async (req, res) => {
     // Get total submissions count for this writer from PostgreSQL (all YouTube videos)
     let totalSubmissionsCount = transformedTopVideos.length; // fallback
     try {
-      const pool = require('../config/database');
       const totalSubmissionsQuery = `
         SELECT COUNT(*) as total_count
         FROM video
@@ -2922,22 +2921,40 @@ router.get('/content', authenticateToken, async (req, res) => {
   }
 });
 
-// Debug endpoint to check video data for writer 130 (no auth required)
-router.get('/debug-writer-130-videos', async (req, res) => {
+// Debug endpoint to check video data for writer 121 (mylogumbs) - no auth required
+router.get('/debug-writer-121-videos', async (req, res) => {
   try {
-    const writerId = 130;
-    console.log(`🔍 DEBUG: Checking video data for writer ${writerId}`);
+    const writerId = 121;
+    console.log(`🔍 DEBUG: Checking video data for writer ${writerId} (mylogumbs)`);
 
-    // Check videos in video table
+    // Check writer exists
+    const writerQuery = `SELECT id, name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [writerId]);
+    console.log(`👤 Writer info:`, writerRows[0] || 'Not found');
+
+    // Check videos in video table with YouTube URLs
     const videoTableQuery = `
       SELECT id, script_title, url, video_cat, writer_id
       FROM video
       WHERE writer_id = $1
-        AND url LIKE '%youtube.com%'
+        AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
+        AND url IS NOT NULL
       ORDER BY id DESC
     `;
     const { rows: videoTableRows } = await pool.query(videoTableQuery, [writerId]);
-    console.log(`📊 Videos in video table: ${videoTableRows.length}`);
+    console.log(`📊 YouTube videos in video table: ${videoTableRows.length}`);
+
+    // Get total count using the same query as analytics
+    const totalCountQuery = `
+      SELECT COUNT(*) as total_count
+      FROM video
+      WHERE writer_id = $1
+        AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
+        AND url IS NOT NULL
+    `;
+    const { rows: countRows } = await pool.query(totalCountQuery, [writerId]);
+    const totalCount = countRows[0]?.total_count || 0;
+    console.log(`📊 Total count from analytics query: ${totalCount}`);
 
     // Check videos in statistics_youtube_api table
     const statsTableQuery = `
@@ -3009,7 +3026,7 @@ router.get('/debug-writer-130-videos', async (req, res) => {
     });
 
   } catch (error) {
-    console.error('❌ Debug writer 130 videos error:', error);
+    console.error('❌ Debug writer 121 videos error:', error);
     res.status(500).json({ error: error.message });
   }
 });
