@@ -2544,27 +2544,26 @@ router.get('/channel', authenticateToken, async (req, res) => {
       }
     }
 
-    // Get total submissions count for this writer (all time, not just current range)
+    // Get total submissions count for this writer from PostgreSQL (all YouTube videos)
     let totalSubmissionsCount = transformedTopVideos.length; // fallback
     try {
+      const pool = require('../config/database');
       const totalSubmissionsQuery = `
-        SELECT COUNT(DISTINCT video_id) as total_count
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-        WHERE writer_name = @writer_name
-          AND writer_name IS NOT NULL
+        SELECT COUNT(*) as total_count
+        FROM video
+        WHERE writer_id = $1
+          AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
+          AND url IS NOT NULL
       `;
 
-      const [totalSubmissionsRows] = await bigquery.query({
-        query: totalSubmissionsQuery,
-        params: { writer_name: writerName }
-      });
+      const totalSubmissionsResult = await pool.query(totalSubmissionsQuery, [writerId]);
 
-      if (totalSubmissionsRows.length > 0) {
-        totalSubmissionsCount = parseInt(totalSubmissionsRows[0].total_count) || transformedTopVideos.length;
-        console.log(`📊 Total submissions for ${writerName}: ${totalSubmissionsCount} (all time)`);
+      if (totalSubmissionsResult.rows.length > 0) {
+        totalSubmissionsCount = parseInt(totalSubmissionsResult.rows[0].total_count) || transformedTopVideos.length;
+        console.log(`📊 Total YouTube submissions for writer ${writerId}: ${totalSubmissionsCount} (all time from PostgreSQL)`);
       }
     } catch (totalSubmissionsError) {
-      console.error('❌ Error getting total submissions count:', totalSubmissionsError);
+      console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
     }
 
     const analyticsData = {
