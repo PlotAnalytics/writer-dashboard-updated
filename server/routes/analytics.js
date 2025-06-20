@@ -2544,6 +2544,29 @@ router.get('/channel', authenticateToken, async (req, res) => {
       }
     }
 
+    // Get total submissions count for this writer (all time, not just current range)
+    let totalSubmissionsCount = transformedTopVideos.length; // fallback
+    try {
+      const totalSubmissionsQuery = `
+        SELECT COUNT(DISTINCT video_id) as total_count
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+      `;
+
+      const [totalSubmissionsRows] = await bigquery.query({
+        query: totalSubmissionsQuery,
+        params: { writer_name: writerName }
+      });
+
+      if (totalSubmissionsRows.length > 0) {
+        totalSubmissionsCount = parseInt(totalSubmissionsRows[0].total_count) || transformedTopVideos.length;
+        console.log(`📊 Total submissions for ${writerName}: ${totalSubmissionsCount} (all time)`);
+      }
+    } catch (totalSubmissionsError) {
+      console.error('❌ Error getting total submissions count:', totalSubmissionsError);
+    }
+
     const analyticsData = {
       totalViews: totalViews,
       totalLikes: totalLikes || 0,
@@ -2554,7 +2577,7 @@ router.get('/channel', authenticateToken, async (req, res) => {
       chartData: chartData,
       topVideos: transformedTopVideos,
       latestContent: latestContent,
-      totalSubmissions: transformedTopVideos.length,
+      totalSubmissions: totalSubmissionsCount,
 
       // Enhanced performance summary
       summary: {

@@ -1581,29 +1581,7 @@ const Analytics = () => {
                     </Typography>
                   </Box>
                 )}
-                {(analyticsData.acceptedSubmissions !== undefined || analyticsData.topVideos?.length) && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#4CAF50', fontWeight: 600 }}>
-                      {analyticsData.acceptedSubmissions || analyticsData.topVideos?.length || 50}
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Published Videos
-                    </Typography>
-                  </Box>
-                )}
-                {(analyticsData.acceptanceRate !== undefined || analyticsData.topVideos?.length) && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#2196F3', fontWeight: 600 }}>
-                      {analyticsData.acceptanceRate ||
-                        (analyticsData.topVideos?.length && analyticsData.totalSubmissions ?
-                          Math.round((analyticsData.topVideos.length / analyticsData.totalSubmissions) * 100) :
-                          100)}%
-                    </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Success Rate
-                    </Typography>
-                  </Box>
-                )}
+
                 {analyticsData.avgDailyViews !== undefined && (
                   <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h5" sx={{ color: '#FF9800', fontWeight: 600 }}>
