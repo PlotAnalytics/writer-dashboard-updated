@@ -1243,12 +1243,41 @@ async function getBigQueryAnalyticsOverview(
     console.log(`📊 BigQuery total views: ${totalViews.toLocaleString()}`);
     console.log(`📊 InfluxDB data points: ${influxData.length}`);
 
+    // Get total submissions count for this writer from PostgreSQL (all YouTube videos)
+    let totalSubmissionsCount = 0; // default fallback
+    console.log(`🔍 DEBUG: About to query total submissions for writer ${writerId}`);
+
+    try {
+      const totalSubmissionsQuery = `
+        SELECT COUNT(*) as total_count
+        FROM video
+        WHERE writer_id = $1
+          AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
+          AND url IS NOT NULL
+      `;
+
+      console.log(`🔍 DEBUG: Executing total submissions query for writer ${writerId}`);
+      const totalSubmissionsResult = await pool.query(totalSubmissionsQuery, [writerId]);
+      console.log(`🔍 DEBUG: Query result:`, totalSubmissionsResult.rows);
+
+      if (totalSubmissionsResult.rows.length > 0) {
+        const rawCount = totalSubmissionsResult.rows[0].total_count;
+        totalSubmissionsCount = parseInt(rawCount) || 0;
+        console.log(`📊 Total YouTube submissions for writer ${writerId}: ${totalSubmissionsCount} (raw: ${rawCount}, all time from PostgreSQL)`);
+      } else {
+        console.log(`⚠️ No rows returned from total submissions query for writer ${writerId}`);
+      }
+    } catch (totalSubmissionsError) {
+      console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
+    }
+
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
       totalViews: finalTotalViews,
       chartData: chartData,
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
+      totalSubmissions: totalSubmissionsCount, // Add total submissions to the return data
       summary: {
         progressToTarget: (finalTotalViews / 100000000) * 100,
         highestDay: dailyTotalsData.length > 0 ? Math.max(...dailyTotalsData.map(d => d.views)) : 0,
@@ -2544,26 +2573,7 @@ router.get('/channel', authenticateToken, async (req, res) => {
       }
     }
 
-    // Get total submissions count for this writer from PostgreSQL (all YouTube videos)
-    let totalSubmissionsCount = transformedTopVideos.length; // fallback
-    try {
-      const totalSubmissionsQuery = `
-        SELECT COUNT(*) as total_count
-        FROM video
-        WHERE writer_id = $1
-          AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
-          AND url IS NOT NULL
-      `;
 
-      const totalSubmissionsResult = await pool.query(totalSubmissionsQuery, [writerId]);
-
-      if (totalSubmissionsResult.rows.length > 0) {
-        totalSubmissionsCount = parseInt(totalSubmissionsResult.rows[0].total_count) || transformedTopVideos.length;
-        console.log(`📊 Total YouTube submissions for writer ${writerId}: ${totalSubmissionsCount} (all time from PostgreSQL)`);
-      }
-    } catch (totalSubmissionsError) {
-      console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
-    }
 
     const analyticsData = {
       totalViews: totalViews,
@@ -2575,7 +2585,6 @@ router.get('/channel', authenticateToken, async (req, res) => {
       chartData: chartData,
       topVideos: transformedTopVideos,
       latestContent: latestContent,
-      totalSubmissions: totalSubmissionsCount,
 
       // Enhanced performance summary
       summary: {
