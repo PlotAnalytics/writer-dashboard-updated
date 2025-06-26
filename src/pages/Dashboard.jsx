@@ -187,12 +187,36 @@ const Dashboard = () => {
     } catch (error) {
       console.error('❌ Error fetching writer data:', error);
 
-      // Enhanced fallback with user data from AuthContext
+      // SECURITY: Get writerId safely without dangerous fallbacks
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // If no writerId, try to get from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId;
+            localStorage.setItem('writerId', writerId.toString());
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load your dashboard. Please log out and log back in.');
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          return;
+        }
+      }
+
+      // Enhanced fallback with user data from AuthContext (NO HARDCODED ID)
       const fallbackWriter = {
-        id: user?.writerId || localStorage.getItem('writerId') || 74,
-        name: user?.name || user?.username || 'Test Writer',
+        id: writerId,
+        name: user?.name || user?.username || 'Writer',
         access_advanced_types: true,
-        username: user?.username || 'test_user'
+        username: user?.username || 'writer'
       };
 
       console.log('🔄 Using fallback writer data:', fallbackWriter);

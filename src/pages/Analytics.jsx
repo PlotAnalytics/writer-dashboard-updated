@@ -290,7 +290,30 @@ const Analytics = () => {
     try {
       // Get token from localStorage
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load analytics. Please log out and log back in.');
+            setLoading(false);
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          setLoading(false);
+          return;
+        }
+      }
 
       if (!token) {
         setError('Please log in to view analytics');
@@ -509,7 +532,30 @@ const Analytics = () => {
     try {
       // Get token from localStorage
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load analytics. Please log out and log back in.');
+            setLoading(false);
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          setLoading(false);
+          return;
+        }
+      }
 
       if (!token) {
         setError('Please log in to view analytics');
@@ -656,7 +702,26 @@ const Analytics = () => {
   const fetchTopContent = async (filterType = contentFilter) => {
     try {
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          return;
+        }
+      }
 
       console.log('🏆 Fetching top content for writer with BigQuery enhancement');
       console.log('🔍 Debug info:', {
@@ -782,7 +847,26 @@ const Analytics = () => {
   const fetchTopContentWithCustomRange = async (filterType = contentFilter, customRange, startDate, endDate) => {
     try {
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          return;
+        }
+      }
 
       console.log('🏆 Fetching top content with explicit custom range:', { customRange, startDate, endDate, filterType });
 
@@ -854,7 +938,26 @@ const Analytics = () => {
   const fetchLatestContent = async () => {
     try {
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          return;
+        }
+      }
 
       console.log('📅 Fetching latest content for writer with BigQuery enhancement');
 
@@ -1021,7 +1124,28 @@ const Analytics = () => {
 
     try {
       const token = localStorage.getItem('token');
-      let writerId = localStorage.getItem('writerId') || '110';
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load analytics. Please log out and log back in.');
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          return;
+        }
+      }
 
       if (!token) {
         setError('Please log in to view analytics');
