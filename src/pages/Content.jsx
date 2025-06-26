@@ -882,6 +882,40 @@ const Content = () => {
                           {item.duration || '0:30'}
                         </Box>
                       </Box>
+
+                      {/* Sleek Link Button */}
+                      <Button
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          window.open(item.url, '_blank');
+                        }}
+                        sx={{
+                          minWidth: '50px',
+                          height: '28px',
+                          px: 1.5,
+                          py: 0.5,
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: 'white',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          textTransform: 'none',
+                          borderRadius: '6px',
+                          border: 'none',
+                          boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                          transition: 'all 0.2s ease',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                          },
+                          '&:active': {
+                            transform: 'translateY(0)',
+                            boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)',
+                          }
+                        }}
+                      >
+                        Link
+                      </Button>
                       {/* Title and Description */}
                       <Box sx={{ flex: 1 }}>
                         <Typography variant="body2" sx={{ color: 'white', fontWeight: 500, mb: 0.5 }}>
