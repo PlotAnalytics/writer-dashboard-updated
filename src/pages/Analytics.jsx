@@ -26,6 +26,7 @@ import dayjs from 'dayjs';
 import Layout from '../components/Layout.jsx';
 import { buildApiUrl, API_CONFIG } from '../config/api.js';
 import RealtimeWidget from '../components/RealtimeWidget';
+import { useAuth } from '../contexts/AuthContext';
 
 // Utility functions like WriterAnalytics.jsx
 const formatNumber = (value) => {
@@ -242,6 +243,7 @@ const Analytics = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
+  const { user } = useAuth();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
