@@ -46,7 +46,7 @@ const Content = () => {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [filterStatus, setFilterStatus] = useState('all');
-  const [dateRange, setDateRange] = useState('28');
+  const [dateRange, setDateRange] = useState('lifetime');
   const [videoTypeFilter, setVideoTypeFilter] = useState('short'); // 'short', 'video', 'full_to_short' - start with shorts
   const [currentPage, setCurrentPage] = useState(1);
   const [videosPerPage] = useState(20);
@@ -67,8 +67,31 @@ const Content = () => {
     setLoading(true);
     setError(null);
     try {
-      // Get writer ID from user context or localStorage
-      const writerId = user?.writerId || localStorage.getItem('writerId') || '106';
+      // Get writer ID from user context or localStorage - NO FALLBACK for security
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
+        try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
+          const profileResponse = await axios.get('/api/auth/profile');
+          if (profileResponse.data.user.writerId) {
+            writerId = profileResponse.data.user.writerId.toString();
+            localStorage.setItem('writerId', writerId);
+            console.log('✅ Security: Got writerId from profile:', writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load your content. Please log out and log back in.');
+            setLoading(false);
+            return;
+          }
+        } catch (profileError) {
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          setLoading(false);
+          return;
+        }
+      }
 
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 

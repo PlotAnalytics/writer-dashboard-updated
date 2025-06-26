@@ -56,24 +56,29 @@ const VideoAnalytics = () => {
     setLoading(true);
     setError(null);
     try {
-      // Get the correct writer ID - try to refresh from profile if needed
-      let writerId =
-        user?.writerId || localStorage.getItem("writerId") || "106";
+      // Get writer ID from user context or localStorage - NO FALLBACK for security
+      let writerId = user?.writerId || localStorage.getItem("writerId");
 
-      // If we're using the fallback writer ID, try to get the correct one from profile
-      if (writerId === "106") {
+      // SECURITY: If no writerId, fetch from profile endpoint
+      if (!writerId) {
         try {
+          console.log('🔒 No writerId found, fetching from profile for security...');
           const profileResponse = await axios.get("/api/auth/profile");
           if (profileResponse.data.user.writerId) {
             writerId = profileResponse.data.user.writerId.toString();
             localStorage.setItem("writerId", writerId);
-            console.log("✅ Updated writer ID from profile:", writerId);
+            console.log("✅ Security: Got writerId from profile:", writerId);
+          } else {
+            console.error('❌ SECURITY ERROR: No writerId available for user');
+            setError('Unable to load your video data. Please log out and log back in.');
+            setLoading(false);
+            return;
           }
         } catch (profileError) {
-          console.warn(
-            "Could not refresh writer ID from profile:",
-            profileError
-          );
+          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
+          setError('Authentication error. Please log out and log back in.');
+          setLoading(false);
+          return;
         }
       }
 

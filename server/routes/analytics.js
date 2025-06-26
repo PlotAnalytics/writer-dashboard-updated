@@ -627,17 +627,52 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
         s.preview,
         pa.account as account_name
       FROM video v
-      INNER JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
       LEFT JOIN posting_accounts pa ON v.account_id = pa.id
       WHERE v.writer_id = $1
         AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
-        AND s.video_id IS NOT NULL
+        AND v.url IS NOT NULL
         ${dateCondition}
       ORDER BY s.posted_date DESC NULLS LAST, v.id DESC
     `;
 
     const { rows: postgresRows } = await pool.query(postgresQuery, queryParams);
     console.log(`📊 PostgreSQL returned ${postgresRows.length} videos for writer ${writerId}`);
+
+    // DEBUG: Check if writer has ANY videos in video table
+    const debugVideoQuery = `
+      SELECT COUNT(*) as total_videos,
+             COUNT(CASE WHEN url LIKE '%youtube%' THEN 1 END) as youtube_videos
+      FROM video
+      WHERE writer_id = $1
+    `;
+    const debugResult = await pool.query(debugVideoQuery, [parseInt(writerId)]);
+    console.log(`🔍 DEBUG: Writer ${writerId} has ${debugResult.rows[0].total_videos} total videos, ${debugResult.rows[0].youtube_videos} YouTube videos in video table`);
+
+    // DEBUG: Check statistics_youtube_api table for this writer's videos
+    const debugStatsQuery = `
+      SELECT COUNT(*) as stats_count
+      FROM video v
+      INNER JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      WHERE v.writer_id = $1
+    `;
+    const debugStatsResult = await pool.query(debugStatsQuery, [parseInt(writerId)]);
+    console.log(`🔍 DEBUG: Writer ${writerId} has ${debugStatsResult.rows[0].stats_count} videos with statistics_youtube_api data`);
+
+    // DEBUG: Check date range of videos for this writer
+    const debugDateQuery = `
+      SELECT
+        MIN(s.posted_date) as earliest_date,
+        MAX(s.posted_date) as latest_date,
+        COUNT(*) as total_with_dates
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      WHERE v.writer_id = $1
+        AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.posted_date IS NOT NULL
+    `;
+    const debugDateResult = await pool.query(debugDateQuery, [parseInt(writerId)]);
+    console.log(`🔍 DEBUG: Writer ${writerId} video dates: earliest=${debugDateResult.rows[0].earliest_date}, latest=${debugDateResult.rows[0].latest_date}, total_with_dates=${debugDateResult.rows[0].total_with_dates}`);
 
     // Step 2: Get duration data from BigQuery for accurate video type determination
     let bigQueryDurationMap = new Map();
