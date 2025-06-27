@@ -148,18 +148,20 @@ const PreviousSubmissions = ({
     }
     const normalizedStatus = status.trim().toLowerCase();
     switch (normalizedStatus) {
-      case "approved script. ready for production":
       case "writer submissions (qa)":
+        return "Pending Approval";
+      case "approved script. ready for production":
       case "finished video":
+        return "Pending Posting";
       case "pending":
       case "story continuation":
-        return "Pending";
+        return "Pending Approval";
       case "rejected":
         return "Rejected";
       case "posted":
         return "Posted";
       default:
-        return "Pending"; // Default to Pending for all unknown statuses
+        return "Pending Approval"; // Default to Pending for all unknown statuses
     }
   };
 
@@ -292,6 +294,30 @@ const PreviousSubmissions = ({
           .chip-draft {
             background-color: #9E9E9E !important;
             border-color: #9E9E9E !important;
+          }
+          .status-pending-approval {
+            background-color: rgba(33, 150, 243, 0.05) !important; /* light blue background */
+            border-color: rgba(33, 150, 243, 0.2) !important;
+          }
+          .status-pending-approval::before,
+          .status-pending-approval::after {
+            background-color: #2196F3 !important; /* blue */
+          }
+          .status-pending-posting {
+            background-color: rgba(255, 152, 0, 0.05) !important; /* orange */
+            border-color: rgba(255, 152, 0, 0.2) !important;
+          }
+          .status-pending-posting::before,
+          .status-pending-posting::after {
+            background-color: #FF9800 !important;
+          }
+          .chip-pending-approval {
+            background-color: #2196F3 !important;
+            border-color: #2196F3 !important;
+          }
+          .chip-pending-posting {
+            background-color: #FF9800 !important;
+            border-color: #FF9800 !important;
           }
         `}
       </style>
