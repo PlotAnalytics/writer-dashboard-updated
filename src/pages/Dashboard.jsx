@@ -11,9 +11,11 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
+import CacheStatus from '../components/CacheStatus.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
 import axios from 'axios';
+import { staticDataApi, submissionsApi } from '../utils/cachedApi.js';
 import '../styles/firecracker.css';
 
 const Dashboard = () => {
@@ -121,16 +123,16 @@ const Dashboard = () => {
   // WebSocket integration for real-time updates
   const { onStatusUpdate, offStatusUpdate } = useSocket();
 
-  // Fetch tropes from API - Updated for your API structure
+  // Fetch tropes from API - Updated with caching
   const fetchTropes = async () => {
     try {
-      const response = await axios.get('/api/tropes');
-      console.log('Tropes API response:', response.data);
+      const { data, fromCache } = await staticDataApi.getTropes();
+      console.log('Tropes API response:', data, fromCache ? '(cached)' : '(fresh)');
       // API returns array of objects with id, number, name - extract names ordered by number
-      if (Array.isArray(response.data)) {
-        setTropeList(response.data.map((trope) => trope.name));
+      if (Array.isArray(data)) {
+        setTropeList(data.map((trope) => trope.name));
       } else {
-        console.error('Tropes API did not return an array:', response.data);
+        console.error('Tropes API did not return an array:', data);
         // Fallback data for testing
         setTropeList(['Sample Trope 1', 'Sample Trope 2', 'Sample Trope 3']);
       }
@@ -141,16 +143,16 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch structures from API - Updated for your API structure
+  // Fetch structures from API - Updated with caching
   const fetchStructures = async () => {
     try {
-      const response = await axios.get('/api/structures');
-      console.log('Structures API response:', response.data);
+      const { data, fromCache } = await staticDataApi.getStructures();
+      console.log('Structures API response:', data, fromCache ? '(cached)' : '(fresh)');
       // API returns { structures: [...] } where each structure has structure_id, name, writers
-      if (response.data && response.data.structures) {
-        setStructureList(response.data.structures);
+      if (data && data.structures) {
+        setStructureList(data.structures);
       } else {
-        console.error('Structures API did not return expected format:', response.data);
+        console.error('Structures API did not return expected format:', data);
         // Fallback data for testing
         setStructureList([
           { structure_id: 1, name: 'Three Act Structure' },
@@ -228,27 +230,28 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch scripts using your API endpoint
+  // Fetch scripts using cached API endpoint
   const fetchScripts = async (writer_id, filters = {}) => {
     try {
       setLoading(true);
-      let url = `/api/scripts?writer_id=${writer_id}`;
 
-      // Add query parameters for filtering
+      // Build params object for cached API
+      const params = { writer_id };
       if (filters.startDate && filters.endDate) {
-        url += `&startDate=${filters.startDate}&endDate=${filters.endDate}`;
+        params.startDate = filters.startDate;
+        params.endDate = filters.endDate;
       }
       if (filters.searchTitle) {
-        url += `&searchTitle=${encodeURIComponent(filters.searchTitle)}`;
+        params.searchTitle = filters.searchTitle;
       }
 
-      const response = await axios.get(url);
-      console.log('Scripts API response:', response.data);
+      const { data, fromCache } = await submissionsApi.getScripts(params);
+      console.log('Scripts API response:', data, fromCache ? '(cached)' : '(fresh)');
 
-      if (Array.isArray(response.data)) {
-        setSubmissions(response.data);
+      if (Array.isArray(data)) {
+        setSubmissions(data);
       } else {
-        console.error('Scripts API did not return an array:', response.data);
+        console.error('Scripts API did not return an array:', data);
         setSubmissions([]);
       }
     } catch (error) {
@@ -467,6 +470,18 @@ const Dashboard = () => {
           }}>
             Welcome, {writer?.name || user?.name || 'Writer'}! What are we writing today?
           </Typography>
+
+          {/* Cache Status Indicator */}
+          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
+            <CacheStatus onClearCache={() => {
+              // Refresh data after cache clear
+              if (writer) {
+                fetchScripts(writer.id);
+              }
+              fetchTropes();
+              fetchStructures();
+            }} />
+          </Box>
         </Box>
 
         <Box sx={{

@@ -27,6 +27,7 @@ import Layout from '../components/Layout.jsx';
 import { buildApiUrl, API_CONFIG } from '../config/api.js';
 import RealtimeWidget from '../components/RealtimeWidget';
 import { useAuth } from '../contexts/AuthContext';
+import { analyticsApi } from '../utils/cachedApi.js';
 
 // Utility functions like WriterAnalytics.jsx
 const formatNumber = (value) => {
