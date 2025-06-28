@@ -36,6 +36,7 @@ class CachedApi {
 
   // Cached GET request
   async get(url, options = {}) {
+    console.log('🌐 CachedApi.get called:', url, options);
     const {
       params = {},
       ttl = CACHE_TTL.ANALYTICS,
@@ -46,6 +47,7 @@ class CachedApi {
 
     const fullUrl = buildApiUrl(url);
     const cacheKey = this.getCacheKey(url, params);
+    console.log('🔑 Cache key generated:', cacheKey);
 
     // Check cache first (unless force refresh)
     if (useCache && !forceRefresh) {
@@ -126,12 +128,15 @@ const cachedApi = new CachedApi();
 
 // Convenience methods for different data types
 export const analyticsApi = {
-  getOverview: (params = {}) => 
-    cachedApi.get('/api/analytics', { 
-      params, 
+  getOverview: (options = {}) => {
+    const { params = {}, ...otherOptions } = options;
+    return cachedApi.get('/api/analytics', {
+      params,
       ttl: CACHE_TTL.ANALYTICS,
-      useCache: true 
-    }),
+      useCache: true,
+      ...otherOptions
+    });
+  },
   
   getContent: (params = {}) => 
     cachedApi.get('/api/analytics/content', { 
@@ -146,12 +151,15 @@ export const analyticsApi = {
     }),
 
   // Force refresh for real-time data
-  getOverviewFresh: (params = {}) => 
-    cachedApi.get('/api/analytics', { 
-      params, 
+  getOverviewFresh: (params = {}) =>
+    cachedApi.get('/api/analytics', {
+      params,
       forceRefresh: true,
-      useCache: false 
-    })
+      useCache: false
+    }),
+
+  // Clear analytics cache
+  clearCache: () => cachedApi.clearCache()
 };
 
 export const submissionsApi = {

@@ -97,19 +97,20 @@ const Content = () => {
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 
       // Try cached InfluxDB first, then PostgreSQL fallback
-      let response;
+      let responseData;
       try {
-        response = await submissionsApi.getVideos({
+        const { data, fromCache } = await submissionsApi.getVideos({
           writer_id: writerId,
           range: dateRange,
           page: currentPage,
           limit: videosPerPage,
           type: videoTypeFilter
         });
-        console.log('✅ Got response from /api/writer/videos:', response.data, response.fromCache ? '(cached)' : '(fresh)');
+        responseData = data;
+        console.log('✅ Got response from /api/writer/videos:', data, fromCache ? '(cached)' : '(fresh)');
       } catch (influxError) {
         console.log('⚠️ InfluxDB API failed, trying PostgreSQL fallback');
-        response = await axios.get(`/api/writer/analytics`, {
+        const response = await axios.get(`/api/writer/analytics`, {
           params: {
             writer_id: writerId,
             page: currentPage,
@@ -117,21 +118,22 @@ const Content = () => {
             type: videoTypeFilter
           }
         });
+        responseData = response.data;
         console.log('✅ Got response from PostgreSQL fallback:', response.data);
       }
 
       // Handle paginated response
-      if (response.data) {
+      if (responseData) {
         let videos, paginationData;
 
-        if (response.data.videos && response.data.pagination) {
+        if (responseData.videos && responseData.pagination) {
           // Paginated response
-          videos = response.data.videos;
-          paginationData = response.data.pagination;
+          videos = responseData.videos;
+          paginationData = responseData.pagination;
           setPagination(paginationData);
-        } else if (Array.isArray(response.data)) {
+        } else if (Array.isArray(responseData)) {
           // Legacy non-paginated response
-          videos = response.data;
+          videos = responseData;
           setPagination({
             currentPage: 1,
             totalPages: 1,

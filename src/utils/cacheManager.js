@@ -22,6 +22,7 @@ class CacheManager {
 
   // Get from memory cache first, then localStorage
   get(key) {
+    console.log('🔍 Cache lookup for:', key);
     // Check memory cache first (fastest)
     const memoryEntry = this.memoryCache.get(key);
     if (this.isValid(memoryEntry)) {

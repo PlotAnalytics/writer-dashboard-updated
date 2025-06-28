@@ -263,6 +263,8 @@ const Analytics = () => {
   });
   const [showCustomDatePicker, setShowCustomDatePicker] = useState(false);
   const [isChartLoading, setIsChartLoading] = useState(false);
+  const [loadTime, setLoadTime] = useState(null);
+  const [cacheStatus, setCacheStatus] = useState(null);
 
   const dateRangeOptions = [
     { value: 'last7days', label: 'Last 7 days' },
@@ -278,10 +280,19 @@ const Analytics = () => {
     { value: 'custom', label: 'Custom' }
   ];
 
-  const fetchAnalytics = async () => {
-    console.log('🔥 fetchAnalytics function called with dateRange:', dateRange);
-    setIsChartLoading(true);
+  const fetchAnalytics = async (useCache = true) => {
+    const startTime = performance.now();
+    console.log('🔥 fetchAnalytics function called with dateRange:', dateRange, 'useCache:', useCache);
+
+    // If using cache and we already have data, show it immediately while fetching in background
+    if (useCache && analyticsData && Object.keys(analyticsData).length > 0) {
+      console.log('📊 Using cached data while fetching fresh data in background');
+    } else {
+      setIsChartLoading(true);
+    }
+
     setError(null);
+    setCacheStatus(null);
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
@@ -334,13 +345,8 @@ const Analytics = () => {
 
       console.log('📊 Will use BigQuery data from overview endpoint');
 
-      // Fetch overview data from BigQuery (includes chart data and total views)
-      // Add strong cache-busting parameters to force fresh data
-      const cacheBuster = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-
-      // Build URL with proper parameters for custom date ranges
-      let apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.ANALYTICS.OVERVIEW)}?range=${dateRange}&_t=${cacheBuster}&_r=${randomId}&force_refresh=true`;
+      // Use cached API for better performance
+      let params = { range: dateRange };
 
       // If it's a custom date range, extract and add start_date and end_date parameters
       if (dateRange.startsWith('custom_')) {
@@ -348,41 +354,31 @@ const Analytics = () => {
         if (parts.length === 3) {
           const startDate = parts[1];
           const endDate = parts[2];
-          apiUrl += `&start_date=${startDate}&end_date=${endDate}`;
+          params.start_date = startDate;
+          params.end_date = endDate;
           console.log(`📅 Adding custom date parameters: start_date=${startDate}, end_date=${endDate}`);
         }
       }
 
-      console.log(`📊 Fetching from URL: ${apiUrl}`);
+      console.log(`📊 Fetching analytics via cached API (useCache: ${useCache})`);
 
-      const overviewResponse = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+      const overviewResult = await analyticsApi.getOverview({
+        params: params,
+        forceRefresh: !useCache,
+        useCache: useCache
       });
 
-      let overviewData = {};
-      if (overviewResponse.ok) {
-        overviewData = await overviewResponse.json();
-        console.log('📊 BigQuery Overview data received:', {
-          totalViews: overviewData.totalViews,
-          totalSubmissions: overviewData.totalSubmissions,
-          chartDataPoints: overviewData.chartData?.length || 0,
-          aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0
-        });
-      } else {
-        const errorText = await overviewResponse.text();
-        console.error('❌ Analytics API error:', {
-          status: overviewResponse.status,
-          statusText: overviewResponse.statusText,
-          error: errorText
-        });
-        throw new Error(`API Error: ${overviewResponse.status} - ${errorText}`);
-      }
+      const overviewData = overviewResult.data;
+      const fromCache = overviewResult.fromCache;
+      setCacheStatus(fromCache ? 'cached' : 'fresh');
+
+      console.log('📊 BigQuery Overview data received:', {
+        totalViews: overviewData.totalViews,
+        totalSubmissions: overviewData.totalSubmissions,
+        chartDataPoints: overviewData.chartData?.length || 0,
+        aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0,
+        fromCache: fromCache
+      });
 
         // Debug: Check for June 6th in the received data
         if (overviewData.aggregatedViewsData) {
@@ -516,12 +512,16 @@ const Analytics = () => {
       clearTimeout(timeoutId);
       setLoading(false);
       setIsChartLoading(false);
+      const endTime = performance.now();
+      const loadTimeMs = endTime - startTime;
+      setLoadTime(loadTimeMs);
+      console.log(`⚡ Analytics fetch completed in ${loadTimeMs.toFixed(2)}ms (useCache: ${useCache})`);
     }
   };
 
   // Fetch analytics with specific date range (for calendar selections)
-  const fetchAnalyticsWithDateRange = async (customRange, startDate, endDate) => {
-    console.log('🔥 fetchAnalyticsWithDateRange called with:', { customRange, startDate, endDate });
+  const fetchAnalyticsWithDateRange = async (customRange, startDate, endDate, useCache = true) => {
+    console.log('🔥 fetchAnalyticsWithDateRange called with:', { customRange, startDate, endDate, useCache });
     setIsChartLoading(true);
     setError(null);
 
@@ -573,45 +573,32 @@ const Analytics = () => {
       let totalViews = 0;
       let chartData = [];
 
-      // Add strong cache-busting parameters to force fresh data
-      const cacheBuster = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
+      // Use cached API with explicit custom date parameters
+      const params = {
+        range: 'custom',
+        start_date: startDate,
+        end_date: endDate
+      };
 
-      // Build URL with explicit custom date parameters
-      let apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.ANALYTICS.OVERVIEW)}?range=custom&_t=${cacheBuster}&_r=${randomId}&force_refresh=true`;
-      apiUrl += `&start_date=${startDate}&end_date=${endDate}`;
+      console.log(`📊 Fetching analytics via cached API with custom dates (useCache: ${useCache})`);
 
-      console.log(`📊 Fetching from URL with custom dates: ${apiUrl}`);
-
-      const overviewResponse = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
+      const overviewResult = await analyticsApi.getOverview({
+        params: params,
+        forceRefresh: !useCache,
+        useCache: useCache
       });
 
-      let overviewData = {};
-      if (overviewResponse.ok) {
-        overviewData = await overviewResponse.json();
-        console.log('📊 BigQuery Overview data received for custom range:', {
-          totalViews: overviewData.totalViews,
-          totalSubmissions: overviewData.totalSubmissions,
-          chartDataPoints: overviewData.chartData?.length || 0,
-          aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0,
-          dateRange: `${startDate} to ${endDate}`
-        });
-      } else {
-        const errorText = await overviewResponse.text();
-        console.error('❌ Analytics API error:', {
-          status: overviewResponse.status,
-          statusText: overviewResponse.statusText,
-          error: errorText
-        });
-        throw new Error(`API Error: ${overviewResponse.status} - ${errorText}`);
-      }
+      const overviewData = overviewResult.data;
+      const fromCache = overviewResult.fromCache;
+
+      console.log('📊 BigQuery Overview data received for custom range:', {
+        totalViews: overviewData.totalViews,
+        totalSubmissions: overviewData.totalSubmissions,
+        chartDataPoints: overviewData.chartData?.length || 0,
+        aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0,
+        dateRange: `${startDate} to ${endDate}`,
+        fromCache: fromCache
+      });
 
       // Use BigQuery DAILY TOTALS data for the specific date range (already filtered in query)
       if (overviewData.aggregatedViewsData && overviewData.aggregatedViewsData.length > 0) {
@@ -1022,7 +1009,7 @@ const Analytics = () => {
     console.log('🚀 Analytics useEffect triggered, dateRange:', dateRange);
     // Don't auto-fetch for "custom" (when picker is open) or custom ranges (when applied)
     if (dateRange !== "custom" && !dateRange.startsWith("custom_")) {
-      fetchAnalytics();
+      fetchAnalytics(true); // Use cached data by default for faster loading
     }
   }, [dateRange]);
 
@@ -1398,9 +1385,41 @@ const Analytics = () => {
           flexDirection: { xs: 'column', md: 'row' },
           gap: 2
         }}>
-          <Typography variant="h4" sx={{ color: 'white', fontWeight: 600 }}>
-            Channel analytics
-          </Typography>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="h4" sx={{ color: 'white', fontWeight: 600 }}>
+              Channel analytics
+            </Typography>
+            {loadTime && (
+              <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                <Typography variant="caption" sx={{
+                  color: cacheStatus === 'cached' ? '#FF9800' : '#4CAF50',
+                  bgcolor: cacheStatus === 'cached' ? 'rgba(255, 152, 0, 0.1)' : 'rgba(76, 175, 80, 0.1)',
+                  px: 1,
+                  py: 0.5,
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontWeight: 600
+                }}>
+                  {cacheStatus === 'cached' ? '🚀 Cached' : '⚡ Fresh'} {loadTime.toFixed(0)}ms
+                </Typography>
+                <Typography
+                  variant="caption"
+                  onClick={() => {
+                    analyticsApi.clearCache();
+                    console.log('🗑️ Cache cleared manually');
+                  }}
+                  sx={{
+                    color: '#666',
+                    cursor: 'pointer',
+                    fontSize: '10px',
+                    '&:hover': { color: '#999' }
+                  }}
+                >
+                  Clear Cache
+                </Typography>
+              </Box>
+            )}
+          </Box>
 
           <Box sx={{
             display: 'flex',
@@ -1540,8 +1559,8 @@ const Analytics = () => {
                   // Clear any cached data
                   setAnalyticsData(null);
                   setError(null);
-                  // Force refresh with new data
-                  fetchAnalytics();
+                  // Force refresh with new data (bypass cache)
+                  fetchAnalytics(false);
                 }}
                 sx={{
                   width: '42px',
