@@ -174,8 +174,8 @@ export default cacheManager;
 // Cache TTL constants for different data types
 export const CACHE_TTL = {
   ANALYTICS: 3 * 60 * 1000,      // 3 minutes - analytics data
-  SUBMISSIONS: 2 * 60 * 1000,    // 2 minutes - submission data  
-  CONTENT: 5 * 60 * 1000,        // 5 minutes - content lists
+  // REMOVED: SUBMISSIONS - no caching for submissions to prevent duplicate submissions
+  CONTENT: 5 * 60 * 1000,        // 5 minutes - content lists (videos/published content)
   TROPES: 30 * 60 * 1000,        // 30 minutes - tropes (rarely change)
   STRUCTURES: 30 * 60 * 1000,    // 30 minutes - structures (rarely change)
   WRITER_DATA: 10 * 60 * 1000,   // 10 minutes - writer profile data

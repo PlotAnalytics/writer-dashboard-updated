@@ -162,22 +162,15 @@ export const analyticsApi = {
   clearCache: () => cachedApi.clearCache()
 };
 
-export const submissionsApi = {
-  getScripts: (params = {}) => 
-    cachedApi.get('/api/scripts', { 
-      params, 
-      ttl: CACHE_TTL.SUBMISSIONS 
-    }),
+// REMOVED: submissionsApi to prevent caching of submission data
+// This was causing users to see stale submission data and resubmit scripts
+// Submissions should always be fresh to avoid duplicate submissions
 
-  getVideos: (params = {}) => 
-    cachedApi.get('/api/writer/videos', { 
-      params, 
-      ttl: CACHE_TTL.CONTENT 
-    }),
-
-  createScript: (data) => 
-    cachedApi.post('/api/scripts', data, {
-      invalidateCache: ['/api/scripts']
+export const contentApi = {
+  getVideos: (params = {}) =>
+    cachedApi.get('/api/writer/videos', {
+      params,
+      ttl: CACHE_TTL.CONTENT
     })
 };
 

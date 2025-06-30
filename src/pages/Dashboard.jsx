@@ -11,11 +11,11 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
-import CacheStatus from '../components/CacheStatus.jsx';
+
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
 import axios from 'axios';
-import { staticDataApi, submissionsApi } from '../utils/cachedApi.js';
+import { staticDataApi } from '../utils/cachedApi.js';
 import '../styles/firecracker.css';
 
 const Dashboard = () => {
@@ -230,12 +230,12 @@ const Dashboard = () => {
     }
   };
 
-  // Fetch scripts using cached API endpoint
+  // Fetch scripts using direct API (NO CACHING for submissions to prevent stale data)
   const fetchScripts = async (writer_id, filters = {}) => {
     try {
       setLoading(true);
 
-      // Build params object for cached API
+      // Build params object for direct API call
       const params = { writer_id };
       if (filters.startDate && filters.endDate) {
         params.startDate = filters.startDate;
@@ -245,8 +245,10 @@ const Dashboard = () => {
         params.searchTitle = filters.searchTitle;
       }
 
-      const { data, fromCache } = await submissionsApi.getScripts(params);
-      console.log('Scripts API response:', data, fromCache ? '(cached)' : '(fresh)');
+      // Use direct axios call to avoid caching submission data
+      const response = await axios.get('/api/scripts', { params });
+      const data = response.data;
+      console.log('Scripts API response (FRESH - no cache):', data);
 
       if (Array.isArray(data)) {
         setSubmissions(data);
@@ -471,17 +473,7 @@ const Dashboard = () => {
             Welcome, {writer?.name || user?.name || 'Writer'}! What are we writing today?
           </Typography>
 
-          {/* Cache Status Indicator */}
-          <Box sx={{ display: 'flex', justifyContent: 'center', mb: 2 }}>
-            <CacheStatus onClearCache={() => {
-              // Refresh data after cache clear
-              if (writer) {
-                fetchScripts(writer.id);
-              }
-              fetchTropes();
-              fetchStructures();
-            }} />
-          </Box>
+
         </Box>
 
         <Box sx={{

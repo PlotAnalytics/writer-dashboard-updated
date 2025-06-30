@@ -33,7 +33,7 @@ import {
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import axios from 'axios';
-import { submissionsApi } from '../utils/cachedApi.js';
+import { contentApi } from '../utils/cachedApi.js';
 
 const Content = () => {
   const navigate = useNavigate();
@@ -99,7 +99,7 @@ const Content = () => {
       // Try cached InfluxDB first, then PostgreSQL fallback
       let responseData;
       try {
-        const { data, fromCache } = await submissionsApi.getVideos({
+        const { data, fromCache } = await contentApi.getVideos({
           writer_id: writerId,
           range: dateRange,
           page: currentPage,
