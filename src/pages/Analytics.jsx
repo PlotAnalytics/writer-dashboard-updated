@@ -26,6 +26,7 @@ import dayjs from 'dayjs';
 import Layout from '../components/Layout.jsx';
 import { buildApiUrl, API_CONFIG } from '../config/api.js';
 import RealtimeWidget from '../components/RealtimeWidget';
+import WriterLeaderboard from '../components/WriterLeaderboard.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { analyticsApi } from '../utils/cachedApi.js';
 
@@ -2495,83 +2496,9 @@ const Analytics = () => {
                     flex: '1 1 100%'
                   }
                 }}>
-                  {/* Performance Summary Section */}
+                  {/* Writer Leaderboard Section */}
                   <Box sx={{ mb: 4 }}>
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
-                      Performance Summary
-                    </Typography>
-                    <Box
-                      sx={{
-                        bgcolor: '#2A2A2A',
-                        borderRadius: '8px',
-                        border: '1px solid #333',
-                        p: 2
-                      }}
-                    >
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Average Daily Views
-                        </Typography>
-                        <Typography variant="body2" sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          fontWeight: 600
-                        }}>
-                          {formatNumber(analyticsData.avgDailyViews || 0)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Best Day
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#4CAF50', fontWeight: 600 }}>
-                          {formatNumber(analyticsData.summary?.highestDay || 0)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Total Likes
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#E91E63', fontWeight: 600 }}>
-                          {formatNumber(analyticsData.totalLikes || 0)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Total Comments
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#9C27B0', fontWeight: 600 }}>
-                          {formatNumber(analyticsData.totalComments || 0)}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Total Videos
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: '#2196F3', fontWeight: 600 }}>
-                          {analyticsData.topVideos?.length || analyticsData.totalSubmissions || 0}
-                        </Typography>
-                      </Box>
-
-                      <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                        <Typography variant="body2" sx={{ color: 'white' }}>
-                          Progress to Target
-                        </Typography>
-                        <Typography variant="body2" sx={{
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          WebkitBackgroundClip: 'text',
-                          WebkitTextFillColor: 'transparent',
-                          fontWeight: 600
-                        }}>
-                          {analyticsData.summary?.progressToTarget?.toFixed(1) || 0}%
-                        </Typography>
-                      </Box>
-                    </Box>
+                    <WriterLeaderboard currentWriterName={user?.name} />
                   </Box>
 
                   {/* Latest Content Section */}
@@ -2584,7 +2511,23 @@ const Analytics = () => {
                         bgcolor: '#2A2A2A',
                         borderRadius: '8px',
                         border: '1px solid #333',
-                        p: 2
+                        p: 2,
+                        height: '600px', // Fixed height to match top content section
+                        overflowY: 'auto',
+                        '&::-webkit-scrollbar': {
+                          width: '4px',
+                        },
+                        '&::-webkit-scrollbar-track': {
+                          background: 'rgba(255, 255, 255, 0.1)',
+                          borderRadius: '2px',
+                        },
+                        '&::-webkit-scrollbar-thumb': {
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          borderRadius: '2px',
+                        },
+                        '&::-webkit-scrollbar-thumb:hover': {
+                          background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)',
+                        },
                       }}
                     >
                       {analyticsData.latestContent ? (
@@ -2856,6 +2799,8 @@ const Analytics = () => {
                       )}
                     </Box>
                   </Box>
+
+
                 </Box>
               </Box>
             </Box>

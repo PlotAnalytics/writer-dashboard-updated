@@ -4511,5 +4511,82 @@ router.get('/test/top-content', async (req, res) => {
   }
 });
 
+// Writer Leaderboard endpoint
+router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
+  try {
+    const { limit = 10, period = '30d' } = req.query;
+
+    console.log('🏆 Getting writer leaderboard data...');
+
+    if (!bigquery) {
+      return res.status(503).json({ error: 'BigQuery not available' });
+    }
+
+    // Calculate date range based on period
+    let daysBack = 30;
+    if (period === '7d') daysBack = 7;
+    else if (period === '90d') daysBack = 90;
+    else if (period === '1y') daysBack = 365;
+
+    const leaderboardQuery = `
+      SELECT
+        writer_name,
+        SUM(CAST(views AS INT64)) as total_views,
+        COUNT(DISTINCT date_day) as days_active,
+        ROUND(AVG(CAST(views AS INT64)), 0) as avg_daily_views,
+        MIN(date_day) as first_active_date,
+        MAX(date_day) as last_active_date,
+        ROUND((SUM(CAST(views AS INT64)) / 1000000000.0) * 100, 2) as progress_to_1b_percent
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+      WHERE writer_name IS NOT NULL
+        AND date_day >= DATE_SUB(CURRENT_DATE(), INTERVAL ${daysBack} DAY)
+        AND views IS NOT NULL
+        AND CAST(views AS INT64) > 0
+      GROUP BY writer_name
+      ORDER BY total_views DESC
+      LIMIT ${parseInt(limit)}
+    `;
+
+    console.log('🔍 Executing leaderboard query:', leaderboardQuery);
+
+    const [leaderboardRows] = await bigquery.query({ query: leaderboardQuery });
+
+    // Add ranking and format data
+    const leaderboardData = leaderboardRows.map((row, index) => ({
+      rank: index + 1,
+      writer_name: row.writer_name,
+      total_views: parseInt(row.total_views),
+      days_active: parseInt(row.days_active),
+      avg_daily_views: parseInt(row.avg_daily_views),
+      first_active_date: row.first_active_date,
+      last_active_date: row.last_active_date,
+      progress_to_1b_percent: parseFloat(row.progress_to_1b_percent),
+      // Calculate performance metrics
+      views_per_million: (parseInt(row.total_views) / 1000000).toFixed(1),
+      is_active: row.last_active_date >= new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    }));
+
+    console.log(`✅ Leaderboard data retrieved: ${leaderboardData.length} writers`);
+
+    res.json({
+      success: true,
+      data: leaderboardData,
+      metadata: {
+        period: period,
+        days_back: daysBack,
+        total_writers: leaderboardData.length,
+        last_updated: new Date().toISOString()
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting writer leaderboard:', error);
+    res.status(500).json({
+      error: 'Failed to get writer leaderboard',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
 module.exports.bigquery = bigquery;

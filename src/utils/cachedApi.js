@@ -159,7 +159,14 @@ export const analyticsApi = {
     }),
 
   // Clear analytics cache
-  clearCache: () => cachedApi.clearCache()
+  clearCache: () => cachedApi.clearCache(),
+
+  // Writer leaderboard
+  getLeaderboard: (params = {}) =>
+    cachedApi.get('/api/analytics/writer/leaderboard', {
+      params,
+      ttl: CACHE_TTL.ANALYTICS
+    })
 };
 
 // REMOVED: submissionsApi to prevent caching of submission data
