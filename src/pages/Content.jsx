@@ -33,7 +33,7 @@ import {
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import axios from 'axios';
-import { contentApi } from '../utils/cachedApi.js';
+import { contentApi } from '../utils/simpleApi.js';
 
 const Content = () => {
   const navigate = useNavigate();
@@ -96,10 +96,10 @@ const Content = () => {
 
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 
-      // Try cached InfluxDB first, then PostgreSQL fallback
+      // Try InfluxDB first, then PostgreSQL fallback
       let responseData;
       try {
-        const { data, fromCache } = await contentApi.getVideos({
+        const { data } = await contentApi.getVideos({
           writer_id: writerId,
           range: dateRange,
           page: currentPage,
@@ -107,7 +107,7 @@ const Content = () => {
           type: videoTypeFilter
         });
         responseData = data;
-        console.log('✅ Got response from /api/writer/videos:', data, fromCache ? '(cached)' : '(fresh)');
+        console.log('✅ Got response from /api/writer/videos:', data);
       } catch (influxError) {
         console.log('⚠️ InfluxDB API failed, trying PostgreSQL fallback');
         const response = await axios.get(`/api/writer/analytics`, {

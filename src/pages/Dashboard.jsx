@@ -15,7 +15,7 @@ import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
 import axios from 'axios';
-import { staticDataApi } from '../utils/cachedApi.js';
+import { staticDataApi } from '../utils/simpleApi.js';
 import '../styles/firecracker.css';
 
 const Dashboard = () => {
@@ -126,8 +126,8 @@ const Dashboard = () => {
   // Fetch tropes from API - Updated with caching
   const fetchTropes = async () => {
     try {
-      const { data, fromCache } = await staticDataApi.getTropes();
-      console.log('Tropes API response:', data, fromCache ? '(cached)' : '(fresh)');
+      const { data } = await staticDataApi.getTropes();
+      console.log('Tropes API response:', data);
       // API returns array of objects with id, number, name - extract names ordered by number
       if (Array.isArray(data)) {
         setTropeList(data.map((trope) => trope.name));
@@ -146,8 +146,8 @@ const Dashboard = () => {
   // Fetch structures from API - Updated with caching
   const fetchStructures = async () => {
     try {
-      const { data, fromCache } = await staticDataApi.getStructures();
-      console.log('Structures API response:', data, fromCache ? '(cached)' : '(fresh)');
+      const { data } = await staticDataApi.getStructures();
+      console.log('Structures API response:', data);
       // API returns { structures: [...] } where each structure has structure_id, name, writers
       if (data && data.structures) {
         setStructureList(data.structures);

@@ -10,7 +10,7 @@ import Analytics from './pages/Analytics.jsx';
 import Content from './pages/Content.jsx';
 import VideoAnalytics from './pages/VideoAnalytics.jsx';
 import Settings from './pages/Settings.jsx';
-import CacheTest from './pages/CacheTest.jsx';
+
 import './styles/mobile-responsive.css';
 import './styles/mobile-fixes.css';
 
@@ -214,14 +214,7 @@ function App() {
                 </ProtectedRoute>
               }
             />
-            <Route
-              path="/cache-test"
-              element={
-                <ProtectedRoute>
-                  <CacheTest />
-                </ProtectedRoute>
-              }
-            />
+
             {/* Catch-all route for any unmatched paths */}
             <Route
               path="*"

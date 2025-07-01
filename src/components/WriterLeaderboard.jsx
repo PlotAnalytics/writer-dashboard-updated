@@ -21,7 +21,7 @@ import {
   CalendarToday as CalendarIcon,
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import { analyticsApi } from '../utils/cachedApi.js';
+import { analyticsApi } from '../utils/simpleApi.js';
 
 const WriterLeaderboard = ({ currentWriterName }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
