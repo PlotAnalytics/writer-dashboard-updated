@@ -31,6 +31,34 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Special case for retention_master user
+    if (username === 'retention_master' && password === 'Plotpointe!@3456') {
+      console.log('✅ Retention master authenticated');
+
+      // Generate JWT token for retention master
+      const token = jwt.sign(
+        {
+          id: 'retention_master',
+          username: 'retention_master',
+          role: 'retention_master'
+        },
+        process.env.JWT_SECRET || 'fallback_secret',
+        { expiresIn: "24h" }
+      );
+
+      return res.json({
+        success: true,
+        token,
+        role: 'retention_master',
+        username: 'retention_master',
+        user: {
+          id: 'retention_master',
+          username: 'retention_master',
+          role: 'retention_master'
+        }
+      });
+    }
+
     // First check if user exists
     const userCheckResult = await pool.query(
       "SELECT * FROM login WHERE username = $1",
@@ -193,6 +221,21 @@ router.get('/profile', async (req, res) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
+
+    // Special case for retention_master user
+    if (decoded.role === 'retention_master') {
+      return res.json({
+        success: true,
+        user: {
+          id: 'retention_master',
+          username: 'retention_master',
+          role: 'retention_master',
+          name: 'Retention Master',
+          writerId: null,
+          avatar: 'R'
+        }
+      });
+    }
 
     // Get user from database
     const result = await pool.query(

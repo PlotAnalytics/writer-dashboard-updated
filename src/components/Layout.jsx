@@ -59,7 +59,10 @@ const Layout = ({ children }) => {
   console.log('🔍 Layout - Current user:', user);
   console.log('🔍 Layout - WriterId from localStorage:', localStorage.getItem('writerId'));
 
-  const menuItems = [
+  // Check if user is retention master
+  const isRetentionMaster = user?.role === 'retention_master';
+
+  const menuItems = isRetentionMaster ? [] : [
     {
       text: 'Dashboard',
       icon: <DashboardIcon />,
@@ -83,7 +86,7 @@ const Layout = ({ children }) => {
     },
   ];
 
-  const bottomMenuItems = [
+  const bottomMenuItems = isRetentionMaster ? [] : [
     { text: 'Settings', icon: <SettingsIcon />, path: '/settings', description: 'Preferences' },
     { text: 'Send Feedback', icon: <BugReportIcon />, path: '/support', description: 'Report issues' },
   ];
@@ -240,35 +243,36 @@ const Layout = ({ children }) => {
       </Box>
 
       {/* Modern Navigation */}
-      <Box sx={{ px: isMobile ? 1.5 : 2, py: isMobile ? 2 : 3 }}>
-        <Typography variant="caption" sx={{
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          mb: 2,
-          display: 'block',
-          px: 1,
-          fontSize: isMobile ? '10px' : '12px'
-        }}>
-          Navigation
-        </Typography>
-        {menuItems.map((item, index) => {
-          const isActive = location.pathname === item.path;
-          return (
-            <Box
-              key={item.text}
-              onClick={() => handleMenuClick(item.path)}
-              sx={{
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'space-between',
-                p: isMobile ? 1.5 : 2,
-                mb: 1,
-                borderRadius: isMobile ? '12px' : '16px',
-                cursor: 'pointer',
-                position: 'relative',
-                background: isActive
+      {!isRetentionMaster && (
+        <Box sx={{ px: isMobile ? 1.5 : 2, py: isMobile ? 2 : 3 }}>
+          <Typography variant="caption" sx={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            mb: 2,
+            display: 'block',
+            px: 1,
+            fontSize: isMobile ? '10px' : '12px'
+          }}>
+            Navigation
+          </Typography>
+          {menuItems.map((item, index) => {
+            const isActive = location.pathname === item.path;
+            return (
+              <Box
+                key={item.text}
+                onClick={() => handleMenuClick(item.path)}
+                sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  p: isMobile ? 1.5 : 2,
+                  mb: 1,
+                  borderRadius: isMobile ? '12px' : '16px',
+                  cursor: 'pointer',
+                  position: 'relative',
+                  background: isActive
                   ? 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)'
                   : 'transparent',
                 border: isActive
@@ -351,25 +355,52 @@ const Layout = ({ children }) => {
               </Box>
             </Box>
           );
-        })}
-      </Box>
+          })}
+        </Box>
+      )}
+
+      {/* Retention Master Title */}
+      {isRetentionMaster && (
+        <Box sx={{ px: isMobile ? 1.5 : 2, py: isMobile ? 2 : 3 }}>
+          <Typography variant="h6" sx={{
+            color: 'white',
+            fontWeight: 600,
+            textAlign: 'center',
+            background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
+            backgroundClip: 'text',
+            WebkitBackgroundClip: 'text',
+            WebkitTextFillColor: 'transparent'
+          }}>
+            Retention Master
+          </Typography>
+          <Typography variant="caption" sx={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            textAlign: 'center',
+            display: 'block',
+            mt: 1
+          }}>
+            All Video Retention Data
+          </Typography>
+        </Box>
+      )}
 
       {/* Modern Bottom Navigation */}
       <Box sx={{ flexGrow: 1 }} />
-      <Box sx={{ px: isMobile ? 1.5 : 2, pb: isMobile ? 2 : 3 }}>
-        <Typography variant="caption" sx={{
-          color: 'rgba(255, 255, 255, 0.5)',
-          fontWeight: 600,
-          textTransform: 'uppercase',
-          letterSpacing: '1px',
-          mb: 2,
-          display: 'block',
-          px: 1,
-          fontSize: isMobile ? '10px' : '12px'
-        }}>
-          Support
-        </Typography>
-        {bottomMenuItems.map((item) => (
+      {!isRetentionMaster && (
+        <Box sx={{ px: isMobile ? 1.5 : 2, pb: isMobile ? 2 : 3 }}>
+          <Typography variant="caption" sx={{
+            color: 'rgba(255, 255, 255, 0.5)',
+            fontWeight: 600,
+            textTransform: 'uppercase',
+            letterSpacing: '1px',
+            mb: 2,
+            display: 'block',
+            px: 1,
+            fontSize: isMobile ? '10px' : '12px'
+          }}>
+            Support
+          </Typography>
+          {bottomMenuItems.map((item) => (
           <Box
             key={item.text}
             onClick={() => handleMenuClick(item.path)}
@@ -468,7 +499,8 @@ const Layout = ({ children }) => {
             }} />
           )}
         </Box>
-      </Box>
+        </Box>
+      )}
     </>
   );
 

@@ -10,9 +10,22 @@ import Analytics from './pages/Analytics.jsx';
 import Content from './pages/Content.jsx';
 import VideoAnalytics from './pages/VideoAnalytics.jsx';
 import Settings from './pages/Settings.jsx';
+import RetentionMaster from './pages/RetentionMaster.jsx';
 
 import './styles/mobile-responsive.css';
 import './styles/mobile-fixes.css';
+import { useAuth } from './contexts/AuthContext.jsx';
+
+// Component to handle root redirect based on user role
+const RootRedirect = () => {
+  const { user } = useAuth();
+
+  if (user?.role === 'retention_master') {
+    return <Navigate to="/retention-master" replace />;
+  }
+
+  return <Navigate to="/dashboard" replace />;
+};
 
 const darkTheme = createTheme({
   palette: {
@@ -159,6 +172,14 @@ function App() {
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
+              path="/retention-master"
+              element={
+                <ProtectedRoute>
+                  <RetentionMaster />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="/dashboard"
               element={
                 <ProtectedRoute>
@@ -210,7 +231,7 @@ function App() {
               path="/"
               element={
                 <ProtectedRoute>
-                  <Navigate to="/dashboard" replace />
+                  <RootRedirect />
                 </ProtectedRoute>
               }
             />
@@ -220,7 +241,7 @@ function App() {
               path="*"
               element={
                 <ProtectedRoute>
-                  <Navigate to="/dashboard" replace />
+                  <RootRedirect />
                 </ProtectedRoute>
               }
             />

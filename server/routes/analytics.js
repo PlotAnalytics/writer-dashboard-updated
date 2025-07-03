@@ -4588,5 +4588,214 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
   }
 });
 
+// Get all retention data for retention master view with pagination
+router.get('/retention-master', async (req, res) => {
+  try {
+    console.log('🎯 Retention master endpoint called');
+
+    const projectId = process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
+    const dataset = "dbt_youtube_analytics";
+
+    // Get pagination parameters
+    const page = parseInt(req.query.page) || 1;
+    const limit = 200; // 200 videos per page
+    const offset = (page - 1) * limit;
+
+    console.log(`📄 Pagination: Page ${page}, Limit ${limit}, Offset ${offset}`);
+
+    // First, get total count of videos with retention data
+    const countQuery = `
+      WITH unique_videos AS (
+        SELECT DISTINCT video_id
+        FROM \`${projectId}.${dataset}.audience_retention_historical\`
+        WHERE video_id IS NOT NULL
+      )
+      SELECT COUNT(DISTINCT v.video_id) as total_count
+      FROM \`${projectId}.${dataset}.youtube_video_report_historical\` v
+      INNER JOIN unique_videos uv ON v.video_id = uv.video_id
+      WHERE v.video_title IS NOT NULL
+    `;
+
+    console.log('🔍 Getting total count of videos with retention data');
+    const [countRows] = await bigqueryClient.query({
+      query: countQuery
+    });
+    const totalVideos = parseInt(countRows[0].total_count);
+    const totalPages = Math.ceil(totalVideos / limit);
+
+    console.log(`📊 Total videos: ${totalVideos}, Total pages: ${totalPages}`);
+
+    // Query to get paginated videos with retention data
+    const videosQuery = `
+      WITH unique_videos AS (
+        SELECT DISTINCT video_id
+        FROM \`${projectId}.${dataset}.audience_retention_historical\`
+        WHERE video_id IS NOT NULL
+      ),
+      unique_video_reports AS (
+        SELECT DISTINCT
+          v.video_id,
+          FIRST_VALUE(v.video_title) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as video_title,
+          FIRST_VALUE(v.video_duration_seconds) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as video_duration_seconds,
+          FIRST_VALUE(v.writer_name) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as writer_name,
+          FIRST_VALUE(v.account_name) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as account_name
+        FROM \`${projectId}.${dataset}.youtube_video_report_historical\` v
+        INNER JOIN unique_videos uv ON v.video_id = uv.video_id
+        WHERE v.video_title IS NOT NULL
+      )
+      SELECT DISTINCT
+        video_id,
+        video_title,
+        video_duration_seconds,
+        writer_name,
+        account_name
+      FROM unique_video_reports
+      ORDER BY video_title
+      LIMIT ${limit}
+      OFFSET ${offset}
+    `;
+
+    console.log('🔍 Executing videos query for retention master');
+    const [videoRows] = await bigqueryClient.query({
+      query: videosQuery
+    });
+
+    console.log(`📊 Found ${videoRows.length} videos with retention data for page ${page}`);
+
+    // No need for hard limit since we're using proper pagination
+    const limitedVideoRows = videoRows;
+    console.log(`🔒 Processing ${limitedVideoRows.length} videos for page ${page}`);
+
+    // Process videos in smaller batches to avoid overwhelming BigQuery
+    const batchSize = 10;
+    const videosWithRetention = [];
+
+    for (let i = 0; i < limitedVideoRows.length; i += batchSize) {
+      const batch = limitedVideoRows.slice(i, i + batchSize);
+      console.log(`🔄 Processing batch ${Math.floor(i/batchSize) + 1}/${Math.ceil(limitedVideoRows.length/batchSize)}`);
+
+      const batchResults = await Promise.all(
+        batch.map(async (video) => {
+        try {
+          // Get retention data for this video
+          const retentionQuery = `
+            SELECT
+              elapsed_video_time_ratio,
+              audience_watch_ratio,
+              relative_retention_performance,
+              date
+            FROM \`${projectId}.${dataset}.audience_retention_historical\`
+            WHERE video_id = @video_id
+            ORDER BY date DESC, elapsed_video_time_ratio ASC
+          `;
+
+          const [retentionRows] = await bigqueryClient.query({
+            query: retentionQuery,
+            params: {
+              video_id: video.video_id
+            }
+          });
+
+          // Process retention data for chart
+          const videoDurationSeconds = video.video_duration_seconds || 178;
+
+          const processedData = retentionRows.map(point => {
+            const elapsedRatio = point.elapsed_video_time_ratio || 0;
+            const audienceWatch = point.audience_watch_ratio || 0;
+            const elapsedTimeSeconds = elapsedRatio * videoDurationSeconds;
+
+            return {
+              elapsed_video_time_seconds: elapsedTimeSeconds,
+              audience_watch_ratio: audienceWatch * 100, // Convert to percentage
+              relative_retention_performance: point.relative_retention_performance,
+              date: point.date
+            };
+          });
+
+          // Aggregate data by elapsed time in seconds
+          const aggregatedData = new Map();
+          processedData.forEach(point => {
+            const roundedSeconds = Math.round(point.elapsed_video_time_seconds);
+
+            if (!aggregatedData.has(roundedSeconds)) {
+              aggregatedData.set(roundedSeconds, {
+                elapsed_video_time_seconds: roundedSeconds,
+                audience_watch_ratios: [],
+                relative_performance_ratios: []
+              });
+            }
+
+            aggregatedData.get(roundedSeconds).audience_watch_ratios.push(point.audience_watch_ratio);
+            if (point.relative_retention_performance !== null) {
+              aggregatedData.get(roundedSeconds).relative_performance_ratios.push(point.relative_retention_performance);
+            }
+          });
+
+          // Calculate averages for chart data
+          const chartData = Array.from(aggregatedData.values()).map(group => ({
+            elapsed_video_time_seconds: group.elapsed_video_time_seconds,
+            audienceRetention: group.audience_watch_ratios.length > 0
+              ? group.audience_watch_ratios.reduce((sum, val) => sum + val, 0) / group.audience_watch_ratios.length
+              : 0
+          })).sort((a, b) => a.elapsed_video_time_seconds - b.elapsed_video_time_seconds);
+
+          return {
+            video_id: video.video_id,
+            title: video.video_title,
+            url: `https://www.youtube.com/watch?v=${video.video_id}`,
+            writer_name: video.writer_name,
+            account_name: video.account_name,
+            video_duration_seconds: videoDurationSeconds,
+            retention_data: chartData
+          };
+
+        } catch (retentionError) {
+          console.warn(`⚠️ Could not fetch retention data for video ${video.video_id}:`, retentionError.message);
+          return {
+            video_id: video.video_id,
+            title: video.video_title,
+            url: `https://www.youtube.com/watch?v=${video.video_id}`,
+            writer_name: video.writer_name,
+            account_name: video.account_name,
+            video_duration_seconds: video.video_duration_seconds || 178,
+            retention_data: []
+          };
+        }
+        }) // Close the async (video) => { function
+      ); // Close Promise.all
+
+      videosWithRetention.push(...batchResults);
+
+      // Small delay between batches to avoid overwhelming BigQuery
+      if (i + batchSize < limitedVideoRows.length) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+      }
+    }
+
+    console.log(`✅ Processed retention data for ${videosWithRetention.length} videos`);
+
+    res.json({
+      success: true,
+      videos: videosWithRetention,
+      pagination: {
+        current_page: page,
+        total_pages: totalPages,
+        total_videos: totalVideos,
+        videos_per_page: limit,
+        has_next_page: page < totalPages,
+        has_prev_page: page > 1
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error in retention master endpoint:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch retention data',
+      details: error.message
+    });
+  }
+});
+
 module.exports = router;
 module.exports.bigquery = bigquery;
