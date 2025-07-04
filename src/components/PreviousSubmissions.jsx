@@ -123,6 +123,46 @@ const PreviousSubmissions = ({
       chipShadow: 'rgba(158, 158, 158, 0.4)',
       chipHoverShadow: 'rgba(158, 158, 158, 0.6)',
     },
+    'Pending Approval': {
+      base: '#2196F3',
+      bg: 'rgba(33, 150, 243, 0.05)',
+      border: 'rgba(33, 150, 243, 0.2)',
+      hoverBg: 'rgba(33, 150, 243, 0.1)',
+      hoverBorder: 'rgba(33, 150, 243, 0.4)',
+      shadow: 'rgba(33, 150, 243, 0.3)',
+      chipShadow: 'rgba(33, 150, 243, 0.4)',
+      chipHoverShadow: 'rgba(33, 150, 243, 0.6)',
+    },
+    'Approved - Ready for Production': {
+      base: '#FF9800',
+      bg: 'rgba(255, 152, 0, 0.05)',
+      border: 'rgba(255, 152, 0, 0.2)',
+      hoverBg: 'rgba(255, 152, 0, 0.1)',
+      hoverBorder: 'rgba(255, 152, 0, 0.4)',
+      shadow: 'rgba(255, 152, 0, 0.3)',
+      chipShadow: 'rgba(255, 152, 0, 0.4)',
+      chipHoverShadow: 'rgba(255, 152, 0, 0.6)',
+    },
+    'Video Complete - Pending Upload': {
+      base: '#9C27B0',
+      bg: 'rgba(156, 39, 176, 0.05)',
+      border: 'rgba(156, 39, 176, 0.2)',
+      hoverBg: 'rgba(156, 39, 176, 0.1)',
+      hoverBorder: 'rgba(156, 39, 176, 0.4)',
+      shadow: 'rgba(156, 39, 176, 0.3)',
+      chipShadow: 'rgba(156, 39, 176, 0.4)',
+      chipHoverShadow: 'rgba(156, 39, 176, 0.6)',
+    },
+    'Story Continuation': {
+      base: '#607D8B',
+      bg: 'rgba(96, 125, 139, 0.05)',
+      border: 'rgba(96, 125, 139, 0.2)',
+      hoverBg: 'rgba(96, 125, 139, 0.1)',
+      hoverBorder: 'rgba(96, 125, 139, 0.4)',
+      shadow: 'rgba(96, 125, 139, 0.3)',
+      chipShadow: 'rgba(96, 125, 139, 0.4)',
+      chipHoverShadow: 'rgba(96, 125, 139, 0.6)',
+    },
   };
 
   // Fallback colors for unknown statuses
@@ -141,27 +181,29 @@ const PreviousSubmissions = ({
     return STATUS_COLORS[status] || DEFAULT_COLORS;
   };
 
-  // Status mapping function for your API data
+  // Status mapping function with granular status categories
   const getStatusDisplay = (status) => {
     if (!status || typeof status !== 'string') {
-      return "Pending"; // Default to Pending instead of Unknown
+      return "Pending Approval"; // Default to Pending Approval instead of Unknown
     }
     const normalizedStatus = status.trim().toLowerCase();
     switch (normalizedStatus) {
       case "writer submissions (qa)":
         return "Pending Approval";
       case "approved script. ready for production":
+        return "Approved - Ready for Production";
       case "finished video":
-        return "Pending Posting";
+        return "Video Complete - Pending Upload";
       case "pending":
-      case "story continuation":
         return "Pending Approval";
+      case "story continuation":
+        return "Story Continuation";
       case "rejected":
         return "Rejected";
       case "posted":
         return "Posted";
       default:
-        return "Pending Approval"; // Default to Pending for all unknown statuses
+        return "Pending Approval"; // Default to Pending Approval for all unknown statuses
     }
   };
 
@@ -318,6 +360,42 @@ const PreviousSubmissions = ({
           .chip-pending-posting {
             background-color: #FF9800 !important;
             border-color: #FF9800 !important;
+          }
+          .status-approved-ready-for-production {
+            background-color: rgba(255, 152, 0, 0.05) !important;
+            border-color: rgba(255, 152, 0, 0.2) !important;
+          }
+          .status-approved-ready-for-production::before,
+          .status-approved-ready-for-production::after {
+            background-color: #FF9800 !important;
+          }
+          .chip-approved-ready-for-production {
+            background-color: #FF9800 !important;
+            border-color: #FF9800 !important;
+          }
+          .status-video-complete-pending-upload {
+            background-color: rgba(156, 39, 176, 0.05) !important;
+            border-color: rgba(156, 39, 176, 0.2) !important;
+          }
+          .status-video-complete-pending-upload::before,
+          .status-video-complete-pending-upload::after {
+            background-color: #9C27B0 !important;
+          }
+          .chip-video-complete-pending-upload {
+            background-color: #9C27B0 !important;
+            border-color: #9C27B0 !important;
+          }
+          .status-story-continuation {
+            background-color: rgba(96, 125, 139, 0.05) !important;
+            border-color: rgba(96, 125, 139, 0.2) !important;
+          }
+          .status-story-continuation::before,
+          .status-story-continuation::after {
+            background-color: #607D8B !important;
+          }
+          .chip-story-continuation {
+            background-color: #607D8B !important;
+            border-color: #607D8B !important;
           }
         `}
       </style>
@@ -572,8 +650,9 @@ const PreviousSubmissions = ({
         >
           Rejected
         </MenuItem>
+
         <MenuItem
-          onClick={() => setStatusFilter("Pending")}
+          onClick={() => setStatusFilter("Pending Approval")}
           sx={{
             color: 'white',
             fontSize: '0.9rem',
@@ -586,7 +665,55 @@ const PreviousSubmissions = ({
             transition: 'all 0.2s ease'
           }}
         >
-          Pending
+          Pending Approval
+        </MenuItem>
+        <MenuItem
+          onClick={() => setStatusFilter("Approved - Ready for Production")}
+          sx={{
+            color: 'white',
+            fontSize: '0.9rem',
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.08)',
+              transform: 'translateX(4px)'
+            },
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Approved - Ready for Production
+        </MenuItem>
+        <MenuItem
+          onClick={() => setStatusFilter("Video Complete - Pending Upload")}
+          sx={{
+            color: 'white',
+            fontSize: '0.9rem',
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.08)',
+              transform: 'translateX(4px)'
+            },
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Video Complete - Pending Upload
+        </MenuItem>
+        <MenuItem
+          onClick={() => setStatusFilter("Story Continuation")}
+          sx={{
+            color: 'white',
+            fontSize: '0.9rem',
+            py: 1.5,
+            px: 2,
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.08)',
+              transform: 'translateX(4px)'
+            },
+            transition: 'all 0.2s ease'
+          }}
+        >
+          Story Continuation
         </MenuItem>
         <MenuItem
           onClick={() => setStatusFilter("Posted")}

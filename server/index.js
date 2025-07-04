@@ -515,7 +515,7 @@ app.post("/api/scripts", async (req, res) => {
         (process.env.NODE_ENV === "production"
           ? `https://${
               process.env.VERCEL_URL ||
-              "https://writer-dashboard-1t76.vercel.app"
+              "https://writer-dashboard-updated.vercel.app"
             }`
           : `http://localhost:${PORT}`);
 
@@ -823,6 +823,371 @@ app.post("/api/updateStatus", async (req, res) => {
   } catch (error) {
     console.error(":x: Error updating script status:", error);
     return res.status(500).json({ error: "Internal Server Error" });
+  }
+});
+
+// Manual Status Sync Tool - Sync database status with Trello status
+app.post("/api/syncStatus", async (req, res) => {
+  try {
+    console.log("🔄 Starting manual status sync...");
+
+    // Get Trello API credentials
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({ error: "Trello settings not configured" });
+    }
+
+    const { api_key: apiKey, token } = settingsResult.rows[0];
+
+    // Get all scripts with Trello card IDs that might be out of sync
+    const scriptsResult = await pool.query(`
+      SELECT id, title, trello_card_id, approval_status, writer_id
+      FROM script
+      WHERE trello_card_id IS NOT NULL
+      AND approval_status NOT IN ('Posted', 'Rejected')
+      ORDER BY created_at DESC
+      LIMIT 100
+    `);
+
+    const scripts = scriptsResult.rows;
+    console.log(`📊 Found ${scripts.length} scripts to check`);
+
+    let syncedCount = 0;
+    let errors = [];
+
+    // Define Trello list IDs and their corresponding statuses
+    const listStatusMap = {
+      "66982de89e8cb1bfb456ba0a": "Approved Script. Ready for production", // Auto-approved list
+      "6801db782202edad6322e7f5": "Story Continuation", // Story continuation list
+      "66982de89e8cb1bfb456ba0b": "Posted", // Posted list (example ID)
+      "66982de89e8cb1bfb456ba0c": "Rejected", // Rejected list (example ID)
+    };
+
+    for (const script of scripts) {
+      try {
+        // Get current Trello card info
+        const trelloResponse = await axios.get(
+          `https://api.trello.com/1/cards/${script.trello_card_id}?key=${apiKey}&token=${token}&fields=idList,name,closed`
+        );
+
+        const trelloCard = trelloResponse.data;
+
+        // Skip archived/closed cards
+        if (trelloCard.closed) {
+          continue;
+        }
+
+        // Check if card is in "Posted" list (you'll need to update this with actual Posted list ID)
+        let newStatus = null;
+
+        // Get list name to determine status
+        const listResponse = await axios.get(
+          `https://api.trello.com/1/lists/${trelloCard.idList}?key=${apiKey}&token=${token}&fields=name`
+        );
+
+        const listName = listResponse.data.name.toLowerCase();
+
+        // Map list names to statuses
+        if (listName.includes('posted') || listName.includes('live')) {
+          newStatus = 'Posted';
+        } else if (listName.includes('rejected') || listName.includes('denied')) {
+          newStatus = 'Rejected';
+        } else if (listName.includes('approved') || listName.includes('production')) {
+          newStatus = 'Approved Script. Ready for production';
+        } else if (listName.includes('qa') || listName.includes('review')) {
+          newStatus = 'Writer Submissions (QA)';
+        } else if (listName.includes('story') || listName.includes('continuation')) {
+          newStatus = 'Story Continuation';
+        }
+
+        // Update database if status has changed
+        if (newStatus && newStatus !== script.approval_status) {
+          await pool.query(
+            "UPDATE script SET approval_status = $1 WHERE trello_card_id = $2",
+            [newStatus, script.trello_card_id]
+          );
+
+          console.log(`✅ Updated ${script.title.substring(0, 50)}... from "${script.approval_status}" to "${newStatus}"`);
+          syncedCount++;
+        }
+
+      } catch (error) {
+        console.error(`❌ Error syncing ${script.title.substring(0, 30)}...`, error.message);
+        errors.push({
+          title: script.title.substring(0, 50),
+          error: error.message
+        });
+      }
+
+      // Add small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+
+    console.log(`🎉 Sync complete! Updated ${syncedCount} scripts`);
+
+    res.json({
+      success: true,
+      message: `Successfully synced ${syncedCount} scripts`,
+      syncedCount,
+      totalChecked: scripts.length,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error("❌ Error in status sync:", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message
+    });
+  }
+});
+
+// Sync Video Table - Create missing video records for Posted scripts
+app.post("/api/syncVideoTable", async (req, res) => {
+  console.log("🎬 Starting video table sync...");
+
+  try {
+    // Find scripts that are "Posted" but don't have video table entries
+    const missingVideosResult = await pool.query(`
+      SELECT s.id, s.title, s.trello_card_id, s.writer_id, s.created_at
+      FROM script s
+      LEFT JOIN video v ON s.trello_card_id = v.trello_card_id
+      WHERE s.approval_status = 'Posted'
+      AND s.trello_card_id IS NOT NULL
+      AND v.trello_card_id IS NULL
+      ORDER BY s.created_at DESC
+      LIMIT 50
+    `);
+
+    const missingVideos = missingVideosResult.rows;
+    console.log(`📊 Found ${missingVideos.length} scripts missing video records`);
+
+    if (missingVideos.length === 0) {
+      return res.json({ message: "No missing video records found", created: 0 });
+    }
+
+    let createdCount = 0;
+
+    // Create video records for each missing script
+    for (const script of missingVideos) {
+      try {
+        // Create placeholder video record (URLs will be updated later when actual videos are posted)
+        const videoQuery = `
+          INSERT INTO video
+          (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id
+        `;
+
+        const result = await pool.query(videoQuery, [
+          '', // Empty URL - will be filled when actual video is posted
+          script.created_at,
+          script.writer_id,
+          script.title,
+          script.trello_card_id,
+          1, // Default account_id
+          'long' // Default to long video
+        ]);
+
+        const videoId = result.rows[0].id;
+        console.log(`✅ Created video record ${videoId} for script: ${script.title.substring(0, 50)}...`);
+        createdCount++;
+
+      } catch (error) {
+        console.error(`❌ Error creating video record for ${script.title.substring(0, 30)}:`, error.message);
+        continue;
+      }
+    }
+
+    console.log(`🎉 Video sync complete! Created ${createdCount} video records`);
+    res.json({
+      message: `Video sync complete! Created ${createdCount} video records`,
+      created: createdCount,
+      checked: missingVideos.length
+    });
+
+  } catch (error) {
+    console.error("❌ Error in video table sync:", error);
+    res.status(500).json({ error: "Failed to sync video table" });
+  }
+});
+
+// Sync Video URLs - Populate missing URLs from Trello cards
+app.post("/api/syncVideoUrls", async (req, res) => {
+  console.log("🔗 Starting video URL sync...");
+
+  try {
+    // Get Trello API credentials
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({ error: "Trello settings not configured" });
+    }
+
+    const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
+
+    // Find video records with empty URLs that have trello_card_id
+    const emptyUrlsResult = await pool.query(`
+      SELECT v.id, v.trello_card_id, v.script_title, s.approval_status, s.writer_id
+      FROM video v
+      JOIN script s ON v.trello_card_id = s.trello_card_id
+      WHERE (v.url = '' OR v.url IS NULL)
+      AND v.trello_card_id IS NOT NULL
+      AND s.approval_status = 'Posted'
+      ORDER BY v.created DESC
+      LIMIT 100
+    `);
+
+    const emptyUrls = emptyUrlsResult.rows;
+    console.log(`📊 Found ${emptyUrls.length} video records missing URLs`);
+
+    if (emptyUrls.length === 0) {
+      return res.json({ message: "No missing video URLs found", updated: 0 });
+    }
+
+    let updatedCount = 0;
+    const results = [];
+
+    // Check each Trello card for video URLs
+    for (const video of emptyUrls) {
+      try {
+        console.log(`🔍 Checking Trello card ${video.trello_card_id} for URLs...`);
+
+        // Get card details from Trello including comments and custom fields
+        const cardResponse = await fetch(
+          `https://api.trello.com/1/cards/${video.trello_card_id}?key=${trelloApiKey}&token=${trelloToken}&fields=name,desc&actions=commentCard&action_limit=50&customFieldItems=true`
+        );
+
+        if (!cardResponse.ok) {
+          console.log(`❌ Failed to fetch Trello card ${video.trello_card_id}: ${cardResponse.status}`);
+          results.push({
+            video_id: video.id,
+            title: video.script_title.substring(0, 50),
+            status: 'trello_error',
+            error: `HTTP ${cardResponse.status}`
+          });
+          continue;
+        }
+
+        const cardData = await cardResponse.json();
+        let longVideoUrl = null;
+        let shortVideoUrl = null;
+
+        // Function to extract YouTube URLs from text
+        const extractYouTubeUrls = (text) => {
+          if (!text) return [];
+          const urlRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s\)]+/gi;
+          return text.match(urlRegex) || [];
+        };
+
+        // Check custom fields for video URLs first (this is where URLs are stored)
+        let customFieldUrls = [];
+        if (cardData.customFieldItems && cardData.customFieldItems.length > 0) {
+          for (const customField of cardData.customFieldItems) {
+            if (customField.value && customField.value.text) {
+              const urls = extractYouTubeUrls(customField.value.text);
+              customFieldUrls = customFieldUrls.concat(urls);
+            }
+          }
+        }
+
+        // Check card description for URLs
+        const descUrls = extractYouTubeUrls(cardData.desc);
+
+        // Check comments for URLs
+        let commentUrls = [];
+        if (cardData.actions && cardData.actions.length > 0) {
+          for (const action of cardData.actions) {
+            if (action.type === 'commentCard' && action.data && action.data.text) {
+              const urls = extractYouTubeUrls(action.data.text);
+              commentUrls = commentUrls.concat(urls);
+            }
+          }
+        }
+
+        // Combine all found URLs (prioritize custom fields)
+        const allUrls = [...customFieldUrls, ...descUrls, ...commentUrls];
+
+        // Categorize URLs
+        for (let url of allUrls) {
+          // Ensure URL has protocol
+          if (!url.startsWith('http')) {
+            url = 'https://' + url;
+          }
+
+          if (url.includes('/shorts/')) {
+            shortVideoUrl = url;
+          } else if (url.includes('youtube.com/watch') || url.includes('youtu.be/')) {
+            longVideoUrl = url;
+          }
+        }
+
+        // Determine which URL to use (prefer long video, fallback to short)
+        const finalUrl = longVideoUrl || shortVideoUrl;
+
+        if (finalUrl) {
+          // Update video record with found URL
+          const updateQuery = `
+            UPDATE video
+            SET url = $1
+            WHERE id = $2
+            RETURNING id, url
+          `;
+
+          const result = await pool.query(updateQuery, [finalUrl, video.id]);
+          console.log(`✅ Updated video ${video.id} with URL: ${finalUrl.substring(0, 60)}...`);
+          updatedCount++;
+
+          results.push({
+            video_id: video.id,
+            title: video.script_title.substring(0, 50),
+            status: 'updated',
+            url: finalUrl.substring(0, 60),
+            url_type: longVideoUrl ? 'long' : 'short'
+          });
+
+        } else {
+          console.log(`⚠️ No video URL found for: ${video.script_title.substring(0, 50)}...`);
+          results.push({
+            video_id: video.id,
+            title: video.script_title.substring(0, 50),
+            status: 'no_url_found',
+            desc_checked: !!cardData.desc,
+            comments_checked: cardData.actions ? cardData.actions.length : 0
+          });
+        }
+
+        // Small delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 200));
+
+      } catch (error) {
+        console.error(`❌ Error processing video ${video.id}:`, error.message);
+        results.push({
+          video_id: video.id,
+          title: video.script_title ? video.script_title.substring(0, 50) : 'Unknown',
+          status: 'error',
+          error: error.message
+        });
+        continue;
+      }
+    }
+
+    console.log(`🎉 URL sync complete! Updated ${updatedCount} video URLs`);
+    res.json({
+      message: `URL sync complete! Updated ${updatedCount} video URLs`,
+      updated: updatedCount,
+      checked: emptyUrls.length,
+      results: results
+    });
+
+  } catch (error) {
+    console.error("❌ Error in video URL sync:", error);
+    res.status(500).json({ error: "Failed to sync video URLs", details: error.message });
   }
 });
 
@@ -5407,6 +5772,479 @@ async function getChannelInfoFromUrl(url) {
     return null;
   }
 }
+
+// Debug: Check specific Trello card
+app.get("/api/debug/trello-card/:cardId", async (req, res) => {
+  try {
+    const { cardId } = req.params;
+
+    // Get Trello API credentials
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({ error: "Trello settings not configured" });
+    }
+
+    const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
+
+    // Get card details from Trello including custom fields, actions and attachments
+    const cardResponse = await fetch(
+      `https://api.trello.com/1/cards/${cardId}?key=${trelloApiKey}&token=${trelloToken}&fields=name,desc,url&attachments=true&actions=commentCard&action_limit=50&customFieldItems=true`
+    );
+
+    if (!cardResponse.ok) {
+      return res.status(500).json({ error: `Failed to fetch Trello card: ${cardResponse.status}` });
+    }
+
+    const cardData = await cardResponse.json();
+
+    // Function to extract YouTube URLs from text
+    const extractYouTubeUrls = (text) => {
+      if (!text) return [];
+      const urlRegex = /(https?:\/\/)?(www\.)?(youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/shorts\/)[^\s\)]+/gi;
+      return text.match(urlRegex) || [];
+    };
+
+    // Check custom fields for URLs first
+    let customFieldUrls = [];
+    let customFields = [];
+    if (cardData.customFieldItems && cardData.customFieldItems.length > 0) {
+      for (const customField of cardData.customFieldItems) {
+        customFields.push({
+          id: customField.id,
+          value: customField.value
+        });
+        if (customField.value && customField.value.text) {
+          const urls = extractYouTubeUrls(customField.value.text);
+          customFieldUrls = customFieldUrls.concat(urls);
+        }
+      }
+    }
+
+    // Check card description for URLs
+    const descUrls = extractYouTubeUrls(cardData.desc);
+
+    // Check comments for URLs
+    let commentUrls = [];
+    let comments = [];
+    if (cardData.actions && cardData.actions.length > 0) {
+      for (const action of cardData.actions) {
+        if (action.type === 'commentCard' && action.data && action.data.text) {
+          comments.push({
+            text: action.data.text,
+            date: action.date,
+            member: action.memberCreator ? action.memberCreator.fullName : 'Unknown'
+          });
+          const urls = extractYouTubeUrls(action.data.text);
+          commentUrls = commentUrls.concat(urls);
+        }
+      }
+    }
+
+    // Check attachments for URLs
+    let attachmentUrls = [];
+    let attachments = [];
+    if (cardData.attachments && cardData.attachments.length > 0) {
+      for (const attachment of cardData.attachments) {
+        attachments.push({
+          name: attachment.name,
+          url: attachment.url,
+          date: attachment.date
+        });
+        if (attachment.url && (attachment.url.includes('youtube.com') || attachment.url.includes('youtu.be'))) {
+          attachmentUrls.push(attachment.url);
+        }
+      }
+    }
+
+    // Check if this card has a video record
+    const videoQuery = `
+      SELECT v.id, v.url, v.script_title
+      FROM video v
+      WHERE v.trello_card_id = $1
+    `;
+    const videoResult = await pool.query(videoQuery, [cardId]);
+
+    res.json({
+      success: true,
+      card_id: cardId,
+      card_name: cardData.name,
+      description: cardData.desc,
+      custom_fields: customFields,
+      custom_field_urls: customFieldUrls,
+      description_urls: descUrls,
+      comments: comments,
+      comment_urls: commentUrls,
+      attachments: attachments,
+      attachment_urls: attachmentUrls,
+      all_urls: [...customFieldUrls, ...descUrls, ...commentUrls, ...attachmentUrls],
+      video_record: videoResult.rows[0] || null
+    });
+
+  } catch (error) {
+    console.error("❌ Debug Trello card error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Debug: Check video table status
+app.get("/api/debug/video-status", async (req, res) => {
+  try {
+    // Count videos with and without URLs
+    const statusQuery = `
+      SELECT
+        COUNT(*) as total_videos,
+        COUNT(CASE WHEN v.url IS NOT NULL AND v.url != '' THEN 1 END) as videos_with_urls,
+        COUNT(CASE WHEN v.url IS NULL OR v.url = '' THEN 1 END) as videos_without_urls
+      FROM video v
+      JOIN script s ON v.trello_card_id = s.trello_card_id
+      WHERE s.approval_status = 'Posted'
+    `;
+
+    const statusResult = await pool.query(statusQuery);
+    const stats = statusResult.rows[0];
+
+    // Get sample videos without URLs
+    const sampleQuery = `
+      SELECT v.id, v.script_title, v.trello_card_id, v.url, s.approval_status
+      FROM video v
+      JOIN script s ON v.trello_card_id = s.trello_card_id
+      WHERE s.approval_status = 'Posted'
+      AND (v.url IS NULL OR v.url = '')
+      ORDER BY v.created DESC
+      LIMIT 5
+    `;
+
+    const sampleResult = await pool.query(sampleQuery);
+
+    res.json({
+      success: true,
+      stats: {
+        total_videos: parseInt(stats.total_videos),
+        videos_with_urls: parseInt(stats.videos_with_urls),
+        videos_without_urls: parseInt(stats.videos_without_urls)
+      },
+      sample_videos_without_urls: sampleResult.rows
+    });
+
+  } catch (error) {
+    console.error("❌ Debug video status error:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Check status sync for last 5 days - Find mismatches between Trello and database
+app.post("/api/syncRecentStatus", async (req, res) => {
+  try {
+    console.log("🔄 Starting recent status sync check (last 5 days)...");
+
+    // Get Trello API credentials
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({ error: "Trello settings not configured" });
+    }
+
+    const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
+
+    // Get all scripts from the last 5 days with trello_card_id
+    const scriptsResult = await pool.query(`
+      SELECT id, title, trello_card_id, approval_status, created_at, writer_id
+      FROM script
+      WHERE trello_card_id IS NOT NULL
+      AND created_at >= NOW() - INTERVAL '5 days'
+      ORDER BY created_at DESC
+    `);
+
+    const scripts = scriptsResult.rows;
+    console.log(`📊 Found ${scripts.length} scripts from last 5 days to check`);
+
+    if (scripts.length === 0) {
+      return res.json({ message: "No scripts found from last 5 days", checked: 0 });
+    }
+
+    let syncedCount = 0;
+    let mismatchCount = 0;
+    const errors = [];
+    const mismatches = [];
+
+    // Function to determine Trello status from list name
+    const getTrelloStatus = (listName) => {
+      const listNameLower = listName.toLowerCase();
+      if (listNameLower.includes('pending approval') || listNameLower.includes('pending_approval')) {
+        return 'Pending Approval';
+      } else if (listNameLower.includes('posted')) {
+        return 'Posted';
+      } else if (listNameLower.includes('rejected') || listNameLower.includes('denied')) {
+        return 'Rejected';
+      } else if (listNameLower.includes('pending posting') || listNameLower.includes('pending_posting')) {
+        return 'Pending Posting';
+      } else if (listNameLower.includes('pending')) {
+        return 'Pending';
+      }
+      return null;
+    };
+
+    // Check each script's Trello status
+    for (const script of scripts) {
+      try {
+        console.log(`🔍 Checking ${script.title.substring(0, 50)}... (${script.approval_status})`);
+
+        // Get card details from Trello
+        const cardResponse = await fetch(
+          `https://api.trello.com/1/cards/${script.trello_card_id}?key=${trelloApiKey}&token=${trelloToken}&fields=name,list&list=true`
+        );
+
+        if (!cardResponse.ok) {
+          console.log(`❌ Failed to fetch card ${script.trello_card_id}: ${cardResponse.status}`);
+          errors.push({
+            title: script.title.substring(0, 50),
+            trello_card_id: script.trello_card_id,
+            error: `HTTP ${cardResponse.status}`
+          });
+          continue;
+        }
+
+        const cardData = await cardResponse.json();
+        const trelloListName = cardData.list ? cardData.list.name : 'Unknown';
+        const newStatus = getTrelloStatus(trelloListName);
+
+        console.log(`📋 Trello list: "${trelloListName}" → Status: "${newStatus}"`);
+
+        // Check for mismatch
+        if (newStatus && newStatus !== script.approval_status) {
+          console.log(`⚠️ MISMATCH: DB="${script.approval_status}" vs Trello="${newStatus}"`);
+
+          mismatchCount++;
+          mismatches.push({
+            script_id: script.id,
+            title: script.title.substring(0, 60),
+            trello_card_id: script.trello_card_id,
+            database_status: script.approval_status,
+            trello_status: newStatus,
+            trello_list: trelloListName,
+            created_at: script.created_at,
+            writer_id: script.writer_id
+          });
+
+          // Update database if status has changed
+          await pool.query(
+            "UPDATE script SET approval_status = $1 WHERE trello_card_id = $2",
+            [newStatus, script.trello_card_id]
+          );
+
+          console.log(`✅ Updated "${script.title.substring(0, 50)}..." from "${script.approval_status}" to "${newStatus}"`);
+          syncedCount++;
+        } else {
+          console.log(`✅ Status matches: "${script.approval_status}"`);
+        }
+
+      } catch (error) {
+        console.error(`❌ Error checking ${script.title.substring(0, 30)}...`, error.message);
+        errors.push({
+          title: script.title.substring(0, 50),
+          trello_card_id: script.trello_card_id,
+          error: error.message
+        });
+      }
+
+      // Add small delay to avoid rate limiting
+      await new Promise(resolve => setTimeout(resolve, 150));
+    }
+
+    console.log(`🎉 Recent sync complete! Found ${mismatchCount} mismatches, updated ${syncedCount} scripts`);
+
+    res.json({
+      success: true,
+      message: `Recent status sync complete! Found ${mismatchCount} mismatches, updated ${syncedCount} scripts`,
+      period: "last 5 days",
+      totalChecked: scripts.length,
+      mismatchesFound: mismatchCount,
+      scriptsUpdated: syncedCount,
+      mismatches: mismatches,
+      errors: errors.length > 0 ? errors : undefined
+    });
+
+  } catch (error) {
+    console.error("❌ Error in recent status sync:", error);
+    res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message
+    });
+  }
+});
+
+// Comprehensive verification endpoint to check all sync steps
+app.post("/api/verifyFullSync", async (req, res) => {
+  try {
+    console.log("🔍 Starting comprehensive sync verification...");
+
+    // Step 1: Get all scripts from last 5 days that should be "Posted"
+    const recentScriptsResult = await pool.query(`
+      SELECT s.id, s.title, s.trello_card_id, s.approval_status, s.writer_id, s.created_at
+      FROM script s
+      WHERE s.trello_card_id IS NOT NULL
+      AND s.created_at >= NOW() - INTERVAL '5 days'
+      ORDER BY s.created_at DESC
+    `);
+
+    console.log(`📋 Found ${recentScriptsResult.rows.length} recent scripts with Trello cards`);
+
+    let statusIssues = [];
+    let videoMissing = [];
+    let urlMissing = [];
+    let fullyComplete = [];
+
+    // Check each script for all three requirements
+    for (const script of recentScriptsResult.rows) {
+      try {
+        // Check Trello status
+        const cardResponse = await fetch(
+          `https://api.trello.com/1/cards/${script.trello_card_id}?key=${trelloApiKey}&token=${trelloToken}&fields=name,list`
+        );
+
+        if (!cardResponse.ok) {
+          console.log(`⚠️ Could not fetch Trello card ${script.trello_card_id}`);
+          continue;
+        }
+
+        const cardData = await cardResponse.json();
+        const listResponse = await fetch(
+          `https://api.trello.com/1/lists/${cardData.list.id}?key=${trelloApiKey}&token=${trelloToken}&fields=name`
+        );
+        const listData = await listResponse.json();
+        const trelloStatus = mapTrelloListToStatus(listData.name);
+
+        // Only check scripts that should be "Posted" in Trello
+        if (trelloStatus === "Posted") {
+          // Check 1: Database status
+          if (script.approval_status !== "Posted") {
+            statusIssues.push({
+              script_id: script.id,
+              title: script.title.substring(0, 50),
+              trello_card_id: script.trello_card_id,
+              database_status: script.approval_status,
+              trello_status: trelloStatus
+            });
+            continue; // Skip other checks if status is wrong
+          }
+
+          // Check 2: Video table record exists
+          const videoResult = await pool.query(
+            "SELECT id, url FROM video WHERE trello_card_id = $1",
+            [script.trello_card_id]
+          );
+
+          if (videoResult.rows.length === 0) {
+            videoMissing.push({
+              script_id: script.id,
+              title: script.title.substring(0, 50),
+              trello_card_id: script.trello_card_id
+            });
+            continue; // Skip URL check if no video record
+          }
+
+          // Check 3: Video has URL
+          const video = videoResult.rows[0];
+          if (!video.url || video.url.trim() === '') {
+            urlMissing.push({
+              script_id: script.id,
+              video_id: video.id,
+              title: script.title.substring(0, 50),
+              trello_card_id: script.trello_card_id
+            });
+          } else {
+            fullyComplete.push({
+              script_id: script.id,
+              video_id: video.id,
+              title: script.title.substring(0, 50),
+              trello_card_id: script.trello_card_id,
+              url: video.url
+            });
+          }
+        }
+
+      } catch (error) {
+        console.log(`❌ Error checking script ${script.id}: ${error.message}`);
+      }
+    }
+
+    console.log(`✅ Verification complete!`);
+    console.log(`📊 Status issues: ${statusIssues.length}`);
+    console.log(`📊 Missing video records: ${videoMissing.length}`);
+    console.log(`📊 Missing URLs: ${urlMissing.length}`);
+    console.log(`📊 Fully complete: ${fullyComplete.length}`);
+
+    res.json({
+      success: true,
+      message: "Comprehensive sync verification complete",
+      summary: {
+        total_checked: recentScriptsResult.rows.length,
+        status_issues: statusIssues.length,
+        video_missing: videoMissing.length,
+        url_missing: urlMissing.length,
+        fully_complete: fullyComplete.length
+      },
+      issues: {
+        status_issues: statusIssues,
+        video_missing: videoMissing,
+        url_missing: urlMissing
+      },
+      complete: fullyComplete.slice(0, 10) // Show first 10 complete records
+    });
+
+  } catch (error) {
+    console.error("❌ Error in comprehensive verification:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Debug endpoint to check Posted scripts
+app.get("/api/debug/posted-scripts", async (req, res) => {
+  try {
+    // Get Posted scripts from last 5 days
+    const postedScriptsResult = await pool.query(`
+      SELECT s.id, s.title, s.trello_card_id, s.approval_status, s.writer_id, s.created_at,
+             v.id as video_id, v.url as video_url
+      FROM script s
+      LEFT JOIN video v ON s.trello_card_id = v.trello_card_id
+      WHERE s.approval_status = 'Posted'
+      AND s.created_at >= NOW() - INTERVAL '5 days'
+      ORDER BY s.created_at DESC
+      LIMIT 20
+    `);
+
+    res.json({
+      success: true,
+      count: postedScriptsResult.rows.length,
+      scripts: postedScriptsResult.rows.map(row => ({
+        script_id: row.id,
+        title: row.title.substring(0, 60),
+        trello_card_id: row.trello_card_id,
+        status: row.approval_status,
+        video_id: row.video_id,
+        has_video: !!row.video_id,
+        has_url: !!(row.video_url && row.video_url.trim()),
+        url: row.video_url ? row.video_url.substring(0, 50) + '...' : null,
+        created_at: row.created_at
+      }))
+    });
+
+  } catch (error) {
+    console.error("❌ Error checking posted scripts:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
 
 // Health check
 app.get("/api/health", (req, res) => {
