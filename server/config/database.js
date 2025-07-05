@@ -2,9 +2,9 @@ const { Pool } = require('pg');
 
 const pool = new Pool({
   user: process.env.DB_USER || 'postgres',
-  host: process.env.DB_HOST || '34.93.195.0',
+  host: process.env.DB_HOST || '34.10.59.242',
   database: process.env.DB_NAME || 'postgres',
-  password: process.env.DB_PASS || 'Plotpointe!@3456',
+  password: process.env.DB_PASS || 'simplepass123',
   port: process.env.DB_PORT || 5432,
   ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
   connectionTimeoutMillis: 10000,

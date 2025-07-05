@@ -18,9 +18,9 @@ app.use(express.json());
 // Database connection
 const pool = new Pool({
   user: 'postgres',
-  host: '34.93.195.0',
+  host: '34.10.59.242',
   database: 'postgres',
-  password: 'Plotpointe!@3456',
+  password: 'simplepass123',
   port: 5432,
   ssl: false
 });
