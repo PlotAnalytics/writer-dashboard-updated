@@ -2010,6 +2010,24 @@ router.get('/debug-30days-june5', async (req, res) => {
   }
 });
 
+// Clear Redis cache endpoint for debugging
+router.get('/clear-cache', authenticateToken, async (req, res) => {
+  try {
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      // Clear all analytics cache
+      await redisService.clearPattern('analytics:*');
+      console.log('✅ Cleared all analytics cache');
+      res.json({ success: true, message: 'Analytics cache cleared' });
+    } else {
+      res.json({ success: false, message: 'Redis not available' });
+    }
+  } catch (error) {
+    console.error('❌ Error clearing cache:', error);
+    res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
 // Get analytics data with BigQuery
 router.get('/', authenticateToken, async (req, res) => {
   return await handleAnalyticsRequest(req, res);
@@ -2020,6 +2038,8 @@ async function handleAnalyticsRequest(req, res) {
   try {
     console.log('🔥 OVERVIEW ENDPOINT CALLED! Query params:', req.query);
     let { range = '30d', start_date, end_date } = req.query;
+
+    let writerId = req.user.writerId || req.user.userId;
 
     // Check if this is a custom date range
     let customStartDate = null;
@@ -2066,7 +2086,7 @@ async function handleAnalyticsRequest(req, res) {
     console.log('📊 Getting analytics for user ID:', userId, 'Range:', range);
 
     // Get writer information from PostgreSQL (get both ID and name)
-    let writerId = null;
+    // writerId already declared above for caching
     let writerName = null;
     try {
       const writerQuery = `
@@ -2084,6 +2104,42 @@ async function handleAnalyticsRequest(req, res) {
       }
     } catch (dbError) {
       console.error('❌ Error getting writer info:', dbError);
+    }
+
+    // Calculate actual date range for cache key (same logic as in getBigQueryAnalyticsOverview)
+    let actualStartDate, actualEndDate;
+    if (customStartDate && customEndDate) {
+      actualStartDate = customStartDate;
+      actualEndDate = customEndDate;
+    } else {
+      // Calculate predefined range dates
+      const endDate = new Date();
+      const startDate = new Date();
+      let days;
+      switch (range) {
+        case '7d':       days = 7;   break;
+        case 'lifetime': days = 365; break;
+        default:         days = 30;  break;
+      }
+      startDate.setDate(endDate.getDate() - days);
+      actualStartDate = startDate.toISOString().slice(0, 10);
+      actualEndDate = endDate.toISOString().slice(0, 10);
+    }
+
+    console.log(`📅 Cache key will use actual dates: ${actualStartDate} → ${actualEndDate}`);
+
+    // Check Redis cache after we have the correct writerId and actual dates
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `analytics:overview:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached analytics overview data');
+        return res.json(cachedData);
+      } else {
+        console.log('❌ Cache MISS for key:', cacheKey);
+      }
     }
 
     if (writerId) {
@@ -2115,6 +2171,13 @@ async function handleAnalyticsRequest(req, res) {
           range: analyticsData.range,
           customDateRange: customStartDate && customEndDate ? `${customStartDate} to ${customEndDate}` : null
         });
+
+        // Cache the response data using actual dates
+        if (redisService && redisService.isAvailable()) {
+          const cacheKey = `analytics:overview:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          await redisService.set(cacheKey, analyticsData, 259200); // Cache for 3 days (72 hours)
+          console.log('✅ Cached analytics overview data');
+        }
 
         res.json(analyticsData);
         return;
@@ -2222,6 +2285,20 @@ router.get('/channel', authenticateToken, async (req, res) => {
     console.log('🔥 CHANNEL ENDPOINT CALLED! Query params:', req.query);
     console.log('🔥 User from token:', req.user);
 
+    const userId = req.user.id;
+
+    // Check Redis cache first
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `channel:analytics:user:${userId}:range:${range}`;
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached channel analytics data');
+        return res.json(cachedData);
+      }
+    }
+
     // Convert frontend range to InfluxDB range
     const convertRange = (range) => {
       switch (range) {
@@ -2245,7 +2322,7 @@ router.get('/channel', authenticateToken, async (req, res) => {
 
     // Get writer information from PostgreSQL
     let writerId = null;
-    const userId = req.user.id;
+    // userId already declared above for caching
     console.log('🔥 Looking up writer for user ID:', userId);
 
     try {
@@ -2729,6 +2806,13 @@ router.get('/channel', authenticateToken, async (req, res) => {
       views: v.views
     })));
 
+    // Cache the response data
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `channel:analytics:user:${userId}:range:${range}`;
+      await redisService.set(cacheKey, analyticsData, 1800); // Cache for 30 minutes
+      console.log('✅ Cached channel analytics data');
+    }
+
     res.json(analyticsData);
   } catch (error) {
     console.error('❌ Channel analytics error:', error);
@@ -2749,6 +2833,18 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
       });
     }
 
+    // Check Redis cache first
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `writer:views:${writer_id}:start:${startDate}:end:${endDate}`;
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached writer views data');
+        return res.json(cachedData);
+      }
+    }
+
     try {
       // Get BigQuery views data
       const bigQueryRows = await getBigQueryViews(writer_id, startDate, endDate, influxService);
@@ -2764,6 +2860,14 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
       }));
 
       console.log(`✅ Sending ${transformedData.length} BigQuery data points to WriterAnalytics`);
+
+      // Cache the response data
+      if (redisService && redisService.isAvailable()) {
+        const cacheKey = `writer:views:${writer_id}:start:${startDate}:end:${endDate}`;
+        await redisService.set(cacheKey, transformedData, 1800); // Cache for 30 minutes
+        console.log('✅ Cached writer views data (BigQuery)');
+      }
+
       res.json(transformedData);
 
     } catch (bigQueryError) {
@@ -2801,6 +2905,14 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
           });
 
         console.log(`✅ Sending ${fallbackData.length} InfluxDB fallback data points to WriterAnalytics`);
+
+        // Cache the fallback response data
+        if (redisService && redisService.isAvailable()) {
+          const cacheKey = `writer:views:${writer_id}:start:${startDate}:end:${endDate}`;
+          await redisService.set(cacheKey, fallbackData, 900); // Cache for 15 minutes (shorter for fallback)
+          console.log('✅ Cached writer views data (InfluxDB fallback)');
+        }
+
         res.json(fallbackData);
       } else {
         res.status(500).json({ error: 'Both BigQuery and InfluxDB failed' });
@@ -2870,6 +2982,18 @@ router.get('/content', authenticateToken, async (req, res) => {
     const userId = req.user.id;
 
     console.log('🎬 Getting content data for user ID:', userId, 'Range:', range, 'Type:', type);
+
+    // Check Redis cache first
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `content:data:user:${userId}:range:${range}:type:${type}:limit:${limit}:sort:${sort}`;
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached content data');
+        return res.json(cachedData);
+      }
+    }
 
     // Get writer information from PostgreSQL
     let writerId = null;
@@ -2971,7 +3095,7 @@ router.get('/content', authenticateToken, async (req, res) => {
           writerId
         });
 
-        res.json({
+        const contentResponse = {
           success: true,
           data: transformedContent,
           metadata: {
@@ -2983,7 +3107,16 @@ router.get('/content', authenticateToken, async (req, res) => {
             writerId: writerId,
             source: 'InfluxDB - Real Data'
           }
-        });
+        };
+
+        // Cache the response data
+        if (redisService && redisService.isAvailable()) {
+          const cacheKey = `content:data:user:${userId}:range:${range}:type:${type}:limit:${limit}:sort:${sort}`;
+          await redisService.set(cacheKey, contentResponse, 1800); // Cache for 30 minutes
+          console.log('✅ Cached content data');
+        }
+
+        res.json(contentResponse);
         return;
       } catch (influxError) {
         console.error('❌ InfluxDB error in content, falling back to dummy data:', influxError);
@@ -3007,7 +3140,7 @@ router.get('/content', authenticateToken, async (req, res) => {
       }
     ];
 
-    res.json({
+    const fallbackResponse = {
       success: true,
       data: dummyContent,
       metadata: {
@@ -3016,7 +3149,16 @@ router.get('/content', authenticateToken, async (req, res) => {
         type: type,
         source: 'Dummy Data - InfluxDB Unavailable'
       }
-    });
+    };
+
+    // Cache the fallback response data
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `content:data:user:${userId}:range:${range}:type:${type}:limit:${limit}:sort:${sort}`;
+      await redisService.set(cacheKey, fallbackResponse, 900); // Cache for 15 minutes (shorter for fallback)
+      console.log('✅ Cached fallback content data');
+    }
+
+    res.json(fallbackResponse);
 
   } catch (error) {
     console.error('❌ Content endpoint error:', error);
@@ -3505,6 +3647,24 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
 
     console.log('🏆 Getting top content like Content page for writer:', writer_id, 'Range:', range, 'Type:', type, 'Limit:', limit, 'Custom dates:', { start_date, end_date });
 
+    // Check Redis cache
+    const redisService = global.redisService;
+    console.log('🔍 TOP CONTENT: Redis service available?', redisService ? redisService.isAvailable() : 'NO SERVICE');
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `analytics:top-content:writer:${writer_id}:range:${range}:type:${type}:limit:${limit}:start:${start_date || 'null'}:end:${end_date || 'null'}`;
+      console.log('🔍 TOP CONTENT: Checking cache key:', cacheKey);
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached top content data');
+        return res.json(cachedData);
+      } else {
+        console.log('❌ Cache MISS for top content key:', cacheKey);
+      }
+    } else {
+      console.log('⚠️ TOP CONTENT: Redis service not available, skipping cache');
+    }
+
     // Calculate date range - handle custom dates
     let startDate;
     let endDate;
@@ -3823,7 +3983,7 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
       })));
     }
 
-    res.json({
+    const responseData = {
       success: true,
       data: enhancedTopContent,
       metadata: {
@@ -3833,7 +3993,16 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
         total_found: enhancedTopContent.length,
         source: 'PostgreSQL + BigQuery Enhanced'
       }
-    });
+    };
+
+    // Cache the response data
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `analytics:top-content:writer:${writer_id}:range:${range}:type:${type}:limit:${limit}:start:${start_date || 'null'}:end:${end_date || 'null'}`;
+      await redisService.set(cacheKey, responseData, 259200); // Cache for 3 days (72 hours)
+      console.log('✅ Cached top content data');
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('❌ Error getting top content:', error);
@@ -3854,6 +4023,24 @@ router.get('/writer/latest-content', authenticateToken, async (req, res) => {
     }
 
     console.log('📅 Getting latest content with BigQuery enhancement for writer:', writer_id);
+
+    // Check Redis cache
+    const redisService = global.redisService;
+    console.log('🔍 LATEST CONTENT: Redis service available?', redisService ? redisService.isAvailable() : 'NO SERVICE');
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `analytics:latest-content:writer:${writer_id}`;
+      console.log('🔍 LATEST CONTENT: Checking cache key:', cacheKey);
+      const cachedData = await redisService.get(cacheKey);
+
+      if (cachedData) {
+        console.log('✅ Returning cached latest content data');
+        return res.json(cachedData);
+      } else {
+        console.log('❌ Cache MISS for latest content key:', cacheKey);
+      }
+    } else {
+      console.log('⚠️ LATEST CONTENT: Redis service not available, skipping cache');
+    }
 
     // Get latest content from PostgreSQL
     const latestContentQuery = `
@@ -4093,14 +4280,23 @@ router.get('/writer/latest-content', authenticateToken, async (req, res) => {
       views: enhancedLatestContent.views
     });
 
-    res.json({
+    const responseData = {
       success: true,
       data: enhancedLatestContent,
       metadata: {
         writer_id: writer_id,
         source: 'PostgreSQL + BigQuery Enhanced'
       }
-    });
+    };
+
+    // Cache the response data
+    if (redisService && redisService.isAvailable()) {
+      const cacheKey = `analytics:latest-content:writer:${writer_id}`;
+      await redisService.set(cacheKey, responseData, 259200); // Cache for 3 days (72 hours)
+      console.log('✅ Cached latest content data');
+    }
+
+    res.json(responseData);
 
   } catch (error) {
     console.error('❌ Error getting latest content:', error);

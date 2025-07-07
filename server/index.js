@@ -13,6 +13,7 @@ const analyticsRoutes = require("./routes/analytics");
 const userRoutes = require("./routes/user");
 const influxRoutes = require("./routes/influx");
 const dataExplorerRoutes = require("./routes/dataExplorer");
+const RedisService = require("./services/redisService");
 
 dotenv.config();
 
@@ -86,6 +87,10 @@ const initializeBigQuery = async () => {
 
 // Initialize BigQuery on server start
 initializeBigQuery();
+
+// Initialize Redis service
+const redisService = new RedisService();
+global.redisService = redisService;
 
 const app = express();
 const PORT = process.env.PORT || 5001;

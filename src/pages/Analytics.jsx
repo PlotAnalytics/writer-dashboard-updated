@@ -561,20 +561,22 @@ const Analytics = () => {
       let totalViews = 0;
       let chartData = [];
 
-      // Use cached API with explicit custom date parameters
+      // Use clean API call with explicit custom date parameters
       const params = {
         range: 'custom',
         start_date: startDate,
         end_date: endDate
       };
 
-      console.log('📊 Fetching analytics via API with custom dates');
+      console.log('📊 Fetching analytics via API with custom dates:', params);
 
       const overviewResult = await analyticsApi.getOverview({
         params: params
       });
 
       const overviewData = overviewResult.data;
+
+      // overviewData is from the API response
 
       console.log('📊 BigQuery Overview data received for custom range:', {
         totalViews: overviewData.totalViews,
@@ -1078,9 +1080,9 @@ const Analytics = () => {
       // Set the date range first
       setDateRange(customRange);
 
-      // Immediately fetch analytics with the custom range (don't wait for state update)
+      // Use the same range function for consistency (no more dual endpoints!)
       try {
-        await fetchAnalyticsWithCustomRange(customRange, customStartDate, endDate);
+        await fetchAnalyticsWithDateRange(customRange, customStartDate, endDate);
         console.log('🎉 Custom range analytics data updated successfully!');
       } catch (error) {
         console.error("Error fetching data for custom range:", error);
@@ -1091,107 +1093,7 @@ const Analytics = () => {
     }
   };
 
-  // Fetch analytics with explicit custom range parameters
-  const fetchAnalyticsWithCustomRange = async (customRange, startDate, endDate) => {
-    console.log('🔥 fetchAnalyticsWithCustomRange called with:', { customRange, startDate, endDate });
-    setError(null);
-
-    try {
-      const token = localStorage.getItem('token');
-      let writerId = user?.writerId || localStorage.getItem('writerId');
-
-      // SECURITY: If no writerId, fetch from profile endpoint
-      if (!writerId) {
-        try {
-          console.log('🔒 No writerId found, fetching from profile for security...');
-          const profileResponse = await axios.get('/api/auth/profile');
-          if (profileResponse.data.user.writerId) {
-            writerId = profileResponse.data.user.writerId.toString();
-            localStorage.setItem('writerId', writerId);
-            console.log('✅ Security: Got writerId from profile:', writerId);
-          } else {
-            console.error('❌ SECURITY ERROR: No writerId available for user');
-            setError('Unable to load analytics. Please log out and log back in.');
-            return;
-          }
-        } catch (profileError) {
-          console.error('❌ SECURITY ERROR: Could not fetch writerId:', profileError);
-          setError('Authentication error. Please log out and log back in.');
-          return;
-        }
-      }
-
-      if (!token) {
-        setError('Please log in to view analytics');
-        return;
-      }
-
-      console.log('📊 Fetching analytics data for custom range:', { customRange, startDate, endDate, writerId });
-
-      // Build URL with custom date parameters
-      const cacheBuster = Date.now();
-      const randomId = Math.random().toString(36).substring(7);
-      let apiUrl = `${buildApiUrl(API_CONFIG.ENDPOINTS.ANALYTICS.OVERVIEW)}?range=${customRange}&_t=${cacheBuster}&_r=${randomId}&force_refresh=true`;
-      apiUrl += `&start_date=${startDate}&end_date=${endDate}`;
-
-      console.log(`📊 Fetching from custom URL: ${apiUrl}`);
-
-      const overviewResponse = await fetch(apiUrl, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json',
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          'Expires': '0'
-        }
-      });
-
-      if (overviewResponse.ok) {
-        const overviewData = await overviewResponse.json();
-        console.log('📊 Custom range BigQuery Overview data received:', {
-          totalViews: overviewData.totalViews,
-          chartDataPoints: overviewData.chartData?.length || 0,
-          aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0
-        });
-
-        // Fetch top content with custom date range (pass the custom range explicitly)
-        const topVideosData = await fetchTopContentWithCustomRange(contentFilter, customRange, startDate, endDate);
-        const latestContentData = await fetchLatestContent();
-
-        // Combine data
-        const combinedData = {
-          ...overviewData,
-          topVideos: topVideosData || [],
-          latestContent: latestContentData,
-          avgDailyViews: overviewData.aggregatedViewsData?.length > 0 ?
-            Math.round(overviewData.totalViews / overviewData.aggregatedViewsData.length) : 0,
-          summary: {
-            progressToTarget: (overviewData.totalViews / 100000000) * 100,
-            highestDay: overviewData.aggregatedViewsData?.length > 0 ?
-              Math.max(...overviewData.aggregatedViewsData.map(d => d.views)) : 0,
-            lowestDay: overviewData.aggregatedViewsData?.length > 0 ?
-              Math.min(...overviewData.aggregatedViewsData.map(d => d.views)) : 0
-          }
-        };
-
-        setAnalyticsData(combinedData);
-        console.log('🎉 Custom range analytics data updated successfully!');
-
-        // Special logging for single date ranges
-        if (startDate === endDate) {
-          console.log('📅 SINGLE DATE APPLIED:', startDate);
-          console.log('📊 Single date chart data:', combinedData.aggregatedViewsData);
-          console.log('📊 Chart will show:', combinedData.aggregatedViewsData?.length || 0, 'data points');
-          console.log('📊 Top content filtered for date:', topVideosData?.length || 0, 'videos');
-        }
-      } else {
-        throw new Error(`API responded with status ${overviewResponse.status}`);
-      }
-    } catch (err) {
-      console.error('❌ Custom range Analytics API error:', err);
-      setError(`Failed to load analytics data: ${err.message}`);
-    }
-  };
+  // Removed fetchAnalyticsWithCustomRange - now using single fetchAnalyticsWithDateRange function for all cases
 
 
 
