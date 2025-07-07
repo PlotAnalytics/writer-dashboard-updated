@@ -1066,22 +1066,18 @@ async function getBigQueryAnalyticsOverview(
       try {
         console.log('📊 NEW APPROACH: Getting daily view increases using youtube_metadata_historical');
 
-        // Step 1: Get distinct video_ids for this writer
+        // Step 1: Get distinct video_ids for this writer (ALL videos, not filtered by date)
         const videoIdsQuery = `
           SELECT DISTINCT video_id
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
           WHERE writer_name = @writer_name
-            AND date_day BETWEEN @start_date AND @end_date
-            ${useBigQuery && useInfluxDB ? `AND date_day <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
         `;
 
         console.log('🔍 Step 1: Getting distinct video_ids for writer:', writerName);
         const [videoIdsResult] = await bigquery.query({
           query: videoIdsQuery,
           params: {
-            writer_name: writerName,
-            start_date: finalStartDate,
-            end_date: finalBigQueryEndDate
+            writer_name: writerName
           }
         });
 
@@ -1093,6 +1089,11 @@ async function getBigQueryAnalyticsOverview(
           dailyTotalsRows = [];
         } else {
           // Step 2: Get daily view counts from youtube_metadata_historical
+          // CRITICAL FIX: Use extended date range to get previous day data for daily increase calculations
+          const extendedStartDate = new Date(finalStartDate);
+          extendedStartDate.setDate(extendedStartDate.getDate() - 7); // Get 7 days before for proper calculations
+          const extendedStartDateStr = extendedStartDate.toISOString().slice(0, 10);
+
           const viewCountsQuery = `
             SELECT
               video_id,
@@ -1101,17 +1102,18 @@ async function getBigQueryAnalyticsOverview(
               DATE(snippet_published_at) as published_date
             FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
             WHERE video_id IN UNNEST(@video_ids)
-              AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
+              AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
               ${useBigQuery && useInfluxDB ? `AND DATE(snapshot_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
             ORDER BY video_id, snapshot_date
           `;
 
           console.log('🔍 Step 2: Getting daily view counts from youtube_metadata_historical');
+          console.log(`🔍 Using extended date range: ${extendedStartDateStr} to ${finalBigQueryEndDate} (extended by 7 days for daily increase calculations)`);
           const [viewCountsResult] = await bigquery.query({
             query: viewCountsQuery,
             params: {
               video_ids: videoIds,
-              start_date: finalStartDate,
+              extended_start_date: extendedStartDateStr,
               end_date: finalBigQueryEndDate
             }
           });
@@ -1196,11 +1198,20 @@ async function getBigQueryAnalyticsOverview(
           });
 
           // Convert to array format expected by the rest of the function
-          dailyTotalsRows = Array.from(dailyTotals.entries()).map(([dateStr, data]) => ({
-            date_string: dateStr,
-            total_views: data.total_views,
-            unique_videos: data.unique_videos.size
-          })).sort((a, b) => new Date(b.date_string) - new Date(a.date_string));
+          // CRITICAL FIX: Only include dates within the target range in final output
+          dailyTotalsRows = Array.from(dailyTotals.entries())
+            .filter(([dateStr, data]) => {
+              const date = new Date(dateStr);
+              const startDate = new Date(finalStartDate);
+              const endDate = new Date(finalBigQueryEndDate);
+              return date >= startDate && date <= endDate;
+            })
+            .map(([dateStr, data]) => ({
+              date_string: dateStr,
+              total_views: data.total_views,
+              unique_videos: data.unique_videos.size
+            }))
+            .sort((a, b) => new Date(b.date_string) - new Date(a.date_string));
 
           console.log(`📊 NEW APPROACH: Calculated ${dailyTotalsRows.length} daily increases (smart first-day handling based on publish dates)`);
         }
