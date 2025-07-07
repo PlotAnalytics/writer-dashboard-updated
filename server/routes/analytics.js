@@ -261,24 +261,30 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     }
 
     // Step 2: Get daily view counts from youtube_metadata_historical for these videos
+    // FIXED: Get extended date range to ensure we have previous day data for proper daily increase calculation
+    const extendedStartDate = new Date(startDate);
+    extendedStartDate.setDate(extendedStartDate.getDate() - 7); // Go back 7 days to ensure we have previous data
+    const extendedStartDateStr = extendedStartDate.toISOString().split('T')[0];
+
     const viewCountsQuery = `
       SELECT
         video_id,
         DATE(snapshot_date) as date_day,
-        statistics_view_count
+        statistics_view_count,
+        snippet_published_at
       FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
       WHERE video_id IN UNNEST(@video_ids)
-        AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
+        AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
         AND statistics_view_count IS NOT NULL
       ORDER BY video_id, snapshot_date ASC
     `;
 
-    console.log(`📊 Getting view counts for ${videoIds.length} videos`);
+    console.log(`📊 Getting view counts for ${videoIds.length} videos (extended range: ${extendedStartDateStr} to ${endDate})`);
     const [viewCountsRows] = await bigqueryClient.query({
       query: viewCountsQuery,
       params: {
         video_ids: videoIds,
-        start_date: startDate,
+        extended_start_date: extendedStartDateStr,
         end_date: endDate
       }
     });
@@ -299,37 +305,72 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
         date: row.date_day.value instanceof Date ?
           row.date_day.value.toISOString().split('T')[0] :
           row.date_day.value,
-        views: parseInt(row.statistics_view_count || 0)
+        views: parseInt(row.statistics_view_count || 0),
+        publishedAt: row.snippet_published_at ? row.snippet_published_at.value : null
       });
     });
 
     console.log(`📊 Processing ${videoGroups.size} videos for daily increases`);
 
-    // Calculate daily increases for each video
+    // Calculate daily increases for each video (FIXED LOGIC)
     videoGroups.forEach((dates, videoId) => {
       // Sort by date
       dates.sort((a, b) => new Date(a.date) - new Date(b.date));
 
+      let previousViews = null;
+
       for (let i = 0; i < dates.length; i++) {
         const currentDate = dates[i].date;
         const currentViews = dates[i].views;
+        const publishedAt = dates[i].publishedAt;
+
+        // FIXED: Only include dates within our target range for output
+        if (currentDate < startDate || currentDate > endDate) {
+          // Still track previous views for calculation, but don't include in output
+          previousViews = currentViews;
+          continue;
+        }
 
         let dailyIncrease;
-        if (i === 0) {
-          // First day: use raw count
-          dailyIncrease = currentViews;
-          console.log(`📊 Video ${videoId} - ${currentDate}: First day = ${dailyIncrease} views`);
+
+        if (previousViews === null) {
+          // FIXED: No previous data available - check if this is a legitimate first day
+          let useFirstDay = false;
+
+          if (publishedAt) {
+            const publishDate = publishedAt;
+            const daysDifference = (new Date(currentDate) - new Date(publishDate)) / (1000 * 60 * 60 * 24);
+            useFirstDay = daysDifference <= 2;
+
+            if (useFirstDay) {
+              console.log(`📅 Video ${videoId}: First day data (${currentDate}) is within ${daysDifference.toFixed(1)} days of publish date (${publishDate}), using first day views: ${currentViews.toLocaleString()}`);
+            } else {
+              console.log(`📅 Video ${videoId}: First day data (${currentDate}) is ${daysDifference.toFixed(1)} days after publish date (${publishDate}), skipping (no previous data)`);
+            }
+          } else {
+            console.log(`📅 Video ${videoId}: No publish date available, skipping first day (no previous data)`);
+          }
+
+          if (useFirstDay) {
+            // Use first day views as-is (it's a legitimate first day)
+            dailyIncrease = currentViews;
+          } else {
+            // Skip this day - no previous data and not a legitimate first day
+            previousViews = currentViews;
+            continue;
+          }
         } else {
-          // Subsequent days: calculate increase from previous day
-          const previousViews = dates[i - 1].views;
-          dailyIncrease = Math.max(0, currentViews - previousViews); // Ensure non-negative
-          console.log(`📊 Video ${videoId} - ${currentDate}: ${currentViews} - ${previousViews} = ${dailyIncrease} increase`);
+          // FIXED: Calculate daily increase from previous day (ALWAYS use this logic when previous data exists)
+          dailyIncrease = Math.max(0, currentViews - previousViews);
+          console.log(`📊 Video ${videoId} on ${currentDate}: ${previousViews.toLocaleString()} → ${currentViews.toLocaleString()} = +${dailyIncrease.toLocaleString()}`);
         }
 
         if (!videoViewIncreases.has(currentDate)) {
           videoViewIncreases.set(currentDate, 0);
         }
         videoViewIncreases.set(currentDate, videoViewIncreases.get(currentDate) + dailyIncrease);
+
+        previousViews = currentViews;
       }
     });
 
