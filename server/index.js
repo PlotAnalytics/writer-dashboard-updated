@@ -342,7 +342,7 @@ app.get("/api/structures", async (req, res) => {
         FROM structures s
         LEFT JOIN writer_structures ws ON s.id = ws.structure_id
         LEFT JOIN writer w ON ws.writer_id = w.id
-        GROUP BY s.id
+        GROUP BY s.id, s.name
         ORDER BY s.id ASC;
       `;
       const result = await pool.query(query);
