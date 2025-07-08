@@ -400,7 +400,7 @@ const Analytics = () => {
 
           totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
 
-          console.log('✅ Using BigQuery DAILY TOTALS (filtered in query - last 3 days excluded):', {
+          console.log('✅ Using BigQuery DAILY TOTALS (YouTube Analytics Confirmed):', {
             dailyTotalsPoints: viewsData.length,
             chartDataPoints: chartData.length,
             totalViews: totalViews.toLocaleString(),
@@ -602,7 +602,7 @@ const Analytics = () => {
 
         totalViews = overviewData.totalViews || viewsData.reduce((acc, item) => acc + item.views, 0);
 
-        console.log('✅ Using BigQuery data for custom range (filtered in query - last 3 days excluded):', {
+        console.log('✅ Using BigQuery data for custom range (YouTube Analytics Confirmed):', {
           dailyTotalsPoints: viewsData.length,
           chartDataPoints: chartData.length,
           totalViews: totalViews.toLocaleString(),
