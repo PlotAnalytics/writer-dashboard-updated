@@ -40,7 +40,10 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
+import { useNotifications } from '../contexts/NotificationContext.jsx';
 import SendFeedback from './SendFeedback.jsx';
+import NotificationCenter from './NotificationCenter.jsx';
+import MilestoneCelebration from './MilestoneCelebration.jsx';
 
 const drawerWidth = 280;
 
@@ -48,9 +51,11 @@ const Layout = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { unreadCount } = useNotifications();
   const [anchorEl, setAnchorEl] = useState(null);
   const [feedbackOpen, setFeedbackOpen] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [notificationOpen, setNotificationOpen] = useState(false);
 
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
@@ -209,7 +214,7 @@ const Layout = ({ children }) => {
           {/* Notification Bell */}
           {!isMobile && (
             <Badge
-              badgeContent={3}
+              badgeContent={unreadCount > 0 ? unreadCount : null}
               sx={{
                 '& .MuiBadge-badge': {
                   bgcolor: '#ff4757',
@@ -217,7 +222,7 @@ const Layout = ({ children }) => {
                   fontSize: '10px',
                   minWidth: '18px',
                   height: '18px',
-                  animation: 'pulse 2s infinite',
+                  animation: unreadCount > 0 ? 'pulse 2s infinite' : 'none',
                   '@keyframes pulse': {
                     '0%': { transform: 'scale(1)' },
                     '50%': { transform: 'scale(1.1)' },
@@ -227,6 +232,7 @@ const Layout = ({ children }) => {
               }}
             >
               <IconButton
+                onClick={() => setNotificationOpen(true)}
                 sx={{
                   color: 'rgba(255, 255, 255, 0.7)',
                   '&:hover': {
@@ -530,7 +536,7 @@ const Layout = ({ children }) => {
               Writer Studio
             </Typography>
             <Badge
-              badgeContent={3}
+              badgeContent={unreadCount > 0 ? unreadCount : null}
               sx={{
                 '& .MuiBadge-badge': {
                   bgcolor: '#ff4757',
@@ -541,7 +547,10 @@ const Layout = ({ children }) => {
                 },
               }}
             >
-              <IconButton color="inherit">
+              <IconButton
+                color="inherit"
+                onClick={() => setNotificationOpen(true)}
+              >
                 <NotificationsIcon />
               </IconButton>
             </Badge>
@@ -635,6 +644,15 @@ const Layout = ({ children }) => {
         open={feedbackOpen}
         onClose={() => setFeedbackOpen(false)}
       />
+
+      {/* Notification Center */}
+      <NotificationCenter
+        open={notificationOpen}
+        onClose={() => setNotificationOpen(false)}
+      />
+
+      {/* Milestone Celebration */}
+      <MilestoneCelebration />
     </Box>
   );
 };

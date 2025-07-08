@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { AuthProvider } from './contexts/AuthContext.jsx';
+import { NotificationProvider } from './contexts/NotificationContext.jsx';
 import { ProtectedRoute } from './components/ProtectedRoute.jsx';
 import Login from './pages/Login.jsx';
 import Dashboard from './pages/Dashboard.jsx';
@@ -168,7 +169,8 @@ function App() {
     <ThemeProvider theme={darkTheme}>
       <CssBaseline />
       <AuthProvider>
-        <Router>
+        <NotificationProvider>
+          <Router>
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route
@@ -246,7 +248,8 @@ function App() {
               }
             />
           </Routes>
-        </Router>
+          </Router>
+        </NotificationProvider>
       </AuthProvider>
     </ThemeProvider>
   );

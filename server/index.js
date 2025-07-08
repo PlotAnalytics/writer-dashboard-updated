@@ -13,6 +13,7 @@ const analyticsRoutes = require("./routes/analytics");
 const userRoutes = require("./routes/user");
 const influxRoutes = require("./routes/influx");
 const dataExplorerRoutes = require("./routes/dataExplorer");
+const notificationRoutes = require("./routes/notifications");
 const RedisService = require("./services/redisService");
 
 dotenv.config();
@@ -135,6 +136,7 @@ app.use("/api/analytics", analyticsRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/influx", influxRoutes);
 app.use("/api/data-explorer", dataExplorerRoutes);
+app.use("/api/notifications", notificationRoutes);
 
 // Route /api/writer/videos to BigQuery-powered analytics endpoint
 app.use("/api/writer", analyticsRoutes);

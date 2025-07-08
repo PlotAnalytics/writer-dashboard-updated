@@ -19,7 +19,8 @@ import {
   useTheme
 } from '@mui/material';
 import {
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  Celebration as CelebrationIcon
 } from '@mui/icons-material';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
@@ -28,6 +29,7 @@ import { buildApiUrl, API_CONFIG } from '../config/api.js';
 import RealtimeWidget from '../components/RealtimeWidget';
 import WriterLeaderboard from '../components/WriterLeaderboard.jsx';
 import { useAuth } from '../contexts/AuthContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
 
 // Utility functions like WriterAnalytics.jsx
@@ -246,6 +248,7 @@ const Analytics = () => {
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
+  const { checkMilestones } = useNotifications();
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -989,6 +992,24 @@ const Analytics = () => {
     }
   };
 
+  // Test milestone check function
+  const handleTestMilestones = async () => {
+    try {
+      console.log('🎉 Testing milestone detection...');
+      const result = await checkMilestones();
+      console.log('✅ Milestone check result:', result);
+
+      if (result && result.new_notifications > 0) {
+        alert(`🎉 Found ${result.new_notifications} new milestone achievements!`);
+      } else {
+        alert('✅ Milestone check completed. No new milestones detected.');
+      }
+    } catch (error) {
+      console.error('❌ Error testing milestones:', error);
+      alert('❌ Error checking milestones. Check console for details.');
+    }
+  };
+
 
 
   useEffect(() => {
@@ -1451,6 +1472,31 @@ const Analytics = () => {
                 }}
               >
                 <RefreshIcon sx={{ fontSize: '20px' }} />
+              </IconButton>
+            </Tooltip>
+
+            {/* Test Milestone Button */}
+            <Tooltip title="Test Milestone Detection" arrow>
+              <IconButton
+                onClick={handleTestMilestones}
+                sx={{
+                  bgcolor: 'rgba(255, 193, 7, 0.1)',
+                  border: '1px solid rgba(255, 193, 7, 0.3)',
+                  color: '#FFC107',
+                  ml: 1,
+                  '&:hover': {
+                    bgcolor: 'rgba(255, 193, 7, 0.2)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 24px rgba(255, 193, 7, 0.3)',
+                    border: '1px solid rgba(255, 255, 255, 0.2)'
+                  },
+                  '&:active': {
+                    transform: 'translateY(0px)',
+                    boxShadow: '0 4px 16px rgba(255, 193, 7, 0.2)'
+                  }
+                }}
+              >
+                <CelebrationIcon sx={{ fontSize: '20px' }} />
               </IconButton>
             </Tooltip>
           </Box>
