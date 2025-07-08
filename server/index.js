@@ -138,6 +138,96 @@ app.use("/api/influx", influxRoutes);
 app.use("/api/data-explorer", dataExplorerRoutes);
 app.use("/api/notifications", notificationRoutes);
 
+// Feedback endpoint for Slack integration
+app.post('/api/feedback', async (req, res) => {
+  try {
+    const { problem, screenshot, timestamp, userAgent, url } = req.body;
+
+    // Get user info from session if available
+    const userId = req.session?.user?.id || 'Unknown';
+    const userName = req.session?.user?.name || 'Anonymous User';
+
+    // Format message for Slack
+    const slackMessage = {
+      text: "🐛 New Feedback Received",
+      blocks: [
+        {
+          type: "header",
+          text: {
+            type: "plain_text",
+            text: "🐛 New Feedback Report"
+          }
+        },
+        {
+          type: "section",
+          fields: [
+            {
+              type: "mrkdwn",
+              text: `*User:* ${userName} (ID: ${userId})`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Time:* ${new Date(timestamp).toLocaleString()}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Page:* ${url}`
+            },
+            {
+              type: "mrkdwn",
+              text: `*Browser:* ${userAgent.split(' ')[0]}`
+            }
+          ]
+        },
+        {
+          type: "section",
+          text: {
+            type: "mrkdwn",
+            text: `*Problem Description:*\n\`\`\`${problem}\`\`\``
+          }
+        }
+      ]
+    };
+
+    if (screenshot) {
+      slackMessage.blocks.push({
+        type: "section",
+        text: {
+          type: "mrkdwn",
+          text: `*Screenshot:* ${screenshot}`
+        }
+      });
+    }
+
+    // Send to Slack webhook
+    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
+
+    if (!slackWebhookUrl) {
+      console.error('SLACK_WEBHOOK_URL not configured');
+      return res.status(500).json({ error: 'Slack integration not configured' });
+    }
+
+    const response = await fetch(slackWebhookUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(slackMessage)
+    });
+
+    if (!response.ok) {
+      throw new Error(`Slack API error: ${response.status}`);
+    }
+
+    console.log('Feedback sent to Slack successfully');
+    res.json({ success: true, message: 'Feedback sent successfully' });
+
+  } catch (error) {
+    console.error('Error sending feedback to Slack:', error);
+    res.status(500).json({ error: 'Failed to send feedback' });
+  }
+});
+
 // Route /api/writer/videos to BigQuery-powered analytics endpoint
 app.use("/api/writer", analyticsRoutes);
 
