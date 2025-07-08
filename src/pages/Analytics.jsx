@@ -1506,107 +1506,187 @@ const Analytics = () => {
             {/* Tab Content */}
             {tabValue === 0 && (
               <>
-                {/* Main Stats */}
-            <Box sx={{ mb: 4 }}>
-              <Typography variant="h3" sx={{
-                color: 'white',
-                fontWeight: 700,
-                mb: 1,
-                textAlign: 'center'
-              }}>
-                You got {formatNumber(analyticsData.totalViews || 0)} views in the {getDateRangeLabel()}
-              </Typography>
+                {/* Ultra Compact Stats Bar */}
+            <Box sx={{
+              background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.05) 0%, rgba(118, 75, 162, 0.05) 100%)',
+              border: '1px solid rgba(102, 126, 234, 0.1)',
+              borderRadius: 1.5,
+              p: 1.5,
+              mb: 2,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              flexWrap: 'wrap',
+              gap: 2,
+              position: 'relative',
+              '&::before': {
+                content: '""',
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: '1px',
+                background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
+              }
+            }}>
+              {/* Main Views */}
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                <Box>
+                  <Typography sx={{
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 700,
+                    fontSize: '1.5rem',
+                    lineHeight: 1
+                  }}>
+                    {formatNumber(analyticsData.totalViews || 0)}
+                  </Typography>
+                  <Typography sx={{
+                    color: 'rgba(255, 255, 255, 0.6)',
+                    fontSize: '0.7rem',
+                    fontWeight: 500
+                  }}>
+                    views • {getDateRangeLabel()}
+                  </Typography>
+                </Box>
 
-              {/* Progress to Target */}
-              {analyticsData.summary?.progressToTarget !== undefined && (
-                <Box sx={{ maxWidth: 600, mx: 'auto', mb: 3 }}>
-                  <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Progress to 100M views
-                    </Typography>
-                    <Typography variant="body2" sx={{
+                {/* Progress Bar */}
+                {analyticsData.summary?.progressToTarget !== undefined && (
+                  <Box sx={{ minWidth: 140 }}>
+                    <Typography sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      fontWeight: 600
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      mb: 0.5
                     }}>
-                      {analyticsData.summary.progressToTarget.toFixed(1)}%
+                      {analyticsData.summary.progressToTarget.toFixed(1)}% to 100M
                     </Typography>
+                    <LinearProgress
+                      variant="determinate"
+                      value={Math.min(analyticsData.summary.progressToTarget, 100)}
+                      sx={{
+                        height: 8,
+                        borderRadius: 4,
+                        bgcolor: 'rgba(255, 255, 255, 0.12)',
+                        border: '1px solid rgba(102, 126, 234, 0.2)',
+                        '& .MuiLinearProgress-bar': {
+                          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
+                          borderRadius: 4,
+                          boxShadow: '0 0 8px rgba(102, 126, 234, 0.4)'
+                        }
+                      }}
+                    />
                   </Box>
-                  <LinearProgress
-                    variant="determinate"
-                    value={Math.min(analyticsData.summary.progressToTarget, 100)}
-                    sx={{
-                      height: 8,
-                      borderRadius: 4,
-                      bgcolor: '#333',
-                      '& .MuiLinearProgress-bar': {
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        borderRadius: 4
-                      }
-                    }}
-                  />
-                </Box>
-              )}
+                )}
+              </Box>
 
-             
-              {/* Additional Stats Row */}
-              <Box sx={{
-                display: 'flex',
-                justifyContent: 'center',
-                gap: 4,
-                mb: 3,
-                flexWrap: 'wrap'
-              }}>
+              {/* Compact Metrics */}
+              <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                 {analyticsData.totalLikes !== undefined && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#E91E63', fontWeight: 600 }}>
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(233, 30, 99, 0.08)',
+                    border: '1px solid rgba(233, 30, 99, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#E91E63',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(233, 30, 99, 0.3)'
+                    }}>
                       {formatNumber(analyticsData.totalLikes)}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Total Likes
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      LIKES
                     </Typography>
                   </Box>
                 )}
+
                 {analyticsData.totalComments !== undefined && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#9C27B0', fontWeight: 600 }}>
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(156, 39, 176, 0.08)',
+                    border: '1px solid rgba(156, 39, 176, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#9C27B0',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(156, 39, 176, 0.3)'
+                    }}>
                       {formatNumber(analyticsData.totalComments)}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Total Comments
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      COMMENTS
                     </Typography>
                   </Box>
                 )}
+
                 {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(102, 126, 234, 0.08)',
+                    border: '1px solid rgba(102, 126, 234, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       WebkitBackgroundClip: 'text',
                       WebkitTextFillColor: 'transparent',
-                      fontWeight: 600
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      filter: 'drop-shadow(0 0 4px rgba(102, 126, 234, 0.3))'
                     }}>
                       {analyticsData.totalSubmissions || analyticsData.topVideos?.length || 50}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Total Submissions
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      SUBMISSIONS
                     </Typography>
                   </Box>
                 )}
 
                 {analyticsData.avgDailyViews !== undefined && (
-                  <Box sx={{ textAlign: 'center' }}>
-                    <Typography variant="h5" sx={{ color: '#FF9800', fontWeight: 600 }}>
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(255, 152, 0, 0.08)',
+                    border: '1px solid rgba(255, 152, 0, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#FF9800',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(255, 152, 0, 0.3)'
+                    }}>
                       {formatNumber(analyticsData.avgDailyViews)}
                     </Typography>
-                    <Typography variant="body2" sx={{ color: '#888' }}>
-                      Daily Average
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      DAILY AVG
                     </Typography>
                   </Box>
                 )}
               </Box>
-
-
             </Box>
 
             {/* Data Source Indicator */}

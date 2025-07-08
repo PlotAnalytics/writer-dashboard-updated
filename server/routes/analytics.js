@@ -1045,16 +1045,44 @@ async function getBigQueryAnalyticsOverview(
     let dailyTotalsRows = [];
     if (useBigQuery) {
       try {
-        console.log('📊 NEW APPROACH: Getting daily view increases using youtube_metadata_historical');
+        console.log('📊 NEW APPROACH: Getting daily view increases using youtube_metadata_historical (priority) + historical_video_metadata_past (fallback)');
 
-        // Step 1: Get distinct video_ids for this writer (ALL videos, not filtered by date)
+        // Step 1: Get historical data from historical_video_metadata_past (January-June, more accurate)
+        console.log('🔍 Step 1: Getting historical data from historical_video_metadata_past for writer:', writerName, 'writerId:', writerId);
+        const historicalDataQuery = `
+          SELECT
+            Date as date_day,
+            SUM(CAST(Views AS INT64)) as total_views
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.historical_video_metadata_past\`
+          WHERE writer_id = @writer_id
+            AND Date IS NOT NULL
+            AND Views IS NOT NULL
+          GROUP BY Date
+          ORDER BY Date
+        `;
+
+        const [historicalDataResult] = await bigquery.query({
+          query: historicalDataQuery,
+          params: {
+            writer_id: parseFloat(writerId) // Convert to float to match the 94.0 format
+          }
+        });
+
+        console.log(`📊 Found ${historicalDataResult.length} historical days for writer ${writerName} (writer_id: ${parseFloat(writerId)})`);
+        if (historicalDataResult.length > 0) {
+          console.log(`📅 Historical data sample:`, historicalDataResult.slice(0, 3));
+        } else {
+          console.log(`⚠️ No historical data found for writer_id ${parseFloat(writerId)} in historical_video_metadata_past table`);
+        }
+
+        // Step 2: Get distinct video_ids for this writer (for current metadata)
         const videoIdsQuery = `
           SELECT DISTINCT video_id
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
           WHERE writer_name = @writer_name
         `;
 
-        console.log('🔍 Step 1: Getting distinct video_ids for writer:', writerName);
+        console.log('🔍 Step 2: Getting distinct video_ids for current metadata for writer:', writerName);
         const [videoIdsResult] = await bigquery.query({
           query: videoIdsQuery,
           params: {
@@ -1065,11 +1093,29 @@ async function getBigQueryAnalyticsOverview(
         const videoIds = videoIdsResult.map(row => row.video_id);
         console.log(`📊 Found ${videoIds.length} distinct video_ids for writer ${writerName}`);
 
+        // Step 3: Process historical data (sum views by date, no daily increase calculation)
+        const historicalDailyTotals = new Map();
+        historicalDataResult.forEach(row => {
+          const dateStr = row.date_day.value; // BigQuery DATE type
+          const totalViews = parseInt(row.total_views);
+          historicalDailyTotals.set(dateStr, totalViews);
+          console.log(`📅 Historical: ${dateStr} = ${totalViews.toLocaleString()} total views`);
+        });
+
         if (videoIds.length === 0) {
           console.log('⚠️ No video IDs found for this writer and date range');
-          dailyTotalsRows = [];
+          // If no current videos but we have historical data, use historical data only
+          if (historicalDailyTotals.size > 0) {
+            dailyTotalsRows = Array.from(historicalDailyTotals.entries()).map(([dateStr, totalViews]) => ({
+              date_string: dateStr,
+              total_views: totalViews,
+              unique_videos: 1 // Approximate since we don't have video count from historical table
+            }));
+          } else {
+            dailyTotalsRows = [];
+          }
         } else {
-          // Step 2: Get daily view counts from youtube_metadata_historical
+          // Step 4: Get daily view counts from youtube_metadata_historical
           // CRITICAL FIX: Use extended date range to get previous day data for daily increase calculations
           const extendedStartDate = new Date(finalStartDate);
           extendedStartDate.setDate(extendedStartDate.getDate() - 7); // Get 7 days before for proper calculations
@@ -1088,7 +1134,7 @@ async function getBigQueryAnalyticsOverview(
             ORDER BY video_id, snapshot_date
           `;
 
-          console.log('🔍 Step 2: Getting daily view counts from youtube_metadata_historical');
+          console.log('🔍 Step 4: Getting daily view counts from youtube_metadata_historical');
           console.log(`🔍 Using extended date range: ${extendedStartDateStr} to ${finalBigQueryEndDate} (extended by 7 days for daily increase calculations)`);
           const [viewCountsResult] = await bigquery.query({
             query: viewCountsQuery,
@@ -1101,8 +1147,7 @@ async function getBigQueryAnalyticsOverview(
 
           console.log(`📊 Retrieved ${viewCountsResult.length} view count records`);
 
-          // Step 3: Calculate daily increases for each video
-          const videoIncreases = new Map();
+          // Step 5: Calculate daily increases for each video (current metadata)
           const dailyTotals = new Map();
 
           // Group by video_id and calculate increases
@@ -1178,6 +1223,40 @@ async function getBigQueryAnalyticsOverview(
             });
           });
 
+          // Step 6: Fill missing dates in the requested range with historical data
+          console.log('🔄 Step 6: Filling missing dates with historical data');
+
+          // Create a complete list of dates in the requested range
+          const requestedDates = [];
+          const startDate = new Date(finalStartDate);
+          const endDate = new Date(finalBigQueryEndDate);
+
+          for (let d = new Date(startDate); d <= endDate; d.setDate(d.getDate() + 1)) {
+            requestedDates.push(d.toISOString().slice(0, 10));
+          }
+
+          console.log(`📅 Requested date range: ${finalStartDate} to ${finalBigQueryEndDate} (${requestedDates.length} days)`);
+          console.log(`📅 Current metadata covers ${dailyTotals.size} days`);
+
+          // For each requested date, check if we have data, if not try historical data
+          requestedDates.forEach(dateStr => {
+            if (!dailyTotals.has(dateStr)) {
+              // Missing date - check if we have historical data for this date
+              if (historicalDailyTotals.has(dateStr)) {
+                const totalViews = historicalDailyTotals.get(dateStr);
+                dailyTotals.set(dateStr, {
+                  total_views: totalViews,
+                  unique_videos: new Set(['historical_data']) // Placeholder since we don't have video count
+                });
+                console.log(`📅 Gap filled: ${dateStr} = ${totalViews.toLocaleString()} views (from historical_video_metadata_past)`);
+              } else {
+                console.log(`📅 Missing: ${dateStr} - no data in either source`);
+              }
+            } else {
+              console.log(`📅 Present: ${dateStr} = ${dailyTotals.get(dateStr).total_views.toLocaleString()} views (from youtube_metadata_historical)`);
+            }
+          });
+
           // Convert to array format expected by the rest of the function
           // CRITICAL FIX: Only include dates within the target range in final output
           dailyTotalsRows = Array.from(dailyTotals.entries())
@@ -1194,7 +1273,7 @@ async function getBigQueryAnalyticsOverview(
             }))
             .sort((a, b) => new Date(b.date_string) - new Date(a.date_string));
 
-          console.log(`📊 NEW APPROACH: Calculated ${dailyTotalsRows.length} daily increases (smart first-day handling based on publish dates)`);
+          console.log(`📊 NEW APPROACH: Calculated ${dailyTotalsRows.length} daily totals (${historicalDailyTotals.size} from historical, ${dailyTotals.size - historicalDailyTotals.size} from current metadata)`);
         }
 
       } catch (bigQueryError) {
