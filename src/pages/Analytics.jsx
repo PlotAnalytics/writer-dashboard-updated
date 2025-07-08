@@ -19,8 +19,7 @@ import {
   useTheme
 } from '@mui/material';
 import {
-  Refresh as RefreshIcon,
-  Celebration as CelebrationIcon
+  Refresh as RefreshIcon
 } from '@mui/icons-material';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
@@ -992,23 +991,7 @@ const Analytics = () => {
     }
   };
 
-  // Test milestone check function
-  const handleTestMilestones = async () => {
-    try {
-      console.log('🎉 Testing milestone detection...');
-      const result = await checkMilestones();
-      console.log('✅ Milestone check result:', result);
 
-      if (result && result.new_notifications > 0) {
-        alert(`🎉 Found ${result.new_notifications} new milestone achievements!`);
-      } else {
-        alert('✅ Milestone check completed. No new milestones detected.');
-      }
-    } catch (error) {
-      console.error('❌ Error testing milestones:', error);
-      alert('❌ Error checking milestones. Check console for details.');
-    }
-  };
 
 
 
@@ -1475,30 +1458,7 @@ const Analytics = () => {
               </IconButton>
             </Tooltip>
 
-            {/* Test Milestone Button */}
-            <Tooltip title="Test Milestone Detection" arrow>
-              <IconButton
-                onClick={handleTestMilestones}
-                sx={{
-                  bgcolor: 'rgba(255, 193, 7, 0.1)',
-                  border: '1px solid rgba(255, 193, 7, 0.3)',
-                  color: '#FFC107',
-                  ml: 1,
-                  '&:hover': {
-                    bgcolor: 'rgba(255, 193, 7, 0.2)',
-                    transform: 'translateY(-2px)',
-                    boxShadow: '0 8px 24px rgba(255, 193, 7, 0.3)',
-                    border: '1px solid rgba(255, 255, 255, 0.2)'
-                  },
-                  '&:active': {
-                    transform: 'translateY(0px)',
-                    boxShadow: '0 4px 16px rgba(255, 193, 7, 0.2)'
-                  }
-                }}
-              >
-                <CelebrationIcon sx={{ fontSize: '20px' }} />
-              </IconButton>
-            </Tooltip>
+
           </Box>
         </Box>
 
