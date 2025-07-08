@@ -134,7 +134,7 @@ const RealtimeWidget = () => {
           {formatNumber(realtimeData?.totalViews || 0)}
         </Typography>
         <Typography variant="body2" sx={{ color: '#888', fontSize: '14px' }}>
-          Views • Last 72 hours
+          Views • Last 24 hours
         </Typography>
       </Box>
 
