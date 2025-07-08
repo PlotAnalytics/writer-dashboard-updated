@@ -425,6 +425,7 @@ const Settings = () => {
               </CardContent>
             </Card>
           </Stack>
+        </Box>
       </Box>
     </Layout>
   );
