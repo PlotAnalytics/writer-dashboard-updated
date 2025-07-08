@@ -4827,210 +4827,131 @@ router.get('/test/top-content', async (req, res) => {
   }
 });
 
-// Writer Leaderboard endpoint - using daily view increases like line chart
+// Fast Writer Leaderboard endpoint - using pre-calculated cache table
 router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
   try {
     const { limit = 10, period = '30d' } = req.query;
 
-    console.log('🏆 Getting writer leaderboard data using daily view increases...');
+    console.log(`🏆 Getting ${period} writer leaderboard from cache...`);
 
     if (!bigquery) {
       return res.status(503).json({ error: 'BigQuery not available' });
     }
 
-    // Calculate date range based on period
-    let daysBack = 30;
-    if (period === '7d') daysBack = 7;
-    else if (period === '90d') daysBack = 90;
-    else if (period === '1y') daysBack = 365;
+    // Map frontend period to cache period
+    let cachePeriod = period;
+    if (period === '30d') cachePeriod = '30d';
+    else if (period === '7d') cachePeriod = '7d';
+    else if (period === '90d') cachePeriod = '30d'; // Fallback to 30d if 90d not available
+    else if (period === '1y') cachePeriod = '30d'; // Fallback to 30d if 1y not available
+    else cachePeriod = '14d'; // Default to 14d for other cases
 
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - daysBack);
-    const startDateStr = startDate.toISOString().split('T')[0];
-    const endDateStr = new Date().toISOString().split('T')[0];
+    const cacheQuery = `
+      SELECT
+        writer_id,
+        writer_name,
+        total_views,
+        total_videos,
+        avg_daily_increase,
+        rank_position as rank,
+        calculation_date,
+        period
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.writer_weekly_leaderboard\`
+      WHERE calculation_date = CURRENT_DATE()
+        AND period = @period
+      ORDER BY rank_position
+      LIMIT @limit
+    `;
 
-    console.log(`🏆 Calculating leaderboard for period: ${startDateStr} to ${endDateStr}`);
+    console.log(`🏆 Fetching ${cachePeriod} leaderboard (limit: ${limit})`);
 
-    // Step 1: Get all writers from PostgreSQL
-    const writersQuery = `SELECT id, name FROM writer WHERE name IS NOT NULL ORDER BY name`;
-    const { rows: writers } = await pool.query(writersQuery);
-
-    console.log(`🏆 Found ${writers.length} writers to process`);
-
-    const leaderboardData = [];
-
-    // Step 2: Calculate daily view increases for each writer (same logic as line chart)
-    for (const writer of writers) {
-      try {
-        console.log(`🏆 Processing writer: ${writer.name} (ID: ${writer.id})`);
-
-        // Get writer's videos from youtube_video_report_historical
-        const videoIdsQuery = `
-          SELECT DISTINCT video_id
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-          WHERE writer_name = @writer_name
-            AND date_day BETWEEN @start_date AND @end_date
-            AND video_id IS NOT NULL
-        `;
-
-        const [videoIdsRows] = await bigquery.query({
-          query: videoIdsQuery,
-          params: {
-            writer_name: writer.name,
-            start_date: startDateStr,
-            end_date: endDateStr
-          }
-        });
-
-        if (videoIdsRows.length === 0) {
-          console.log(`🏆 No videos found for ${writer.name} in period`);
-          continue;
-        }
-
-        const videoIds = videoIdsRows.map(row => row.video_id);
-        console.log(`🏆 Found ${videoIds.length} videos for ${writer.name}`);
-
-        // Get daily view counts from youtube_metadata_historical (extended range for calculations)
-        const extendedStartDate = new Date(startDate);
-        extendedStartDate.setDate(extendedStartDate.getDate() - 7);
-        const extendedStartDateStr = extendedStartDate.toISOString().split('T')[0];
-
-        const viewCountsQuery = `
-          SELECT
-            video_id,
-            DATE(snapshot_date) as date_day,
-            statistics_view_count,
-            snippet_published_at
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-          WHERE video_id IN UNNEST(@video_ids)
-            AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
-            AND statistics_view_count IS NOT NULL
-          ORDER BY video_id, snapshot_date ASC
-        `;
-
-        const [viewCountsRows] = await bigquery.query({
-          query: viewCountsQuery,
-          params: {
-            video_ids: videoIds,
-            extended_start_date: extendedStartDateStr,
-            end_date: endDateStr
-          }
-        });
-
-        // Calculate daily increases for this writer (same logic as line chart)
-        const dailyTotals = new Map();
-        const videoGroups = new Map();
-
-        // Group by video_id
-        viewCountsRows.forEach(row => {
-          const videoId = row.video_id;
-          if (!videoGroups.has(videoId)) {
-            videoGroups.set(videoId, []);
-          }
-          videoGroups.get(videoId).push({
-            date: row.date_day.value instanceof Date ?
-              row.date_day.value.toISOString().split('T')[0] :
-              row.date_day.value,
-            views: parseInt(row.statistics_view_count || 0),
-            publishedAt: row.snippet_published_at ? row.snippet_published_at.value : null
-          });
-        });
-
-        // Calculate daily increases for each video
-        videoGroups.forEach((dates, videoId) => {
-          dates.sort((a, b) => new Date(a.date) - new Date(b.date));
-          let previousViews = null;
-
-          for (let i = 0; i < dates.length; i++) {
-            const currentDate = dates[i].date;
-            const currentViews = dates[i].views;
-            const publishedAt = dates[i].publishedAt;
-
-            // Only include dates within our target range for output
-            if (currentDate < startDateStr || currentDate > endDateStr) {
-              previousViews = currentViews;
-              continue;
-            }
-
-            let dailyIncrease;
-
-            if (previousViews === null) {
-              // Check if this is a legitimate first day
-              let useFirstDay = false;
-              if (publishedAt) {
-                const publishedDate = new Date(publishedAt).toISOString().split('T')[0];
-                const daysDiff = Math.abs(new Date(currentDate) - new Date(publishedDate)) / (1000 * 60 * 60 * 24);
-                useFirstDay = daysDiff <= 2;
-              }
-
-              if (useFirstDay) {
-                dailyIncrease = currentViews;
-              } else {
-                previousViews = currentViews;
-                continue;
-              }
-            } else {
-              dailyIncrease = Math.max(0, currentViews - previousViews);
-            }
-
-            if (!dailyTotals.has(currentDate)) {
-              dailyTotals.set(currentDate, 0);
-            }
-            dailyTotals.set(currentDate, dailyTotals.get(currentDate) + dailyIncrease);
-            previousViews = currentViews;
-          }
-        });
-
-        // Sum up total views for this writer
-        const totalViews = Array.from(dailyTotals.values()).reduce((sum, views) => sum + views, 0);
-        const daysActive = dailyTotals.size;
-        const avgDailyViews = daysActive > 0 ? Math.round(totalViews / daysActive) : 0;
-
-        if (totalViews > 0) {
-          leaderboardData.push({
-            writer_name: writer.name,
-            total_views: totalViews,
-            days_active: daysActive,
-            avg_daily_views: avgDailyViews,
-            first_active_date: daysActive > 0 ? Math.min(...Array.from(dailyTotals.keys())) : null,
-            last_active_date: daysActive > 0 ? Math.max(...Array.from(dailyTotals.keys())) : null,
-            progress_to_1b_percent: (totalViews / 1000000000.0) * 100,
-            views_per_million: (totalViews / 1000000).toFixed(1),
-            is_active: daysActive > 0
-          });
-        }
-
-        console.log(`🏆 ${writer.name}: ${totalViews.toLocaleString()} total views from ${daysActive} active days`);
-
-      } catch (writerError) {
-        console.error(`❌ Error processing writer ${writer.name}:`, writerError.message);
-        continue;
+    const [leaderboardRows] = await bigquery.query({
+      query: cacheQuery,
+      params: {
+        period: cachePeriod,
+        limit: parseInt(limit)
       }
+    });
+
+    if (leaderboardRows.length === 0) {
+      console.log(`⚠️ No cached data found for period ${cachePeriod}, trying to get latest available data`);
+
+      // Fallback: get latest data regardless of date
+      const fallbackQuery = `
+        SELECT
+          writer_id,
+          writer_name,
+          total_views,
+          total_videos,
+          avg_daily_increase,
+          rank_position as rank,
+          calculation_date,
+          period
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.writer_weekly_leaderboard\`
+        WHERE period = @period
+        ORDER BY calculation_date DESC, rank_position
+        LIMIT @limit
+      `;
+
+      const [fallbackRows] = await bigquery.query({
+        query: fallbackQuery,
+        params: {
+          period: cachePeriod,
+          limit: parseInt(limit)
+        }
+      });
+
+      if (fallbackRows.length === 0) {
+        return res.json({
+          success: true,
+          data: [],
+          metadata: {
+            period: period,
+            cache_period: cachePeriod,
+            total_writers: 0,
+            calculation_method: 'cached_daily_increases',
+            cache_date: null,
+            last_updated: null,
+            message: 'No leaderboard data available'
+          }
+        });
+      }
+
+      leaderboardRows.push(...fallbackRows);
     }
 
-    // Sort by total views and add ranking
-    leaderboardData.sort((a, b) => b.total_views - a.total_views);
-    const rankedData = leaderboardData.slice(0, parseInt(limit)).map((writer, index) => ({
-      ...writer,
-      rank: index + 1
+    const leaderboardData = leaderboardRows.map(row => ({
+      rank: parseInt(row.rank),
+      writer_name: row.writer_name,
+      writer_id: row.writer_id,
+      total_views: parseInt(row.total_views),
+      total_videos: parseInt(row.total_videos),
+      avg_daily_views: parseInt(row.avg_daily_increase),
+      days_active: cachePeriod === '7d' ? 7 : cachePeriod === '14d' ? 14 : 30,
+      first_active_date: null, // Not stored in cache
+      last_active_date: null, // Not stored in cache
+      progress_to_1b_percent: (parseInt(row.total_views) / 1000000000.0) * 100,
+      views_per_million: (parseInt(row.total_views) / 1000000).toFixed(1),
+      is_active: true // All cached entries are considered active
     }));
 
-    console.log(`✅ Leaderboard calculated: ${rankedData.length} writers with view data`);
+    console.log(`✅ Fast leaderboard retrieved: ${leaderboardData.length} writers`);
 
     res.json({
       success: true,
-      data: rankedData,
+      data: leaderboardData,
       metadata: {
         period: period,
-        days_back: daysBack,
-        total_writers: rankedData.length,
-        calculation_method: 'daily_view_increases',
-        last_updated: new Date().toISOString()
+        cache_period: cachePeriod,
+        total_writers: leaderboardData.length,
+        calculation_method: 'cached_daily_increases',
+        cache_date: leaderboardRows[0]?.calculation_date?.value || null,
+        last_updated: leaderboardRows[0]?.calculation_date?.value || null
       }
     });
 
   } catch (error) {
-    console.error('❌ Error getting writer leaderboard:', error);
+    console.error('❌ Error getting cached leaderboard:', error);
     res.status(500).json({
       error: 'Failed to get writer leaderboard',
       details: error.message
