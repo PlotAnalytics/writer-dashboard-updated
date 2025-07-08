@@ -24,7 +24,7 @@ const RealtimeWidget = () => {
           'Content-Type': 'application/json'
         },
         params: {
-          hours: 72
+          hours: 24
         }
       });
 

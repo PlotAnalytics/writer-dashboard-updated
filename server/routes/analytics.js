@@ -977,33 +977,14 @@ async function getBigQueryAnalyticsOverview(
     const requestStartDate = new Date(finalStartDate);
     const requestEndDate = new Date(finalEndDate);
 
-    let useBigQuery = false;
-    let useInfluxDB = false;
+    // NEW STRATEGY: Always use BigQuery for line chart data (all available historical data)
+    // InfluxDB is only used for real-time bar chart (last 24 hours)
+    let useBigQuery = true;
+    let useInfluxDB = false; // No longer used for line chart
     let finalBigQueryEndDate = finalEndDate;
     let finalInfluxStartDate = cutoffDateStr;
 
-    const bigQueryCutoffDate = new Date(cutoffDateStr);
-    const influxCutoffDate = new Date(cutoffDateStr);
-
-    if (requestEndDate <= bigQueryCutoffDate) {
-      // Entire range is in BigQuery territory
-      useBigQuery = true;
-      useInfluxDB = false;
-      finalBigQueryEndDate = finalEndDate;
-      console.log(`📊 Data source strategy: BigQuery ONLY (range ends ${finalEndDate}, BigQuery covers until ${cutoffDateStr})`);
-    } else if (requestStartDate >= influxCutoffDate) {
-      // Entire range is in InfluxDB territory
-      useBigQuery = false;
-      useInfluxDB = true;
-      console.log(`📊 Data source strategy: InfluxDB ONLY (range starts ${finalStartDate}, InfluxDB covers from ${cutoffDateStr})`);
-    } else {
-      // Range spans both territories
-      useBigQuery = true;
-      useInfluxDB = true;
-      finalBigQueryEndDate = cutoffDateStr;
-      finalInfluxStartDate = cutoffDateStr;
-      console.log(`📊 Data source strategy: BOTH (BigQuery until ${cutoffDateStr}, InfluxDB from ${cutoffDateStr})`);
-    }
+    console.log(`📊 NEW Data source strategy: BigQuery ONLY for line chart (all historical data from ${finalStartDate} to ${finalEndDate})`);
 
     console.log(`🔍 Date range analysis: {
       finalStartDate: '${finalStartDate}',
@@ -1240,9 +1221,10 @@ async function getBigQueryAnalyticsOverview(
     console.log('🎯 NEW APPROACH: DAILY VIEW INCREASES PROCESSING COMPLETED SUCCESSFULLY!');
     console.log('🚀 REACHED INFLUXDB SECTION - About to start InfluxDB integration...');
 
-    // ———————————————— 6) Get InfluxDB data (real-time data) ————————————————
+    // ———————————————— 6) COMMENTED OUT: InfluxDB data (now only used for real-time bar chart) ————————————————
     const influxData = [];
-    if (useInfluxDB) {
+    // COMMENTED OUT: InfluxDB data fetching for line chart
+    if (false && useInfluxDB) {
       try {
         console.log('📊 Fetching InfluxDB data for real-time data...');
         console.log('📊 About to initialize InfluxDB service...');
@@ -1308,14 +1290,14 @@ async function getBigQueryAnalyticsOverview(
       source: 'BigQuery'
     }));
 
-    // Add InfluxDB real-time data (dotted lines)
-    influxData.forEach(item => {
-      dailyTotalsData.push({
-        time: item.date,
-        views: item.views,
-        source: 'InfluxDB'
-      });
-    });
+    // COMMENTED OUT: InfluxDB real-time data (dotted lines) - now only used for real-time bar chart
+    // influxData.forEach(item => {
+    //   dailyTotalsData.push({
+    //     time: item.date,
+    //     views: item.views,
+    //     source: 'InfluxDB'
+    //   });
+    // });
 
     // Sort by date
     dailyTotalsData.sort((a, b) => new Date(a.time) - new Date(b.time));
@@ -4417,7 +4399,7 @@ async function getDailyInfluxData(writerId, days = 30) {
   }
 }
 
-// Realtime analytics endpoint - Last 24 hours hourly data
+// Realtime analytics endpoint - Last 24 hours hourly data (InfluxDB only)
 router.get('/realtime', authenticateToken, async (req, res) => {
   try {
     const { hours = 24 } = req.query;
@@ -5048,6 +5030,136 @@ router.get('/retention-master', async (req, res) => {
       success: false,
       error: 'Failed to fetch retention data',
       details: error.message
+    });
+  }
+});
+
+// Test endpoint to check BigQuery date range
+router.get('/test-bigquery-date-range', async (req, res) => {
+  try {
+    console.log('🔍 Checking BigQuery youtube_metadata_historical date range...');
+
+    const query = `
+      SELECT
+        MIN(DATE(snapshot_date)) as earliest_date,
+        MAX(DATE(snapshot_date)) as latest_date,
+        COUNT(DISTINCT DATE(snapshot_date)) as total_days,
+        COUNT(*) as total_records,
+        COUNT(DISTINCT video_id) as unique_videos
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+      WHERE snapshot_date IS NOT NULL
+    `;
+
+    const [rows] = await bigquery.query({ query });
+
+    if (rows.length > 0) {
+      const result = rows[0];
+      console.log('📊 BigQuery youtube_metadata_historical date range results:', result);
+
+      res.json({
+        success: true,
+        table: 'youtube_metadata_historical',
+        data: {
+          earliest_date: result.earliest_date ? result.earliest_date.value : null,
+          latest_date: result.latest_date ? result.latest_date.value : null,
+          total_days: parseInt(result.total_days),
+          total_records: parseInt(result.total_records),
+          unique_videos: parseInt(result.unique_videos)
+        }
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No data found in BigQuery youtube_metadata_historical table'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error checking BigQuery youtube_metadata_historical date range:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint to check BigQuery table schema
+router.get('/test-bigquery-schema', async (req, res) => {
+  try {
+    console.log('🔍 Checking BigQuery youtube_metadata_historical schema...');
+
+    const query = `
+      SELECT
+        column_name,
+        data_type,
+        is_nullable
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.INFORMATION_SCHEMA.COLUMNS\`
+      WHERE table_name = 'youtube_metadata_historical'
+      ORDER BY ordinal_position
+    `;
+
+    const [rows] = await bigquery.query({ query });
+
+    if (rows.length > 0) {
+      console.log('📊 BigQuery youtube_metadata_historical schema:', rows);
+
+      res.json({
+        success: true,
+        table: 'youtube_metadata_historical',
+        schema: rows.map(row => ({
+          column_name: row.column_name,
+          data_type: row.data_type,
+          is_nullable: row.is_nullable
+        }))
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No schema found for youtube_metadata_historical table'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error checking BigQuery schema:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// Test endpoint to get sample data from youtube_metadata_historical
+router.get('/test-bigquery-sample', async (req, res) => {
+  try {
+    console.log('🔍 Getting sample data from youtube_metadata_historical...');
+
+    const query = `
+      SELECT *
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+      ORDER BY snapshot_date DESC
+      LIMIT 5
+    `;
+
+    const [rows] = await bigquery.query({ query });
+
+    if (rows.length > 0) {
+      console.log('📊 Sample data from youtube_metadata_historical:', rows);
+
+      res.json({
+        success: true,
+        table: 'youtube_metadata_historical',
+        sample_count: rows.length,
+        sample_data: rows
+      });
+    } else {
+      res.json({
+        success: false,
+        message: 'No data found in youtube_metadata_historical table'
+      });
+    }
+  } catch (error) {
+    console.error('❌ Error getting sample data:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
     });
   }
 });

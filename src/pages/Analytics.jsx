@@ -1796,43 +1796,8 @@ const Analytics = () => {
                         }];
                       }
 
-                      // Multiple dates - separate BigQuery and InfluxDB data
-                      const bigQueryData = [];
-                      const influxData = [];
-
-                      // Find the split point between BigQuery and InfluxDB data
-                      let splitIndex = -1;
-                      for (let i = 0; i < data.length; i++) {
-                        const isInfluxDB = data[i].source === 'InfluxDB_Hourly_Aggregation' || data[i].source?.includes('InfluxDB');
-                        if (isInfluxDB) {
-                          splitIndex = i;
-                          break;
-                        }
-                      }
-
-                      data.forEach((item, index) => {
-                        const isBigQuery = item.source === 'BigQuery_Daily_Totals' || item.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !item.source?.includes('InfluxDB');
-                        const isInfluxDB = item.source === 'InfluxDB_Hourly_Aggregation' || item.source?.includes('InfluxDB');
-
-                        if (isBigQuery) {
-                          // BigQuery data (solid line)
-                          bigQueryData.push(item.views);
-                          // For InfluxDB array: put null except for the last BigQuery point to connect
-                          if (splitIndex !== -1 && index === splitIndex - 1) {
-                            influxData.push(item.views); // Connect the lines at transition point
-                          } else {
-                            influxData.push(null);
-                          }
-                        } else if (isInfluxDB) {
-                          // InfluxDB data (dotted line)
-                          influxData.push(item.views);
-                          bigQueryData.push(null); // null to break the solid line
-                        } else {
-                          // Default to BigQuery if source is unclear
-                          bigQueryData.push(item.views);
-                          influxData.push(null);
-                        }
-                      });
+                      // Multiple dates - use only BigQuery data for line chart
+                      const bigQueryData = data.map(item => item.views);
 
                       const series = [];
 
@@ -1872,28 +1837,28 @@ const Analytics = () => {
                         });
                       }
 
-                      // Add InfluxDB series (dotted line) if there's data
-                      if (influxData.some(val => val !== null)) {
-                        series.push({
-                          name: 'Rough Estimate',
-                          data: influxData,
-                          type: 'line',
-                          smooth: true,
-                          lineStyle: {
-                            color: '#FF9800',
-                            width: 3,
-                            type: 'dashed' // Dotted line for InfluxDB data
-                          },
-                          symbol: 'circle',
-                          symbolSize: 8, // Slightly larger for InfluxDB data
-                          itemStyle: {
-                            color: '#FF9800', // Orange for InfluxDB data
-                            borderColor: '#fff',
-                            borderWidth: 1
-                          },
-                          connectNulls: true
-                        });
-                      }
+                      // COMMENTED OUT: InfluxDB series (dotted line) - now only used for real-time bar chart
+                      // if (influxData.some(val => val !== null)) {
+                      //   series.push({
+                      //     name: 'Rough Estimate',
+                      //     data: influxData,
+                      //     type: 'line',
+                      //     smooth: true,
+                      //     lineStyle: {
+                      //       color: '#FF9800',
+                      //       width: 3,
+                      //       type: 'dashed' // Dotted line for InfluxDB data
+                      //     },
+                      //     symbol: 'circle',
+                      //     symbolSize: 8, // Slightly larger for InfluxDB data
+                      //     itemStyle: {
+                      //       color: '#FF9800', // Orange for InfluxDB data
+                      //       borderColor: '#fff',
+                      //       borderWidth: 1
+                      //     },
+                      //     connectNulls: true
+                      //   });
+                      // }
 
                       return series;
                     })()
