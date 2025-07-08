@@ -200,7 +200,7 @@ app.post('/api/feedback', async (req, res) => {
     }
 
     // Send to Slack webhook - hardcoded for reliability
-    const slackWebhookUrl = 'https://hooks.slack.com/services/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';
+    const slackWebhookUrl = 'https://hooks.slack.com/services/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';
 
     const response = await fetch(slackWebhookUrl, {
       method: 'POST',
