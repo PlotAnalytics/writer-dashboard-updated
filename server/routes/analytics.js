@@ -4930,7 +4930,7 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       days_active: cachePeriod === '7d' ? 7 : cachePeriod === '14d' ? 14 : 30,
       first_active_date: null, // Not stored in cache
       last_active_date: null, // Not stored in cache
-      progress_to_1b_percent: (parseInt(row.total_views) / 1000000000.0) * 100,
+      progress_to_1b_percent: parseFloat(((parseInt(row.total_views) / 1000000000.0) * 100).toFixed(2)),
       views_per_million: (parseInt(row.total_views) / 1000000).toFixed(1),
       is_active: true // All cached entries are considered active
     }));

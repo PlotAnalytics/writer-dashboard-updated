@@ -26,7 +26,7 @@ import { analyticsApi } from '../utils/simpleApi.js';
 const WriterLeaderboard = ({ currentWriterName }) => {
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [period, setPeriod] = useState('30d');
+  const [period, setPeriod] = useState('7d');
   const [error, setError] = useState(null);
 
   const fetchLeaderboard = async (selectedPeriod = period) => {
@@ -162,9 +162,8 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                   }}
                 >
                   <MenuItem value="7d" sx={{ fontSize: '12px' }}>7d</MenuItem>
+                  <MenuItem value="14d" sx={{ fontSize: '12px' }}>14d</MenuItem>
                   <MenuItem value="30d" sx={{ fontSize: '12px' }}>30d</MenuItem>
-                  <MenuItem value="90d" sx={{ fontSize: '12px' }}>90d</MenuItem>
-                  <MenuItem value="1y" sx={{ fontSize: '12px' }}>1y</MenuItem>
                 </Select>
               </FormControl>
 
