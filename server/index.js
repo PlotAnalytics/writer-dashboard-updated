@@ -199,13 +199,8 @@ app.post('/api/feedback', async (req, res) => {
       });
     }
 
-    // Send to Slack webhook
-    const slackWebhookUrl = process.env.SLACK_WEBHOOK_URL;
-
-    if (!slackWebhookUrl) {
-      console.error('SLACK_WEBHOOK_URL not configured');
-      return res.status(500).json({ error: 'Slack integration not configured' });
-    }
+    // Send to Slack webhook - hardcoded for reliability
+    const slackWebhookUrl = 'https://hooks.slack.com/services/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';
 
     const response = await fetch(slackWebhookUrl, {
       method: 'POST',
