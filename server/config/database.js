@@ -23,8 +23,10 @@ const pool = new Pool({
 pool.on('connect', (client) => {
   console.log('✅ New PostgreSQL client connected');
 
-  // Set client encoding and timezone
-  client.query('SET application_name = $1', ['writer-dashboard']);
+  // Set client application name (without parameterized query to avoid syntax issues)
+  client.query("SET application_name = 'writer-dashboard'").catch(err => {
+    console.warn('⚠️ Could not set application name:', err.message);
+  });
 });
 
 pool.on('acquire', () => {
