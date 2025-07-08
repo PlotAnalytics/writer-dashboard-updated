@@ -1737,7 +1737,6 @@ const Analytics = () => {
                           <div style="min-width: 250px; max-width: 350px;">
                             <div style="font-size: 12px; color: #ccc; margin-bottom: 4px;">${dayjs(date).format('MMM D, YYYY')}</div>
                             <div style="font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 6px;">${views} total views</div>
-                            <div style="font-size: 12px; color: #888;">${uniqueVideos} videos posted</div>
                             ${statusIndicator}
                           </div>
                         `;
