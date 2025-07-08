@@ -1360,19 +1360,19 @@ async function getBigQueryAnalyticsOverview(
         lowestDay: dailyTotalsData.length > 0 ? Math.min(...dailyTotalsData.map(d => d.views)) : 0
       },
       metadata: {
-        source: 'BigQuery youtube_video_report_historical (solid lines) + InfluxDB last 3 days (dotted lines)',
-        dataSource: 'BigQuery: all historical data + InfluxDB: last 3 days real-time',
+        source: 'BigQuery youtube_video_report_historical (confirmed YouTube Analytics data)',
+        dataSource: 'BigQuery: all historical data from YouTube Analytics',
         lastUpdated: new Date().toISOString(),
         range: range,
         bigQueryIntegrated: true,
-        influxDBIntegrated: true,
+        influxDBIntegrated: false,
         tableUsed: 'youtube_video_report_historical',
-        influxDBDays: 3
+        influxDBDays: 0
       },
       // Keep raw data for debugging
       rawViews: rawViewsRows,
       dailyTotals: dailyTotalsRows,
-      influxData: influxData
+      influxData: [] // Always empty since InfluxDB is disabled
     };
   }
   catch (err) {
