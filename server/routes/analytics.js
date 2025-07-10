@@ -232,27 +232,112 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     const writerName = writerRows[0].name;
     console.log(`📊 NEW APPROACH: Found writer name: ${writerName}`);
 
-    // Step 1: Get distinct video_ids for this writer from youtube_video_report_historical
-    const videoIdsQuery = `
-      SELECT DISTINCT video_id
-      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-      WHERE writer_name = @writer_name
-        AND date_day BETWEEN @start_date AND @end_date
-        AND writer_name IS NOT NULL
-        AND video_id IS NOT NULL
-    `;
+    // Step 1: Get distinct video_ids for this writer
+    // Use youtube_video_report_historical up to July 3rd, then youtube_metadata_historical for newer dates
+    const cutoffDate = '2025-07-03';
+    const startDateObj = new Date(startDate);
+    const endDateObj = new Date(endDate);
+    const cutoffDateObj = new Date(cutoffDate);
 
-    console.log(`📊 Getting distinct video IDs for writer: ${writerName}`);
-    const [videoIdsRows] = await bigqueryClient.query({
-      query: videoIdsQuery,
-      params: {
-        writer_name: writerName,
-        start_date: startDate,
-        end_date: endDate
-      }
-    });
+    let videoIds = [];
 
-    const videoIds = videoIdsRows.map(row => row.video_id);
+    // If date range is entirely before or on cutoff date, use youtube_video_report_historical
+    if (endDateObj <= cutoffDateObj) {
+      console.log(`📊 Using youtube_video_report_historical for entire date range (before ${cutoffDate})`);
+      const videoIdsQuery = `
+        SELECT DISTINCT video_id
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+        WHERE writer_name = @writer_name
+          AND date_day BETWEEN @start_date AND @end_date
+          AND writer_name IS NOT NULL
+          AND video_id IS NOT NULL
+      `;
+
+      const [videoIdsRows] = await bigqueryClient.query({
+        query: videoIdsQuery,
+        params: {
+          writer_name: writerName,
+          start_date: startDate,
+          end_date: endDate
+        }
+      });
+
+      videoIds = videoIdsRows.map(row => row.video_id);
+    }
+    // If date range is entirely after cutoff date, use youtube_metadata_historical
+    else if (startDateObj > cutoffDateObj) {
+      console.log(`📊 Using youtube_metadata_historical for entire date range (after ${cutoffDate})`);
+      const videoIdsQuery = `
+        SELECT DISTINCT video_id
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_id = @writer_id
+          AND DATE(snapshot_date) BETWEEN @start_date AND @end_date
+          AND writer_id IS NOT NULL
+          AND video_id IS NOT NULL
+      `;
+
+      const [videoIdsRows] = await bigqueryClient.query({
+        query: videoIdsQuery,
+        params: {
+          writer_id: parseInt(writerId),
+          start_date: startDate,
+          end_date: endDate
+        }
+      });
+
+      videoIds = videoIdsRows.map(row => row.video_id);
+    }
+    // If date range spans across cutoff date, combine both sources
+    else {
+      console.log(`📊 Using both data sources: youtube_video_report_historical up to ${cutoffDate}, youtube_metadata_historical after`);
+
+      // Get video IDs from youtube_video_report_historical (up to cutoff date)
+      const historicalVideoIdsQuery = `
+        SELECT DISTINCT video_id
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+        WHERE writer_name = @writer_name
+          AND date_day BETWEEN @start_date AND @cutoff_date
+          AND writer_name IS NOT NULL
+          AND video_id IS NOT NULL
+      `;
+
+      const [historicalVideoIdsRows] = await bigqueryClient.query({
+        query: historicalVideoIdsQuery,
+        params: {
+          writer_name: writerName,
+          start_date: startDate,
+          cutoff_date: cutoffDate
+        }
+      });
+
+      // Get video IDs from youtube_metadata_historical (after cutoff date)
+      const recentVideoIdsQuery = `
+        SELECT DISTINCT video_id
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_id = @writer_id
+          AND DATE(snapshot_date) > @cutoff_date
+          AND DATE(snapshot_date) <= @end_date
+          AND writer_id IS NOT NULL
+          AND video_id IS NOT NULL
+      `;
+
+      const [recentVideoIdsRows] = await bigqueryClient.query({
+        query: recentVideoIdsQuery,
+        params: {
+          writer_id: parseInt(writerId),
+          cutoff_date: cutoffDate,
+          end_date: endDate
+        }
+      });
+
+      // Combine and deduplicate video IDs
+      const historicalVideoIds = historicalVideoIdsRows.map(row => row.video_id);
+      const recentVideoIds = recentVideoIdsRows.map(row => row.video_id);
+      videoIds = [...new Set([...historicalVideoIds, ...recentVideoIds])];
+
+      console.log(`📊 Found ${historicalVideoIds.length} videos from historical data, ${recentVideoIds.length} from recent data`);
+    }
+
     console.log(`📊 Found ${videoIds.length} distinct videos for writer ${writerName}`);
 
     if (videoIds.length === 0) {
@@ -4401,6 +4486,214 @@ router.get('/test-new-bigquery', async (req, res) => {
       success: false,
       error: error.message,
       message: 'New BigQuery function test failed'
+    });
+  }
+});
+
+// Test endpoint specifically for July 8th data investigation
+router.get('/test-july-8th', async (req, res) => {
+  try {
+    const { writer_id = '130' } = req.query;
+
+    console.log(`🔍 Investigating July 8th data for writer ${writer_id}`);
+
+    // Use the new BigQuery function for July 8th specifically
+    const result = await getBigQueryViews(writer_id, '2025-07-08', '2025-07-08');
+
+    // Get raw totals from youtube_metadata_historical for comparison
+    const bigqueryClient = getBigQueryClient();
+    if (!bigqueryClient) {
+      throw new Error('BigQuery client not initialized');
+    }
+
+    // Get writer name from PostgreSQL
+    const writerQuery = `SELECT name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [writer_id]);
+    const writerName = writerRows[0].name;
+
+    // Get raw totals for July 7th and 8th
+    const rawTotalsQuery = `
+      SELECT
+        DATE(snapshot_date) as date_day,
+        SUM(CAST(statistics_view_count AS INT64)) as total_views,
+        COUNT(DISTINCT video_id) as video_count
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+      WHERE writer_id = @writer_id
+        AND DATE(snapshot_date) IN ('2025-07-07', '2025-07-08')
+      GROUP BY date_day
+      ORDER BY date_day
+    `;
+
+    const [rawTotalsRows] = await bigqueryClient.query({
+      query: rawTotalsQuery,
+      params: {
+        writer_id: parseInt(writer_id)
+      }
+    });
+
+    // Get the calculation method used in the daily increases function
+    const calculationDetails = {
+      method: "The system calculates daily increases by comparing each video's view count from one day to the next",
+      example: "If a video had 1000 views on July 7 and 1200 views on July 8, it counts as +200 views increase",
+      note: "This is different from comparing the sum of all views across days, which can be affected by videos being added or removed"
+    };
+
+    res.json({
+      success: true,
+      writer_id: parseInt(writer_id),
+      writer_name: writerName,
+      date: '2025-07-08',
+      calculated_daily_increases: result,
+      calculated_total_increase: result.reduce((sum, day) => sum + day.views, 0),
+      raw_daily_totals: rawTotalsRows.map(row => ({
+        date: row.date_day,
+        total_views: parseInt(row.total_views),
+        video_count: parseInt(row.video_count)
+      })),
+      calculation_explanation: calculationDetails
+    });
+
+  } catch (error) {
+    console.error('❌ July 8th test error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
+// Comprehensive diagnostic endpoint for writer 130 July 8th issue
+router.get('/debug-writer-130-july-8', async (req, res) => {
+  try {
+    console.log('🔍 COMPREHENSIVE DEBUG: Writer 130 July 8th investigation');
+
+    const writerId = 130;
+    const targetDate = '2025-07-08';
+
+    // Get writer name from PostgreSQL
+    const writerQuery = `SELECT name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [writerId]);
+    const writerName = writerRows[0]?.name;
+
+    console.log(`📝 Writer name from PostgreSQL: "${writerName}"`);
+
+    const results = {
+      writer_id: writerId,
+      writer_name: writerName,
+      target_date: targetDate,
+      data_sources: {}
+    };
+
+    // Check youtube_video_report_historical
+    try {
+      const reportQuery = `
+        SELECT
+          date_day,
+          video_id,
+          video_title,
+          views,
+          account_name,
+          writer_name
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+        WHERE writer_name = @writer_name
+          AND date_day = @target_date
+        ORDER BY views DESC
+        LIMIT 10
+      `;
+
+      const [reportRows] = await global.bigqueryClient.query({
+        query: reportQuery,
+        params: { writer_name: writerName, target_date: targetDate }
+      });
+
+      results.data_sources.youtube_video_report_historical = {
+        found_records: reportRows.length,
+        total_views: reportRows.reduce((sum, row) => sum + parseInt(row.views || 0), 0),
+        sample_data: reportRows.slice(0, 3).map(row => ({
+          video_id: row.video_id,
+          video_title: row.video_title,
+          views: row.views,
+          writer_name: row.writer_name
+        }))
+      };
+    } catch (error) {
+      results.data_sources.youtube_video_report_historical = { error: error.message };
+    }
+
+    // Check historical_video_metadata_past
+    try {
+      const historicalQuery = `
+        SELECT
+          Date as date_day,
+          SUM(CAST(Views AS INT64)) as total_views,
+          COUNT(*) as video_count
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.historical_video_metadata_past\`
+        WHERE writer_id = @writer_id
+          AND Date = @target_date
+        GROUP BY Date
+      `;
+
+      const [historicalRows] = await global.bigqueryClient.query({
+        query: historicalQuery,
+        params: { writer_id: 130.0, target_date: targetDate }  // Note: FLOAT type
+      });
+
+      results.data_sources.historical_video_metadata_past = {
+        found_records: historicalRows.length,
+        data: historicalRows.length > 0 ? {
+          total_views: historicalRows[0].total_views,
+          video_count: historicalRows[0].video_count
+        } : null
+      };
+    } catch (error) {
+      results.data_sources.historical_video_metadata_past = { error: error.message };
+    }
+
+    // Check PostgreSQL statistics_youtube_api
+    try {
+      const postgresQuery = `
+        SELECT
+          v.id,
+          v.script_title as title,
+          v.url,
+          v.writer_id,
+          COALESCE(s.views_total, 0) as views,
+          s.posted_date
+        FROM video v
+        LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+        WHERE v.writer_id = $1
+          AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+          AND v.url IS NOT NULL
+          AND s.posted_date::date = $2
+        ORDER BY s.views_total DESC NULLS LAST
+        LIMIT 10
+      `;
+
+      const { rows: postgresRows } = await pool.query(postgresQuery, [writerId, targetDate]);
+
+      results.data_sources.postgresql_statistics = {
+        found_records: postgresRows.length,
+        total_views: postgresRows.reduce((sum, row) => sum + parseInt(row.views || 0), 0),
+        sample_data: postgresRows.slice(0, 3).map(row => ({
+          video_id: row.id,
+          title: row.title,
+          views: row.views,
+          posted_date: row.posted_date
+        }))
+      };
+    } catch (error) {
+      results.data_sources.postgresql_statistics = { error: error.message };
+    }
+
+    res.json(results);
+
+  } catch (error) {
+    console.error('❌ Debug endpoint error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      stack: error.stack
     });
   }
 });
