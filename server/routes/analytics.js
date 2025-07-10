@@ -1160,23 +1160,58 @@ async function getBigQueryAnalyticsOverview(
           console.log(`⚠️ No historical data found for writer_id ${parseFloat(writerId)} in historical_video_metadata_past table`);
         }
 
-        // Step 2: Get distinct video_ids for this writer (for current metadata)
-        const videoIdsQuery = `
-          SELECT DISTINCT video_id
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-          WHERE writer_name = @writer_name
-        `;
+        // Step 2: Get distinct video_ids for this writer from both tables
+        // Use youtube_video_report_historical for dates up to July 3rd
+        // Use youtube_metadata_historical for July 4th onwards (more up-to-date)
+        console.log('🔍 Step 2: Getting distinct video_ids from both tables for writer:', writerName);
 
-        console.log('🔍 Step 2: Getting distinct video_ids for current metadata for writer:', writerName);
-        const [videoIdsResult] = await bigquery.query({
-          query: videoIdsQuery,
-          params: {
-            writer_name: writerName
-          }
-        });
+        const cutoffDate = '2025-07-03';
+        let allVideoIds = new Set();
 
-        const videoIds = videoIdsResult.map(row => row.video_id);
-        console.log(`📊 Found ${videoIds.length} distinct video_ids for writer ${writerName}`);
+        // Get video IDs from youtube_video_report_historical (up to July 3rd)
+        if (finalStartDate <= cutoffDate) {
+          const videoIdsQuery1 = `
+            SELECT DISTINCT video_id
+            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+            WHERE writer_name = @writer_name
+              AND date_day <= @cutoff_date
+          `;
+
+          const [videoIdsResult1] = await bigquery.query({
+            query: videoIdsQuery1,
+            params: {
+              writer_name: writerName,
+              cutoff_date: cutoffDate
+            }
+          });
+
+          console.log(`📊 Found ${videoIdsResult1.length} video IDs from youtube_video_report_historical (up to ${cutoffDate})`);
+          videoIdsResult1.forEach(row => allVideoIds.add(row.video_id));
+        }
+
+        // Get video IDs from youtube_metadata_historical (July 4th onwards)
+        if (finalEndDate > cutoffDate) {
+          const videoIdsQuery2 = `
+            SELECT DISTINCT video_id
+            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+            WHERE writer_name = @writer_name
+              AND snapshot_date > @cutoff_date
+          `;
+
+          const [videoIdsResult2] = await bigquery.query({
+            query: videoIdsQuery2,
+            params: {
+              writer_name: writerName,
+              cutoff_date: cutoffDate
+            }
+          });
+
+          console.log(`📊 Found ${videoIdsResult2.length} video IDs from youtube_metadata_historical (after ${cutoffDate})`);
+          videoIdsResult2.forEach(row => allVideoIds.add(row.video_id));
+        }
+
+        const videoIds = Array.from(allVideoIds);
+        console.log(`📊 Total unique video IDs for writer: ${videoIds.length}`);
 
         // Step 3: Process historical data (sum views by date, no daily increase calculation)
         const historicalDailyTotals = new Map();
@@ -1362,27 +1397,27 @@ async function getBigQueryAnalyticsOverview(
         }
 
       } catch (bigQueryError) {
-        console.error('❌ NEW APPROACH BigQuery error:', bigQueryError);
+        console.error('❌ FIXED APPROACH BigQuery error:', bigQueryError);
         // Fallback to empty array if new approach fails
         dailyTotalsRows = [];
       }
     }
 
-    console.log('✅ NEW APPROACH: Daily view increases calculation completed successfully');
-    console.log(`📋 Daily View Increases (${dailyTotalsRows.length} days):`);
+    console.log('✅ FIXED APPROACH: Total views per day calculation completed successfully');
+    console.log(`📋 Total Views Per Day (${dailyTotalsRows.length} days):`);
     console.table(dailyTotalsRows);
 
-    // ——— Summary stats from DAILY VIEW INCREASES ———
+    // ——— Summary stats from TOTAL VIEWS PER DAY ———
     const totalViews   = dailyTotalsRows.reduce((sum, r) => sum + parseInt(r.total_views, 10), 0);
     const uniqueVideos = dailyTotalsRows.reduce((sum, r) => sum + parseInt(r.unique_videos, 10), 0);
     const uniqueDates  = dailyTotalsRows.length;
-    console.log('📊 Summary from NEW APPROACH (Daily View Increases):');
-    console.log(`   Daily Increase Rows: ${dailyTotalsRows.length}`);
-    console.log(`   Total View Increases: ${totalViews.toLocaleString()}`);
+    console.log('📊 Summary from FIXED APPROACH (Total Views Per Day):');
+    console.log(`   Daily Total Rows: ${dailyTotalsRows.length}`);
+    console.log(`   Total Views: ${totalViews.toLocaleString()}`);
     console.log(`   Unique Videos:        ${uniqueVideos}`);
     console.log(`   Unique Dates:         ${uniqueDates}`);
 
-    console.log('🎯 NEW APPROACH: DAILY VIEW INCREASES PROCESSING COMPLETED SUCCESSFULLY!');
+    console.log('🎯 FIXED APPROACH: TOTAL VIEWS PER DAY PROCESSING COMPLETED SUCCESSFULLY!');
     console.log('🚀 REACHED INFLUXDB SECTION - About to start InfluxDB integration...');
 
     // ———————————————— 6) COMMENTED OUT: InfluxDB data (now only used for real-time bar chart) ————————————————
@@ -4698,6 +4733,117 @@ router.get('/debug-writer-130-july-8', async (req, res) => {
   }
 });
 
+// Simple cache clearing endpoint for testing (no auth required)
+router.get('/clear-cache-simple', async (req, res) => {
+  try {
+    const redisService = global.redisService;
+    let clearedKeys = 0;
+
+    if (redisService && redisService.isAvailable()) {
+      // Clear all analytics cache patterns
+      const patterns = [
+        'analytics:*',
+        'writer:*',
+        'bigquery:*',
+        'daily:*',
+        'views:*',
+        'cache:*'
+      ];
+
+      for (const pattern of patterns) {
+        const keys = await redisService.clearPattern(pattern);
+        clearedKeys += keys;
+        console.log(`✅ Cleared ${keys} keys for pattern: ${pattern}`);
+      }
+
+      console.log(`✅ Total cleared: ${clearedKeys} cache keys`);
+      res.json({
+        success: true,
+        message: `Analytics cache cleared successfully - ${clearedKeys} keys deleted`,
+        patterns_cleared: patterns,
+        total_keys: clearedKeys
+      });
+    } else {
+      res.json({ success: false, message: 'Redis not available' });
+    }
+  } catch (error) {
+    console.error('❌ Error clearing cache:', error);
+    res.status(500).json({ error: 'Failed to clear cache', details: error.message });
+  }
+});
+
+// Debug cache endpoint
+router.get('/debug-cache', async (req, res) => {
+    try {
+        console.log('🔍 Cache debug requested');
+
+        const redisService = global.redisService;
+        if (!redisService || !redisService.isAvailable()) {
+            return res.json({ success: false, message: 'Redis not available' });
+        }
+
+        const patterns = ['analytics:*', 'writer:*', 'bigquery:*'];
+        const cacheInfo = {};
+
+        for (const pattern of patterns) {
+            try {
+                // Use the Redis client directly to get keys
+                const keys = await redisService.client.keys(pattern);
+                cacheInfo[pattern] = {
+                    count: keys ? keys.length : 0,
+                    keys: keys || []
+                };
+
+                // Get sample data for first few keys
+                if (keys && keys.length > 0) {
+                    const sampleKeys = keys.slice(0, 3);
+                    const sampleData = {};
+
+                    for (const key of sampleKeys) {
+                        try {
+                            const data = await redisService.get(key);
+                            if (data) {
+                                const parsed = JSON.parse(data);
+                                // Only show structure, not full data
+                                if (parsed && typeof parsed === 'object') {
+                                    sampleData[key] = {
+                                        type: Array.isArray(parsed) ? 'array' : 'object',
+                                        length: Array.isArray(parsed) ? parsed.length : Object.keys(parsed).length,
+                                        keys: Array.isArray(parsed) ? 'array' : Object.keys(parsed).slice(0, 5)
+                                    };
+                                } else {
+                                    sampleData[key] = parsed;
+                                }
+                            } else {
+                                sampleData[key] = null;
+                            }
+                        } catch (e) {
+                            sampleData[key] = 'Error parsing data: ' + e.message;
+                        }
+                    }
+
+                    cacheInfo[pattern].sampleData = sampleData;
+                }
+            } catch (error) {
+                cacheInfo[pattern] = { error: error.message };
+            }
+        }
+
+        res.json({
+            success: true,
+            cache_info: cacheInfo,
+            timestamp: new Date().toISOString()
+        });
+
+    } catch (error) {
+        console.error('❌ Cache debug error:', error);
+        res.status(500).json({
+            success: false,
+            error: error.message
+        });
+    }
+});
+
 // Helper function to get daily InfluxDB data for main chart
 async function getDailyInfluxData(writerId, days = 30) {
   try {
@@ -5588,6 +5734,52 @@ router.get('/test-bigquery-sample', async (req, res) => {
       success: false,
       error: error.message
     });
+  }
+});
+
+// Test endpoint to mimic exact frontend call for July 8th
+router.get('/test-frontend-july-8th', async (req, res) => {
+  try {
+    console.log('🧪 Testing exact frontend call for July 8th...');
+
+    // Mimic the exact parameters the frontend would send
+    const mockReq = {
+      user: { writerId: 94 },
+      query: {
+        start_date: '2025-07-08',
+        end_date: '2025-07-08'
+      }
+    };
+
+    console.log('📊 Calling handleAnalyticsRequest with mock frontend params...');
+
+    // Create a mock response object to capture the data
+    let responseData = null;
+    const mockRes = {
+      json: (data) => {
+        responseData = data;
+        console.log('📊 Mock response data:', JSON.stringify(data, null, 2));
+      },
+      status: (code) => ({
+        json: (data) => {
+          responseData = { statusCode: code, ...data };
+          console.log('📊 Mock error response:', responseData);
+        }
+      })
+    };
+
+    // Call the actual handler
+    await handleAnalyticsRequest(mockReq, mockRes);
+
+    res.json({
+      success: true,
+      message: 'Frontend call simulation completed',
+      frontend_would_receive: responseData
+    });
+
+  } catch (error) {
+    console.error('❌ Error simulating frontend call:', error);
+    res.status(500).json({ error: error.message });
   }
 });
 

@@ -68,6 +68,8 @@ const simpleApi = new SimpleApi();
 export const analyticsApi = {
   getOverview: (options = {}) => {
     const { params = {} } = options;
+    // Add cache-busting parameter to force fresh data
+    params._t = Date.now();
     return simpleApi.get('/api/analytics', { params });
   },
 

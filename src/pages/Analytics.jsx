@@ -997,6 +997,16 @@ const Analytics = () => {
 
   useEffect(() => {
     console.log('🚀 Analytics useEffect triggered, dateRange:', dateRange);
+
+    // Clear any potential localStorage cache for analytics
+    const cacheKeys = Object.keys(localStorage).filter(key =>
+      key.includes('analytics') || key.includes('cache') || key.includes('views')
+    );
+    cacheKeys.forEach(key => {
+      console.log('🗑️ Clearing localStorage cache key:', key);
+      localStorage.removeItem(key);
+    });
+
     // Don't auto-fetch for "custom" (when picker is open) or custom ranges (when applied)
     if (dateRange !== "custom" && !dateRange.startsWith("custom_")) {
       fetchAnalytics();
