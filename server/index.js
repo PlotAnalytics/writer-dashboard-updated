@@ -786,6 +786,15 @@ app.post("/api/updateStatus", async (req, res) => {
       });
     }
     const script = rows[0];
+
+    // Log the status update to trello_card_movements table
+    const movementQuery = `
+      INSERT INTO trello_card_movements (timestamp, trello_card_id, status)
+      VALUES (NOW(), $1, $2)
+    `;
+    await pool.query(movementQuery, [trello_card_id, normalizedStatus]);
+    console.log(`:white_check_mark: Status movement logged: ${trello_card_id} -> ${normalizedStatus}`);
+
     // If the status is "Posted", insert into the video table
     if (
       (normalizedStatus === "Posted" && short_video_url) ||
