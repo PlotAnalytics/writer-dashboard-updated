@@ -2356,7 +2356,7 @@ async function handleAnalyticsRequest(req, res) {
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
           const cacheKey = `analytics:overview:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
-          await redisService.set(cacheKey, analyticsData, 259200); // Cache for 3 days (72 hours)
+          await redisService.set(cacheKey, analyticsData, 86400); // Cache for 24 hours
           console.log('✅ Cached analytics overview data');
         }
 
@@ -4179,7 +4179,7 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
     // Cache the response data
     if (redisService && redisService.isAvailable()) {
       const cacheKey = `analytics:top-content:writer:${writer_id}:range:${range}:type:${type}:limit:${limit}:start:${start_date || 'null'}:end:${end_date || 'null'}`;
-      await redisService.set(cacheKey, responseData, 259200); // Cache for 3 days (72 hours)
+      await redisService.set(cacheKey, responseData, 86400); // Cache for 24 hours
       console.log('✅ Cached top content data');
     }
 
@@ -4473,7 +4473,7 @@ router.get('/writer/latest-content', authenticateToken, async (req, res) => {
     // Cache the response data
     if (redisService && redisService.isAvailable()) {
       const cacheKey = `analytics:latest-content:writer:${writer_id}`;
-      await redisService.set(cacheKey, responseData, 259200); // Cache for 3 days (72 hours)
+      await redisService.set(cacheKey, responseData, 86400); // Cache for 24 hours
       console.log('✅ Cached latest content data');
     }
 
