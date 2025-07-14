@@ -213,7 +213,7 @@ app.get('/api/submissions', authenticateToken, async (req, res) => {
     const { startDate, endDate, searchTitle } = req.query;
     
     let query = `
-      SELECT id, title, google_doc_link, approval_status, created_at, loom_url
+      SELECT id, title, google_doc_link, approval_status, created_at, loom_url, ai_chat_url
       FROM script
       WHERE writer_id = $1
     `;

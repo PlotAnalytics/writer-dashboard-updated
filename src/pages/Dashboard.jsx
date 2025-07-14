@@ -29,6 +29,7 @@ const Dashboard = () => {
   const [prefixNumber, setPrefixNumber] = useState('Choose');
   const [selectedStructure, setSelectedStructure] = useState('');
   const [googleDocLink, setGoogleDocLink] = useState('');
+  const [aiChatUrl, setAiChatUrl] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -370,6 +371,7 @@ const Dashboard = () => {
         writer_id: writer.id,
         title: fullTitle,
         googleDocLink: googleDocLink,
+        aiChatUrl: aiChatUrl,
       });
 
       // Refresh the scripts list to get the latest data
@@ -378,6 +380,7 @@ const Dashboard = () => {
       // Reset form
       setTitle('');
       setGoogleDocLink('');
+      setAiChatUrl('');
       setPrefixType('Trope');
       setPrefixNumber('Choose');
       setSelectedStructure('');
@@ -811,6 +814,53 @@ const Dashboard = () => {
                     value={googleDocLink}
                     onChange={(e) => setGoogleDocLink(e.target.value)}
                     required
+                    size="medium"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '14px',
+                        padding: '12px 14px',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* AI Chat URL */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.2,
+                    fontWeight: '500',
+                    fontSize: '13px'
+                  }}>
+                    AI Chat URL (Optional)
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type="url"
+                    placeholder="https://chatgpt.com/share/..."
+                    value={aiChatUrl}
+                    onChange={(e) => setAiChatUrl(e.target.value)}
                     size="medium"
                     sx={{
                       '& .MuiOutlinedInput-root': {

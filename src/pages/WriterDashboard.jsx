@@ -29,6 +29,7 @@ const WriterDashboard = () => {
   const [error, setError] = useState(null);
   const [title, setTitle] = useState("");
   const [googleDocLink, setGoogleDocLink] = useState("");
+  const [aiChatUrl, setAiChatUrl] = useState("");
   const [scripts, setScripts] = useState([]);
   const [startDate, setStartDate] = useState(null);
   const [endDate, setEndDate] = useState(null);
@@ -162,11 +163,13 @@ const WriterDashboard = () => {
         writer_id: writer.id,
         title: fullTitle,
         googleDocLink,
+        aiChatUrl,
       });
 
       setScripts([...scripts, response.data]);
       setTitle("");
       setGoogleDocLink("");
+      setAiChatUrl("");
       //  setImageIncluded("No"); // Reset Image field to default "No"
 
       setError(null);
@@ -416,6 +419,16 @@ const WriterDashboard = () => {
                       value={googleDocLink}
                       onChange={(e) => setGoogleDocLink(e.target.value)}
                       required
+                    />
+                  </Form.Group>
+
+                  <Form.Group style={{ marginBottom: "25px" }}>
+                    <Form.Label>AI Chat URL (Optional)</Form.Label>
+                    <Form.Control
+                      type="url"
+                      value={aiChatUrl}
+                      onChange={(e) => setAiChatUrl(e.target.value)}
+                      placeholder="https://chatgpt.com/share/..."
                     />
                   </Form.Group>
 

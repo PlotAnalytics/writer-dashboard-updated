@@ -1023,6 +1023,31 @@ const PreviousSubmissions = ({
                       Open Doc
                     </Button>
                   )}
+                  {submission.ai_chat_url && (
+                    <Button
+                      size="small"
+                      onClick={() => window.open(submission.ai_chat_url, '_blank')}
+                      sx={{
+                        bgcolor: 'rgba(34, 197, 94, 0.8)',
+                        color: 'white',
+                        fontWeight: '500',
+                        fontSize: '0.75rem',
+                        borderRadius: '8px',
+                        px: 1.5,
+                        py: 0.6,
+                        textTransform: 'none',
+                        boxShadow: '0 1px 4px rgba(34, 197, 94, 0.3)',
+                        '&:hover': {
+                          bgcolor: 'rgba(34, 197, 94, 1)',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 2px 8px rgba(34, 197, 94, 0.4)'
+                        },
+                        transition: 'all 0.2s ease'
+                      }}
+                    >
+                      AI Chat
+                    </Button>
+                  )}
                   {submission.loom_url && displayStatus === 'Rejected' && (
                     <Button
                       size="small"
