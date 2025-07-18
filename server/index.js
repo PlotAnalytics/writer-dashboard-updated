@@ -4486,28 +4486,37 @@ const setPostingAccountValue = async (
   token
 ) => {
   try {
+    console.log(`🔧 setPostingAccountValue called with: card=${trello_card_id}, value='${newPostingAccountValue}'`);
+
     // Step 1: Fetch the card's custom fields to find the 'Posting Account'
     const cardDetailsUrl = `https://api.trello.com/1/cards/${trello_card_id}?key=${api_key}&token=${token}`;
     const cardDetailsResponse = await axios.get(cardDetailsUrl);
     const boardId = cardDetailsResponse.data.idBoard;
+    console.log(`🔧 Found board ID: ${boardId}`);
 
     // Step 2: Get all custom fields on the board
     const customFieldsUrl = `https://api.trello.com/1/boards/${boardId}/customFields?key=${api_key}&token=${token}`;
     const customFieldsResponse = await axios.get(customFieldsUrl);
+    console.log(`🔧 Found ${customFieldsResponse.data.length} custom fields on board`);
 
     // Step 3: Find the 'Posting Account' custom field ID
     const postingAccountField = customFieldsResponse.data.find(
       (field) => field.name === "Posting Account"
     );
     if (!postingAccountField) {
-      throw new Error("Custom field 'Posting Account' not found on the board.");
+      const availableFields = customFieldsResponse.data.map(f => f.name).join(', ');
+      throw new Error(`Custom field 'Posting Account' not found on the board. Available fields: ${availableFields}`);
     }
     const postingAccountFieldId = postingAccountField.id;
+    console.log(`🔧 Found 'Posting Account' field: ID=${postingAccountFieldId}, type=${postingAccountField.type}`);
 
     // Step 4: Find the option ID for the desired value
     if (postingAccountField.type !== 'list') {
-      throw new Error("Posting Account field is not a dropdown/list field.");
+      throw new Error(`Posting Account field is not a dropdown/list field. Current type: ${postingAccountField.type}`);
     }
+
+    console.log(`🔧 Available dropdown options:`, postingAccountField.options.map(opt => `"${opt.value.text}" (ID: ${opt.id})`));
+    console.log(`🔧 Looking for option matching: "${newPostingAccountValue}"`);
 
     const targetOption = postingAccountField.options.find(
       (option) => option.value.text.toLowerCase() === newPostingAccountValue.toLowerCase()
@@ -4519,15 +4528,20 @@ const setPostingAccountValue = async (
       throw new Error(`Option '${newPostingAccountValue}' not found in dropdown. Available options: ${availableOptions}`);
     }
 
+    console.log(`🔧 Found matching option: "${targetOption.value.text}" with ID: ${targetOption.id}`);
+
     // Step 5: Set the value using the option ID (not text)
     const setValueUrl = `https://api.trello.com/1/cards/${trello_card_id}/customField/${postingAccountFieldId}/item?key=${api_key}&token=${token}`;
     const setValueBody = {
       value: { idValue: targetOption.id }  // Use idValue for dropdown fields
     };
 
+    console.log(`🔧 Setting value with body:`, JSON.stringify(setValueBody, null, 2));
+    console.log(`🔧 API URL: ${setValueUrl}`);
+
     await axios.put(setValueUrl, setValueBody);
     console.log(
-      `Successfully set 'Posting Account' to '${newPostingAccountValue}' on card ID ${trello_card_id}.`
+      `✅ Successfully set 'Posting Account' to '${newPostingAccountValue}' (ID: ${targetOption.id}) on card ID ${trello_card_id}.`
     );
   } catch (error) {
     console.error(`Error: ${error.message}`);
@@ -4937,8 +4951,8 @@ app.post("/api/getPostingAccount", async (req, res) => {
       if (ignore_daily_limit) {
         itemsListQuery = `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`;
       } else {
-        // Use parameterized query to avoid SQL injection and handle data type issues
-        itemsListQuery = `SELECT id, account::character varying as account from post_accts_by_trello_id_v3($1) ORDER BY id`;
+        // Use parameterized query to avoid SQL injection - removed problematic cast
+        itemsListQuery = `SELECT id, account from post_accts_by_trello_id_v3($1) ORDER BY id`;
         queryParams = [trello_card_id];
       }
 
@@ -5540,6 +5554,54 @@ app.get("/api/debug/reset-accounts", async (req, res) => {
   } catch (error) {
     console.error("❌ Reset accounts error:", error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Test endpoint for setPostingAccountValue function
+app.post("/api/test/setPostingAccount", async (req, res) => {
+  try {
+    const { trello_card_id, posting_account_value } = req.body;
+
+    if (!trello_card_id || !posting_account_value) {
+      return res.status(400).json({
+        success: false,
+        error: "trello_card_id and posting_account_value are required"
+      });
+    }
+
+    // Get Trello settings
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({
+        success: false,
+        error: "Trello settings not configured"
+      });
+    }
+
+    const { api_key, token } = settingsResult.rows[0];
+
+    console.log(`🧪 TEST: Attempting to set posting account '${posting_account_value}' on card ${trello_card_id}`);
+
+    // Call the setPostingAccountValue function
+    await setPostingAccountValue(trello_card_id, posting_account_value, api_key, token);
+
+    res.json({
+      success: true,
+      message: `Successfully set posting account to '${posting_account_value}' on card ${trello_card_id}`,
+      card_id: trello_card_id,
+      account_value: posting_account_value
+    });
+
+  } catch (error) {
+    console.error("🧪 TEST ERROR:", error.message);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      details: "Check server logs for detailed debugging information"
+    });
   }
 });
 
