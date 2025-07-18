@@ -4504,10 +4504,25 @@ const setPostingAccountValue = async (
     }
     const postingAccountFieldId = postingAccountField.id;
 
-    // Step 4: Set the value of the 'Posting Account' custom field on the card
+    // Step 4: Find the option ID for the desired value
+    if (postingAccountField.type !== 'list') {
+      throw new Error("Posting Account field is not a dropdown/list field.");
+    }
+
+    const targetOption = postingAccountField.options.find(
+      (option) => option.value.text.toLowerCase() === newPostingAccountValue.toLowerCase()
+    );
+
+    if (!targetOption) {
+      // Show available options for debugging
+      const availableOptions = postingAccountField.options.map(opt => opt.value.text).join(', ');
+      throw new Error(`Option '${newPostingAccountValue}' not found in dropdown. Available options: ${availableOptions}`);
+    }
+
+    // Step 5: Set the value using the option ID (not text)
     const setValueUrl = `https://api.trello.com/1/cards/${trello_card_id}/customField/${postingAccountFieldId}/item?key=${api_key}&token=${token}`;
     const setValueBody = {
-      value: { text: newPostingAccountValue },
+      value: { idValue: targetOption.id }  // Use idValue for dropdown fields
     };
 
     await axios.put(setValueUrl, setValueBody);
