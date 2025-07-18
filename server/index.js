@@ -4532,14 +4532,53 @@ const setPostingAccountValue = async (
 
     // Step 5: Set the value using the option ID (not text)
     const setValueUrl = `https://api.trello.com/1/cards/${trello_card_id}/customField/${postingAccountFieldId}/item?key=${api_key}&token=${token}`;
-    const setValueBody = {
-      value: { idValue: targetOption.id }  // Use idValue for dropdown fields
+
+    // Try different formats for dropdown values
+    let setValueBody;
+
+    // Format 1: Try with idValue (current approach)
+    setValueBody = {
+      value: { idValue: targetOption.id }
     };
 
-    console.log(`🔧 Setting value with body:`, JSON.stringify(setValueBody, null, 2));
+    console.log(`🔧 Trying Format 1 - idValue:`, JSON.stringify(setValueBody, null, 2));
     console.log(`🔧 API URL: ${setValueUrl}`);
 
-    await axios.put(setValueUrl, setValueBody);
+    try {
+      await axios.put(setValueUrl, setValueBody);
+      console.log(`✅ Format 1 (idValue) worked successfully!`);
+    } catch (error1) {
+      console.log(`❌ Format 1 (idValue) failed:`, error1.response?.data || error1.message);
+
+      // Format 2: Try with just the option ID directly
+      setValueBody = {
+        idValue: targetOption.id
+      };
+
+      console.log(`🔧 Trying Format 2 - direct idValue:`, JSON.stringify(setValueBody, null, 2));
+
+      try {
+        await axios.put(setValueUrl, setValueBody);
+        console.log(`✅ Format 2 (direct idValue) worked successfully!`);
+      } catch (error2) {
+        console.log(`❌ Format 2 (direct idValue) failed:`, error2.response?.data || error2.message);
+
+        // Format 3: Try with text value as fallback
+        setValueBody = {
+          value: { text: newPostingAccountValue }
+        };
+
+        console.log(`🔧 Trying Format 3 - text fallback:`, JSON.stringify(setValueBody, null, 2));
+
+        try {
+          await axios.put(setValueUrl, setValueBody);
+          console.log(`✅ Format 3 (text fallback) worked successfully!`);
+        } catch (error3) {
+          console.log(`❌ All formats failed. Last error:`, error3.response?.data || error3.message);
+          throw new Error(`Failed to set dropdown value. Tried multiple formats. Last error: ${error3.response?.data?.message || error3.message}`);
+        }
+      }
+    }
     console.log(
       `✅ Successfully set 'Posting Account' to '${newPostingAccountValue}' (ID: ${targetOption.id}) on card ID ${trello_card_id}.`
     );
