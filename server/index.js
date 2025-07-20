@@ -828,7 +828,7 @@ app.post("/api/updateStatus", async (req, res) => {
 
       // If account_id is null, get it from Trello posting account field
       if (!account_id) {
-        console.log(`🔍 No account_id in script table, reading from Trello posting account field...`);
+        console.log(`🔍 No account_id in script table (value: ${account_id}), reading from Trello posting account field...`);
         try {
           const settingsResult = await pool.query(
             "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
@@ -842,11 +842,14 @@ app.post("/api/updateStatus", async (req, res) => {
               `https://api.trello.com/1/cards/${trello_card_id}?key=${api_key}&token=${token}&customFieldItems=true`
             );
             const boardId = cardResponse.data.idBoard;
+            console.log(`🔧 Card board ID: ${boardId}`);
+            console.log(`🔧 Custom field items on card:`, JSON.stringify(cardResponse.data.customFieldItems, null, 2));
 
             // Get custom fields on board
             const customFieldsResponse = await axios.get(
               `https://api.trello.com/1/boards/${boardId}/customFields?key=${api_key}&token=${token}`
             );
+            console.log(`🔧 Available custom fields on board:`, customFieldsResponse.data.map(f => ({name: f.name, id: f.id, type: f.type})));
 
             // Find "Posting Account" field
             const postingAccountFieldDef = customFieldsResponse.data.find(
@@ -854,45 +857,77 @@ app.post("/api/updateStatus", async (req, res) => {
             );
 
             if (postingAccountFieldDef) {
+              console.log(`✅ Found "Posting Account" field definition:`, {
+                id: postingAccountFieldDef.id,
+                name: postingAccountFieldDef.name,
+                type: postingAccountFieldDef.type,
+                options: postingAccountFieldDef.options?.map(opt => ({id: opt.id, text: opt.value.text}))
+              });
+
               // Find value for this field on the card
               const customFields = cardResponse.data.customFieldItems || [];
               const postingAccountField = customFields.find(field =>
                 field.idCustomField === postingAccountFieldDef.id
               );
 
+              console.log(`🔧 Posting account field value on card:`, postingAccountField);
+
               if (postingAccountField && postingAccountField.value) {
                 let accountName = null;
 
-                // Handle dropdown value
+                console.log(`🔧 Raw posting account field value:`, JSON.stringify(postingAccountField.value, null, 2));
+
+                // Handle dropdown value (idValue)
                 if (postingAccountField.value.idValue) {
+                  console.log(`🔧 Found idValue: ${postingAccountField.value.idValue}`);
                   const selectedOption = postingAccountFieldDef.options?.find(
                     option => option.id === postingAccountField.value.idValue
                   );
                   if (selectedOption) {
                     accountName = selectedOption.value.text;
+                    console.log(`🔧 Mapped idValue to text: "${accountName}"`);
+                  } else {
+                    console.log(`⚠️ Could not find option for idValue: ${postingAccountField.value.idValue}`);
                   }
-                } else if (postingAccountField.value.text) {
+                }
+                // Handle text value
+                else if (postingAccountField.value.text) {
                   accountName = postingAccountField.value.text;
+                  console.log(`🔧 Found direct text value: "${accountName}"`);
+                }
+                // Handle number value (if account_id is passed directly)
+                else if (postingAccountField.value.number) {
+                  console.log(`🔧 Found number value: ${postingAccountField.value.number}`);
+                  account_id = postingAccountField.value.number;
+                  console.log(`✅ Using direct account_id: ${account_id}`);
                 }
 
+                // If we got an account name, look it up in the database
                 if (accountName) {
-                  console.log(`📋 Found posting account in Trello: "${accountName}"`);
+                  console.log(`📋 Looking up posting account in database: "${accountName}"`);
 
                   // Look up account_id from posting_accounts table
                   const accountQuery = await pool.query(
-                    `SELECT id FROM posting_accounts WHERE account = $1`,
+                    `SELECT id, account FROM posting_accounts WHERE account = $1`,
                     [accountName]
                   );
+
+                  console.log(`🔍 Database lookup result:`, accountQuery.rows);
 
                   if (accountQuery.rows.length > 0) {
                     account_id = accountQuery.rows[0].id;
                     console.log(`✅ Using account_id: ${account_id} for "${accountName}"`);
                   } else {
                     console.warn(`⚠️ Account "${accountName}" not found in posting_accounts table`);
+
+                    // Show available accounts for debugging
+                    const allAccountsQuery = await pool.query(`SELECT id, account FROM posting_accounts LIMIT 10`);
+                    console.log(`🔍 Available accounts in database:`, allAccountsQuery.rows);
+
                     account_id = 1; // Default
                   }
-                } else {
-                  console.log(`📋 No posting account value found`);
+                } else if (!account_id) {
+                  console.log(`📋 No posting account value found in any format`);
                   account_id = 1; // Default
                 }
               } else {
