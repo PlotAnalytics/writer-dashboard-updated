@@ -603,79 +603,9 @@ app.post("/api/scripts", async (req, res) => {
     );
     const script = rows[0];
 
-    // Call getPostingAccount API to get a posting account for this card
-    try {
-      // Use the server's own URL for the API call
-      // In production, use the actual domain; in development, use localhost
-      const serverUrl =
-        process.env.SERVER_URL ||
-        (process.env.NODE_ENV === "production"
-          ? `https://${
-              process.env.VERCEL_URL ||
-              "https://writer-dashboard-updated.vercel.app"
-            }`
-          : `http://localhost:${PORT}`);
-
-      console.log(
-        `Making internal API call to: ${serverUrl}/api/getPostingAccount`
-      );
-      const response = await axios.post(`${serverUrl}/api/getPostingAccount`, {
-        trello_card_id: trelloCardId,
-        ignore_daily_limit: Boolean(isStoryLine),
-      });
-      const accountName = response.data?.account;
-
-      if (accountName) {
-        try {
-          // Query to find account ID based on the name
-          const accountQuery = await pool.query(
-            `SELECT id FROM posting_accounts WHERE account = $1`,
-            [accountName]
-          );
-          const accountId = accountQuery.rows[0]?.id;
-
-          if (accountId) {
-            // Update script row with account_id
-            await pool.query(
-              `UPDATE script SET account_id = $1 WHERE id = $2`,
-              [accountId, script.id]
-            );
-            console.log(
-              `Updated script ${script.id} with account ID ${accountId}`
-            );
-          } else {
-            console.warn(
-              `Account name "${accountName}" not found in posting_accounts table`
-            );
-          }
-        } catch (err) {
-          console.error(
-            "Failed to update script with posting account ID:",
-            err
-          );
-        }
-      }
-
-      console.log(`Posting account assigned for card ${trelloCardId}`);
-    } catch (postingAccountError) {
-      console.error("Error assigning posting account:", postingAccountError);
-      console.error("Error details:", {
-        message: postingAccountError.message,
-        code: postingAccountError.code,
-        errno: postingAccountError.errno,
-        syscall: postingAccountError.syscall,
-        address: postingAccountError.address,
-        port: postingAccountError.port,
-        config: postingAccountError.config
-          ? {
-              url: postingAccountError.config.url,
-              method: postingAccountError.config.method,
-              baseURL: postingAccountError.config.baseURL,
-            }
-          : "No config available",
-      });
-      // Continue execution - don't fail the request if posting account assignment fails
-    }
+    // NOTE: Automated posting account assignment has been disabled
+    // The team now manually selects posting accounts in Trello when moving cards to video table
+    console.log(`Script ${script.id} created successfully. Posting account will be assigned manually via Trello.`);
 
     // Send data to Google Sheets using Apps Script Web App URL
     const appsScriptUrl =
