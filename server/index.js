@@ -824,7 +824,94 @@ app.post("/api/updateStatus", async (req, res) => {
       const writerResult = await pool.query(writerQuery, [trello_card_id]);
       const writer_id = writerResult.rows[0]?.writer_id;
       const script_title = writerResult.rows[0]?.title;
-      const account_id = writerResult.rows[0]?.account_id;
+      let account_id = writerResult.rows[0]?.account_id;
+
+      // If account_id is null, get it from Trello posting account field
+      if (!account_id) {
+        console.log(`🔍 No account_id in script table, reading from Trello posting account field...`);
+        try {
+          const settingsResult = await pool.query(
+            "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+          );
+
+          if (settingsResult.rows.length > 0) {
+            const { api_key, token } = settingsResult.rows[0];
+
+            // Get card and board info
+            const cardResponse = await axios.get(
+              `https://api.trello.com/1/cards/${trello_card_id}?key=${api_key}&token=${token}&customFieldItems=true`
+            );
+            const boardId = cardResponse.data.idBoard;
+
+            // Get custom fields on board
+            const customFieldsResponse = await axios.get(
+              `https://api.trello.com/1/boards/${boardId}/customFields?key=${api_key}&token=${token}`
+            );
+
+            // Find "Posting Account" field
+            const postingAccountFieldDef = customFieldsResponse.data.find(
+              field => field.name === "Posting Account"
+            );
+
+            if (postingAccountFieldDef) {
+              // Find value for this field on the card
+              const customFields = cardResponse.data.customFieldItems || [];
+              const postingAccountField = customFields.find(field =>
+                field.idCustomField === postingAccountFieldDef.id
+              );
+
+              if (postingAccountField && postingAccountField.value) {
+                let accountName = null;
+
+                // Handle dropdown value
+                if (postingAccountField.value.idValue) {
+                  const selectedOption = postingAccountFieldDef.options?.find(
+                    option => option.id === postingAccountField.value.idValue
+                  );
+                  if (selectedOption) {
+                    accountName = selectedOption.value.text;
+                  }
+                } else if (postingAccountField.value.text) {
+                  accountName = postingAccountField.value.text;
+                }
+
+                if (accountName) {
+                  console.log(`📋 Found posting account in Trello: "${accountName}"`);
+
+                  // Look up account_id from posting_accounts table
+                  const accountQuery = await pool.query(
+                    `SELECT id FROM posting_accounts WHERE account = $1`,
+                    [accountName]
+                  );
+
+                  if (accountQuery.rows.length > 0) {
+                    account_id = accountQuery.rows[0].id;
+                    console.log(`✅ Using account_id: ${account_id} for "${accountName}"`);
+                  } else {
+                    console.warn(`⚠️ Account "${accountName}" not found in posting_accounts table`);
+                    account_id = 1; // Default
+                  }
+                } else {
+                  console.log(`📋 No posting account value found`);
+                  account_id = 1; // Default
+                }
+              } else {
+                console.log(`📋 No posting account selected in Trello`);
+                account_id = 1; // Default
+              }
+            } else {
+              console.log(`⚠️ "Posting Account" custom field not found`);
+              account_id = 1; // Default
+            }
+          } else {
+            console.log(`⚠️ No Trello settings found`);
+            account_id = 1; // Default
+          }
+        } catch (error) {
+          console.error("Error reading posting account from Trello:", error.message);
+          account_id = 1; // Default
+        }
+      }
       if (!writer_id) {
         return res.status(404).json({
           error: "Writer ID not found for the given Trello card.",
