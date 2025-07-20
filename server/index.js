@@ -872,7 +872,7 @@ app.post("/api/updateStatus", async (req, res) => {
 
               console.log(`🔧 Posting account field value on card:`, postingAccountField);
 
-              if (postingAccountField && postingAccountField.value) {
+              if (postingAccountField && (postingAccountField.value || postingAccountField.idValue)) {
                 let accountName = null;
 
                 console.log(`🔧 Raw posting account field value:`, JSON.stringify(postingAccountField.value, null, 2));
