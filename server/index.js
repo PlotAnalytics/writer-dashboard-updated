@@ -875,28 +875,28 @@ app.post("/api/updateStatus", async (req, res) => {
               if (postingAccountField && (postingAccountField.value || postingAccountField.idValue)) {
                 let accountName = null;
 
-                console.log(`🔧 Raw posting account field value:`, JSON.stringify(postingAccountField.value, null, 2));
+                console.log(`🔧 Raw posting account field:`, JSON.stringify(postingAccountField, null, 2));
 
-                // Handle dropdown value (idValue)
-                if (postingAccountField.value.idValue) {
-                  console.log(`🔧 Found idValue: ${postingAccountField.value.idValue}`);
+                // Handle dropdown value (idValue) - check the field directly, not the value property
+                if (postingAccountField.idValue) {
+                  console.log(`🔧 Found idValue: ${postingAccountField.idValue}`);
                   const selectedOption = postingAccountFieldDef.options?.find(
-                    option => option.id === postingAccountField.value.idValue
+                    option => option.id === postingAccountField.idValue
                   );
                   if (selectedOption) {
                     accountName = selectedOption.value.text;
                     console.log(`🔧 Mapped idValue to text: "${accountName}"`);
                   } else {
-                    console.log(`⚠️ Could not find option for idValue: ${postingAccountField.value.idValue}`);
+                    console.log(`⚠️ Could not find option for idValue: ${postingAccountField.idValue}`);
                   }
                 }
                 // Handle text value
-                else if (postingAccountField.value.text) {
+                else if (postingAccountField.value && postingAccountField.value.text) {
                   accountName = postingAccountField.value.text;
                   console.log(`🔧 Found direct text value: "${accountName}"`);
                 }
                 // Handle number value (if account_id is passed directly)
-                else if (postingAccountField.value.number) {
+                else if (postingAccountField.value && postingAccountField.value.number) {
                   console.log(`🔧 Found number value: ${postingAccountField.value.number}`);
                   account_id = postingAccountField.value.number;
                   console.log(`✅ Using direct account_id: ${account_id}`);
