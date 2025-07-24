@@ -12,7 +12,8 @@ import {
   InputLabel,
   CircularProgress,
   Tooltip,
-  IconButton
+  IconButton,
+  LinearProgress
 } from '@mui/material';
 import {
   EmojiEvents as TrophyIcon,
@@ -63,6 +64,32 @@ const WriterLeaderboard = ({ currentWriterName }) => {
     if (views >= 1000000) return `${(views / 1000000).toFixed(1)}M`;
     if (views >= 1000) return `${(views / 1000).toFixed(1)}K`;
     return views.toString();
+  };
+
+  // Get target views and progress based on selected period
+  const getProgressInfo = (views, selectedPeriod) => {
+    let target, label;
+
+    switch (selectedPeriod) {
+      case '7d':
+        target = 25000000; // 25 million
+        label = '25M';
+        break;
+      case '14d':
+        target = 50000000; // 50 million
+        label = '50M';
+        break;
+      case '30d':
+        target = 100000000; // 100 million
+        label = '100M';
+        break;
+      default:
+        target = 100000000;
+        label = '100M';
+    }
+
+    const percentage = Math.min((views / target) * 100, 100);
+    return { percentage: percentage.toFixed(1), label, target };
   };
 
   const getRankIcon = (rank) => {
@@ -299,15 +326,61 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                 </Box>
               </Box>
 
-              {/* Progress to 1B */}
-              <Box sx={{ textAlign: 'right', minWidth: '80px' }}>
-                <Typography variant="body2" sx={{ fontWeight: 600, color: '#667eea' }}>
-                  {writer.progress_to_1b_percent}%
-                </Typography>
-                <Typography variant="caption" color="text.secondary">
-                  to 1B
-                </Typography>
-              </Box>
+              {/* Dynamic Progress based on period */}
+              <Tooltip
+                title={(() => {
+                  const progressInfo = getProgressInfo(writer.total_views, period);
+                  const remaining = Math.max(0, progressInfo.target - writer.total_views);
+                  return `${formatViews(writer.total_views)} / ${progressInfo.label} views${remaining > 0 ? ` (${formatViews(remaining)} to go)` : ' - Target reached! 🎉'}`;
+                })()}
+                placement="left"
+                arrow
+              >
+                <Box sx={{ textAlign: 'right', minWidth: '90px', cursor: 'help' }}>
+                  {(() => {
+                    const progressInfo = getProgressInfo(writer.total_views, period);
+                    const isComplete = progressInfo.percentage >= 100;
+                    return (
+                      <>
+                        <Typography variant="body2" sx={{
+                          fontWeight: 600,
+                          color: isComplete ? '#4CAF50' : '#667eea',
+                          fontSize: '12px'
+                        }}>
+                          {progressInfo.percentage}%
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'text.secondary',
+                          fontSize: '10px',
+                          mb: 0.5,
+                          display: 'block'
+                        }}>
+                          to {progressInfo.label}
+                        </Typography>
+
+                        {/* Mini Progress Bar */}
+                        <Box sx={{ width: '100%', mt: 0.5 }}>
+                          <LinearProgress
+                            variant="determinate"
+                            value={Math.min(progressInfo.percentage, 100)}
+                            sx={{
+                              height: 3,
+                              borderRadius: 1.5,
+                              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                              '& .MuiLinearProgress-bar': {
+                                borderRadius: 1.5,
+                                background: isComplete
+                                  ? 'linear-gradient(90deg, #4CAF50 0%, #45a049 100%)'
+                                  : 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
+                              }
+                            }}
+                          />
+                        </Box>
+                      </>
+                    );
+                  })()}
+                </Box>
+              </Tooltip>
             </Box>
           ))}
         </Box>
