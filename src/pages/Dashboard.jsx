@@ -361,16 +361,22 @@ const Dashboard = () => {
     }
 
     // Validate Type selection
+    console.log('🎭 Type validation - prefixType:', prefixType, 'Type:', typeof prefixType);
     if (!prefixType) {
+      console.log('❌ Type validation failed');
       setError('Please select a Type.');
       return;
     }
+    console.log('✅ Type validation passed');
 
     // Validate Structure selection
+    console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure);
     if (!selectedStructure) {
+      console.log('❌ Structure validation failed');
       setError('Please select a Structure.');
       return;
     }
+    console.log('✅ Structure validation passed');
 
     // Validate Script (Google Doc Link)
     if (!googleDocLink.trim()) {
@@ -1034,14 +1040,14 @@ const Dashboard = () => {
                             boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                           },
                           '& .MuiInputBase-input': {
-                            color: prefixType ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)',
+                            color: 'rgba(255, 255, 255, 0.9)',
                             fontSize: '14px',
                             padding: '10px 12px'
                           },
                           '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
-                        <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>-- Select Type --</MenuItem>
+                        <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Type --</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
                         <MenuItem value="Remix">Remix</MenuItem>
                         <MenuItem value="Re-write">Re-write</MenuItem>
