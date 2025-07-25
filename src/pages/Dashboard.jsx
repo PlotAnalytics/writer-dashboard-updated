@@ -366,6 +366,12 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Structure selection
+    if (!selectedStructure) {
+      setError('Please select a Structure.');
+      return;
+    }
+
     // Validate Script (Google Doc Link)
     if (!googleDocLink.trim()) {
       setError('Script (Google Doc Link) is required.');
@@ -985,6 +991,7 @@ const Dashboard = () => {
                       <Select
                         value={prefixType}
                         onChange={handleTypeChange}
+                        displayEmpty
                         MenuProps={{
                           PaperProps: {
                             sx: {
@@ -1027,14 +1034,14 @@ const Dashboard = () => {
                             boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                           },
                           '& .MuiInputBase-input': {
-                            color: 'rgba(255, 255, 255, 0.9)',
+                            color: prefixType ? 'rgba(255, 255, 255, 0.9)' : 'rgba(255, 255, 255, 0.5)',
                             fontSize: '14px',
                             padding: '10px 12px'
                           },
                           '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
-                        <MenuItem value="">-- Select Type --</MenuItem>
+                        <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>-- Select Type --</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
                         <MenuItem value="Remix">Remix</MenuItem>
                         <MenuItem value="Re-write">Re-write</MenuItem>
