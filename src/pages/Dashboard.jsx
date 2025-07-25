@@ -859,7 +859,7 @@ const Dashboard = () => {
                     fontWeight: '700',
                     fontSize: '13px'
                   }}>
-                    Structure
+                    Structure <span style={{ color: '#ff4444' }}>*</span>
                   </Typography>
                   <FormControl size="medium" fullWidth>
                     <Select
@@ -990,7 +990,7 @@ const Dashboard = () => {
                     fontWeight: '700',
                     fontSize: '13px'
                   }}>
-                    Type
+                    Type <span style={{ color: '#ff4444' }}>*</span>
                   </Typography>
                   <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
                     <FormControl size="medium" sx={{ minWidth: '200px' }} required>
