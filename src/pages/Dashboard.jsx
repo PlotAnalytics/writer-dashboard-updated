@@ -25,7 +25,7 @@ const Dashboard = () => {
 
   // Form state matching reference code
   const [title, setTitle] = useState('');
-  const [prefixType, setPrefixType] = useState('Original');
+  const [prefixType, setPrefixType] = useState('');
   const [prefixNumber, setPrefixNumber] = useState('Choose');
   const [selectedStructure, setSelectedStructure] = useState('');
   const [structureExplanation, setStructureExplanation] = useState('');
@@ -360,6 +360,12 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Type selection
+    if (!prefixType) {
+      setError('Please select a Type.');
+      return;
+    }
+
     // Validate Script (Google Doc Link)
     if (!googleDocLink.trim()) {
       setError('Script (Google Doc Link) is required.');
@@ -399,12 +405,10 @@ const Dashboard = () => {
     setIsSubmitting(true);
 
     try {
-      // Build full title with structure and type prefix like in reference
+      // Build full title with structure and type prefix
       const fullTitle =
         (selectedStructure ? `[${selectedStructure}] ` : '') +
-        (prefixType === 'Original' || prefixType === 'Re-write' || prefixType === 'STL'
-          ? `[${prefixType}] ${title}`
-          : `[${prefixType} ${prefixNumber}] ${title}`);
+        `[${prefixType}] ${title}`;
 
       // Filter out empty URLs and join multiple URLs with forward slashes
       const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
@@ -426,7 +430,7 @@ const Dashboard = () => {
       setTitle('');
       setGoogleDocLink('');
       setAiChatUrls(['']);
-      setPrefixType('Original');
+      setPrefixType('');
       setPrefixNumber('Choose');
       setSelectedStructure('');
       setStructureExplanation('');
@@ -450,7 +454,7 @@ const Dashboard = () => {
 
       // Reset form
       setTitle('');
-      setPrefixType('Original');
+      setPrefixType('');
       setPrefixNumber('Choose');
       setSelectedStructure('');
       setStructureExplanation('');
@@ -1030,6 +1034,7 @@ const Dashboard = () => {
                           '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
+                        <MenuItem value="">-- Select Type --</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
                         <MenuItem value="Remix">Remix</MenuItem>
                         <MenuItem value="Re-write">Re-write</MenuItem>
