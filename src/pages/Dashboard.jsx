@@ -29,7 +29,7 @@ const Dashboard = () => {
   const [prefixNumber, setPrefixNumber] = useState('Choose');
   const [selectedStructure, setSelectedStructure] = useState('');
   const [googleDocLink, setGoogleDocLink] = useState('');
-  const [aiChatUrl, setAiChatUrl] = useState('');
+  const [aiChatUrls, setAiChatUrls] = useState(['']); // Array to handle multiple URLs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
@@ -367,11 +367,15 @@ const Dashboard = () => {
           ? `[${prefixType}] ${title}`
           : `[${prefixType} ${prefixNumber}] ${title}`);
 
+      // Filter out empty URLs and join multiple URLs with forward slashes
+      const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
+      const aiChatUrlsString = filteredUrls.join(' / ');
+
       await axios.post('/api/scripts', {
         writer_id: writer.id,
         title: fullTitle,
         googleDocLink: googleDocLink,
-        aiChatUrl: aiChatUrl,
+        aiChatUrl: aiChatUrlsString,
       });
 
       // Refresh the scripts list to get the latest data
@@ -380,7 +384,7 @@ const Dashboard = () => {
       // Reset form
       setTitle('');
       setGoogleDocLink('');
-      setAiChatUrl('');
+      setAiChatUrls(['']);
       setPrefixType('Trope');
       setPrefixNumber('Choose');
       setSelectedStructure('');
@@ -407,6 +411,7 @@ const Dashboard = () => {
       setPrefixNumber('Choose');
       setSelectedStructure('');
       setGoogleDocLink('');
+      setAiChatUrls(['']);
 
       setError(null);
       alert('Script submitted successfully! (Demo mode - API not available)');
@@ -422,6 +427,24 @@ const Dashboard = () => {
     if (e.target.value !== 'Trope') {
       setPrefixNumber('Choose');
     }
+  };
+
+  // Handle multiple AI Chat URLs
+  const addAiChatUrl = () => {
+    setAiChatUrls([...aiChatUrls, '']);
+  };
+
+  const removeAiChatUrl = (index) => {
+    if (aiChatUrls.length > 1) {
+      const newUrls = aiChatUrls.filter((_, i) => i !== index);
+      setAiChatUrls(newUrls);
+    }
+  };
+
+  const updateAiChatUrl = (index, value) => {
+    const newUrls = [...aiChatUrls];
+    newUrls[index] = value;
+    setAiChatUrls(newUrls);
   };
 
   return (
@@ -568,10 +591,10 @@ const Dashboard = () => {
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     mb: 1.2,
-                    fontWeight: '500',
+                    fontWeight: '700',
                     fontSize: '13px'
                   }}>
-                    Title
+                    Title <span style={{ color: '#ff4444' }}>*</span>
                   </Typography>
                   <TextField
                     fullWidth
@@ -601,7 +624,7 @@ const Dashboard = () => {
                       '& .MuiInputBase-input': {
                         color: 'rgba(255, 255, 255, 0.9)',
                         fontSize: '14px',
-                        padding: '12px 14px',
+                        padding: '10px 12px',
                         '&::placeholder': {
                           color: 'rgba(255, 255, 255, 0.4)',
                         }
@@ -610,12 +633,234 @@ const Dashboard = () => {
                   />
                 </Box>
 
+                {/* Script (Google Doc Link) */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.2,
+                    fontWeight: '700',
+                    fontSize: '13px'
+                  }}>
+                    Script (Google Doc Link) <span style={{ color: '#ff4444' }}>*</span>
+                  </Typography>
+                  <TextField
+                    fullWidth
+                    type="url"
+                    placeholder="https://docs.google.com/document/d/..."
+                    value={googleDocLink}
+                    onChange={(e) => setGoogleDocLink(e.target.value)}
+                    required
+                    size="medium"
+                    sx={{
+                      '& .MuiOutlinedInput-root': {
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                        },
+                      },
+                      '& .MuiInputBase-input': {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                        fontSize: '14px',
+                        padding: '10px 12px',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.4)',
+                        }
+                      },
+                    }}
+                  />
+                </Box>
+
+                {/* AI Chat URL(s) */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.2,
+                    fontWeight: '700',
+                    fontSize: '13px'
+                  }}>
+                    AI Chat URL(s) <span style={{ color: '#ff4444' }}>*</span>
+                  </Typography>
+
+                  {/* Multiple URL inputs */}
+                  {aiChatUrls.map((url, index) => (
+                    <Box key={index} sx={{ mb: 1.5, display: 'flex', gap: 1, alignItems: 'center' }}>
+                      <TextField
+                        fullWidth
+                        type="url"
+                        placeholder="https://chatgpt.com/share/..."
+                        value={url}
+                        onChange={(e) => updateAiChatUrl(index, e.target.value)}
+                        size="medium"
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            backdropFilter: 'blur(5px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            transition: 'all 0.2s ease',
+                            '& fieldset': { border: 'none' },
+                            '&:hover': {
+                              border: '1px solid rgba(102, 126, 234, 0.3)',
+                              background: 'rgba(255, 255, 255, 0.06)',
+                            },
+                            '&.Mui-focused': {
+                              border: '1px solid rgba(102, 126, 234, 0.5)',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                            },
+                          },
+                          '& .MuiInputBase-input': {
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            fontSize: '14px',
+                            padding: '10px 12px',
+                            '&::placeholder': {
+                              color: 'rgba(255, 255, 255, 0.4)',
+                            }
+                          },
+                        }}
+                      />
+
+                      {/* Remove button (only show if more than 1 URL) */}
+                      {aiChatUrls.length > 1 && (
+                        <Button
+                          onClick={() => removeAiChatUrl(index)}
+                          variant="contained"
+                          sx={{
+                            background: 'linear-gradient(135deg, #ff4444 0%, #cc3333 100%)',
+                            color: 'white',
+                            fontWeight: '600',
+                            fontSize: '12px',
+                            px: 2,
+                            py: 1,
+                            borderRadius: '8px',
+                            textTransform: 'none',
+                            minWidth: 'auto',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #ff3333 0%, #bb2222 100%)',
+                            },
+                          }}
+                        >
+                          Remove
+                        </Button>
+                      )}
+                    </Box>
+                  ))}
+
+                  {/* Add Another Chat button */}
+                  <Button
+                    onClick={addAiChatUrl}
+                    variant="contained"
+                    sx={{
+                      background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                      color: 'white',
+                      fontWeight: '600',
+                      fontSize: '13px',
+                      px: 2.5,
+                      py: 1,
+                      borderRadius: '8px',
+                      textTransform: 'none',
+                      border: '2px solid #4CAF50',
+                      '&:hover': {
+                        background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)',
+                        border: '2px solid #45a049',
+                      },
+                    }}
+                  >
+                    + Add Another Chat
+                  </Button>
+                </Box>
+
+                {/* Structure Selection */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.2,
+                    fontWeight: '700',
+                    fontSize: '13px'
+                  }}>
+                    Structure
+                  </Typography>
+                  <FormControl size="medium" fullWidth>
+                    <Select
+                      value={selectedStructure}
+                      onChange={(e) => setSelectedStructure(e.target.value)}
+                      displayEmpty
+                      MenuProps={{
+                        PaperProps: {
+                          sx: {
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            backdropFilter: 'blur(12px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                            '& .MuiMenuItem-root': {
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              fontSize: '14px',
+                              padding: '10px 16px',
+                              '&:hover': {
+                                background: 'rgba(102, 126, 234, 0.15)',
+                              },
+                              '&.Mui-selected': {
+                                background: 'rgba(102, 126, 234, 0.25)',
+                                '&:hover': {
+                                  background: 'rgba(102, 126, 234, 0.35)',
+                                },
+                              },
+                            },
+                          },
+                        },
+                      }}
+                      sx={{
+                        background: 'rgba(255, 255, 255, 0.04)',
+                        backdropFilter: 'blur(5px)',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '8px',
+                        transition: 'all 0.2s ease',
+                        '& fieldset': { border: 'none' },
+                        '&:hover': {
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          background: 'rgba(255, 255, 255, 0.06)',
+                        },
+                        '&.Mui-focused': {
+                          border: '1px solid rgba(102, 126, 234, 0.5)',
+                          background: 'rgba(255, 255, 255, 0.08)',
+                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '10px 12px'
+                        },
+                        '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
+                      }}
+                    >
+                      <MenuItem value="">-- No structure selected --</MenuItem>
+                      {structureList.map((structure) => (
+                        <MenuItem key={structure.structure_id || structure.id} value={structure.name}>
+                          {structure.name}
+                        </MenuItem>
+                      ))}
+                    </Select>
+                  </FormControl>
+                </Box>
+
                 {/* Modern Type Section */}
                 <Box sx={{ mb: 2.5 }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     mb: 1.2,
-                    fontWeight: '500',
+                    fontWeight: '700',
                     fontSize: '13px'
                   }}>
                     Type
@@ -625,13 +870,38 @@ const Dashboard = () => {
                       <Select
                         value={prefixType}
                         onChange={handleTypeChange}
-                        displayEmpty
+                        MenuProps={{
+                          PaperProps: {
+                            sx: {
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              backdropFilter: 'blur(12px)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '8px',
+                              boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                              '& .MuiMenuItem-root': {
+                                color: 'rgba(255, 255, 255, 0.9)',
+                                fontSize: '14px',
+                                padding: '10px 16px',
+                                '&:hover': {
+                                  background: 'rgba(102, 126, 234, 0.15)',
+                                },
+                                '&.Mui-selected': {
+                                  background: 'rgba(102, 126, 234, 0.25)',
+                                  '&:hover': {
+                                    background: 'rgba(102, 126, 234, 0.35)',
+                                  },
+                                },
+                              },
+                            },
+                          },
+                        }}
                         sx={{
                           background: 'rgba(255, 255, 255, 0.04)',
                           backdropFilter: 'blur(5px)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
                           borderRadius: '8px',
-                          '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                          transition: 'all 0.2s ease',
+                          '& fieldset': { border: 'none' },
                           '&:hover': {
                             border: '1px solid rgba(102, 126, 234, 0.3)',
                             background: 'rgba(255, 255, 255, 0.06)',
@@ -641,41 +911,62 @@ const Dashboard = () => {
                             background: 'rgba(255, 255, 255, 0.08)',
                             boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                           },
-                          '& .MuiSelect-select': {
+                          '& .MuiInputBase-input': {
                             color: 'rgba(255, 255, 255, 0.9)',
                             fontSize: '14px',
-                            padding: '12px 14px'
+                            padding: '10px 12px'
                           },
                           '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
                         <MenuItem value="Trope">Trope</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
-                        <MenuItem value="STL">STL</MenuItem>
                         <MenuItem value="Re-write">Re-write</MenuItem>
+                        <MenuItem value="STL">STL</MenuItem>
                       </Select>
                     </FormControl>
 
-                    {prefixType === "Trope" && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                        <Typography variant="body2" sx={{
-                          color: 'rgba(255, 255, 255, 0.8)',
-                          fontWeight: '500',
-                          fontSize: '13px'
-                        }}>
-                          Number
+                    {prefixType === 'Trope' && (
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
+                          Number:
                         </Typography>
-                        <FormControl size="small" sx={{ minWidth: '100px' }}>
+                        <FormControl size="medium" sx={{ minWidth: '120px' }} required>
                           <Select
                             value={prefixNumber}
                             onChange={(e) => setPrefixNumber(e.target.value)}
-                            displayEmpty
+                            MenuProps={{
+                              PaperProps: {
+                                sx: {
+                                  background: 'rgba(255, 255, 255, 0.04)',
+                                  backdropFilter: 'blur(12px)',
+                                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                                  borderRadius: '8px',
+                                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                                  '& .MuiMenuItem-root': {
+                                    color: 'rgba(255, 255, 255, 0.9)',
+                                    fontSize: '14px',
+                                    padding: '10px 16px',
+                                    '&:hover': {
+                                      background: 'rgba(102, 126, 234, 0.15)',
+                                    },
+                                    '&.Mui-selected': {
+                                      background: 'rgba(102, 126, 234, 0.25)',
+                                      '&:hover': {
+                                        background: 'rgba(102, 126, 234, 0.35)',
+                                      },
+                                    },
+                                  },
+                                },
+                              },
+                            }}
                             sx={{
                               background: 'rgba(255, 255, 255, 0.04)',
                               backdropFilter: 'blur(5px)',
                               border: '1px solid rgba(255, 255, 255, 0.1)',
                               borderRadius: '8px',
-                              '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                              transition: 'all 0.2s ease',
+                              '& fieldset': { border: 'none' },
                               '&:hover': {
                                 border: '1px solid rgba(102, 126, 234, 0.3)',
                                 background: 'rgba(255, 255, 255, 0.06)',
@@ -685,20 +976,18 @@ const Dashboard = () => {
                                 background: 'rgba(255, 255, 255, 0.08)',
                                 boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
                               },
-                              '& .MuiSelect-select': {
+                              '& .MuiInputBase-input': {
                                 color: 'rgba(255, 255, 255, 0.9)',
                                 fontSize: '14px',
-                                padding: '8px 12px'
+                                padding: '10px 12px'
                               },
                               '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                             }}
                           >
-                            <MenuItem value="Choose" disabled>
-                              Choose
-                            </MenuItem>
-                            {Array.from({ length: tropeList.length }, (_, i) => (
-                              <MenuItem key={i + 1} value={i + 1}>
-                                {i + 1}
+                            <MenuItem value="Choose">Choose</MenuItem>
+                            {tropeList.map((trope, index) => (
+                              <MenuItem key={index} value={index + 1}>
+                                {index + 1}
                               </MenuItem>
                             ))}
                           </Select>
@@ -747,149 +1036,6 @@ const Dashboard = () => {
                       </Box>
                     </Box>
                   )}
-                </Box>
-
-                {/* Structure Selection */}
-                <Box sx={{ mb: 2.5 }}>
-                  <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.2,
-                    fontWeight: '500',
-                    fontSize: '13px'
-                  }}>
-                    Structure (Optional)
-                  </Typography>
-                  <FormControl size="medium" fullWidth>
-                    <Select
-                      value={selectedStructure}
-                      onChange={(e) => setSelectedStructure(e.target.value)}
-                      displayEmpty
-                      sx={{
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        backdropFilter: 'blur(5px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
-                        '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.3)',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                        },
-                        '&.Mui-focused': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                        },
-                        '& .MuiSelect-select': {
-                          color: 'rgba(255, 255, 255, 0.9)',
-                          fontSize: '14px',
-                          padding: '12px 14px'
-                        },
-                        '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
-                      }}
-                    >
-                      <MenuItem value="">-- No structure selected --</MenuItem>
-                      {structureList.map((structure) => (
-                        <MenuItem key={structure.structure_id || structure.id} value={structure.name}>
-                          {structure.name}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                </Box>
-
-                {/* Google Doc Link */}
-                <Box sx={{ mb: 2.5 }}>
-                  <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.2,
-                    fontWeight: '500',
-                    fontSize: '13px'
-                  }}>
-                    Google Doc Link
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    type="url"
-                    placeholder="https://docs.google.com/document/d/..."
-                    value={googleDocLink}
-                    onChange={(e) => setGoogleDocLink(e.target.value)}
-                    required
-                    size="medium"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        backdropFilter: 'blur(5px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        transition: 'all 0.2s ease',
-                        '& fieldset': { border: 'none' },
-                        '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.3)',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                        },
-                        '&.Mui-focused': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                        },
-                      },
-                      '& .MuiInputBase-input': {
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        fontSize: '14px',
-                        padding: '12px 14px',
-                        '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.4)',
-                        }
-                      },
-                    }}
-                  />
-                </Box>
-
-                {/* AI Chat URL */}
-                <Box sx={{ mb: 2.5 }}>
-                  <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.2,
-                    fontWeight: '500',
-                    fontSize: '13px'
-                  }}>
-                    AI Chat URL (Optional)
-                  </Typography>
-                  <TextField
-                    fullWidth
-                    type="url"
-                    placeholder="https://chatgpt.com/share/..."
-                    value={aiChatUrl}
-                    onChange={(e) => setAiChatUrl(e.target.value)}
-                    size="medium"
-                    sx={{
-                      '& .MuiOutlinedInput-root': {
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        backdropFilter: 'blur(5px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        transition: 'all 0.2s ease',
-                        '& fieldset': { border: 'none' },
-                        '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.3)',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                        },
-                        '&.Mui-focused': {
-                          border: '1px solid rgba(102, 126, 234, 0.5)',
-                          background: 'rgba(255, 255, 255, 0.08)',
-                          boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                        },
-                      },
-                      '& .MuiInputBase-input': {
-                        color: 'rgba(255, 255, 255, 0.9)',
-                        fontSize: '14px',
-                        padding: '12px 14px',
-                        '&::placeholder': {
-                          color: 'rgba(255, 255, 255, 0.4)',
-                        }
-                      },
-                    }}
-                  />
                 </Box>
 
                 <Button
