@@ -25,10 +25,12 @@ const Dashboard = () => {
 
   // Form state matching reference code
   const [title, setTitle] = useState('');
-  const [prefixType, setPrefixType] = useState('Trope');
+  const [prefixType, setPrefixType] = useState('Original');
   const [prefixNumber, setPrefixNumber] = useState('Choose');
   const [selectedStructure, setSelectedStructure] = useState('');
+  const [structureExplanation, setStructureExplanation] = useState('');
   const [googleDocLink, setGoogleDocLink] = useState('');
+  const [inspirationLink, setInspirationLink] = useState('');
   const [aiChatUrls, setAiChatUrls] = useState(['']); // Array to handle multiple URLs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -350,9 +352,46 @@ const Dashboard = () => {
       return;
     }
 
-    // Enhanced validation for Trope type and Number
-    if (prefixType === 'Trope' && prefixNumber === 'Choose') {
-      setError('Please select a valid Trope number before submitting.');
+
+
+    // Validate Title
+    if (!title.trim()) {
+      setError('Title is required.');
+      return;
+    }
+
+    // Validate Script (Google Doc Link)
+    if (!googleDocLink.trim()) {
+      setError('Script (Google Doc Link) is required.');
+      return;
+    }
+
+    if (!googleDocLink.includes('docs.google.com')) {
+      setError("Script link must contain 'docs.google.com'.");
+      return;
+    }
+
+    // Validate AI Chat URLs - all fields must be filled
+    const hasEmptyUrls = aiChatUrls.some(url => url.trim() === '');
+    if (hasEmptyUrls) {
+      setError('All AI Chat URL fields must be filled. Please enter a URL in each field or remove empty fields.');
+      return;
+    }
+
+    // Validate Structure Explanation when "No Structure" is selected
+    if (selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
+      setError("Structure explanation must be at least 50 characters when 'No Structure' is selected.");
+      return;
+    }
+
+    // Validate Inspiration Link for Remix and Re-write
+    if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
+      setError("Inspiration link is required for Remix and Re-write scripts.");
+      return;
+    }
+
+    if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.includes('docs.google.com')) {
+      setError("Inspiration link must contain 'docs.google.com'.");
       return;
     }
 
@@ -376,6 +415,8 @@ const Dashboard = () => {
         title: fullTitle,
         googleDocLink: googleDocLink,
         aiChatUrl: aiChatUrlsString,
+        structure_explanation: selectedStructure === "No Structure" ? structureExplanation : null,
+        inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
       });
 
       // Refresh the scripts list to get the latest data
@@ -385,9 +426,11 @@ const Dashboard = () => {
       setTitle('');
       setGoogleDocLink('');
       setAiChatUrls(['']);
-      setPrefixType('Trope');
+      setPrefixType('Original');
       setPrefixNumber('Choose');
       setSelectedStructure('');
+      setStructureExplanation('');
+      setInspirationLink('');
 
       setError(null);
       alert('Approval pending, may take 24-48 hours');
@@ -407,11 +450,13 @@ const Dashboard = () => {
 
       // Reset form
       setTitle('');
-      setPrefixType('Trope');
+      setPrefixType('Original');
       setPrefixNumber('Choose');
       setSelectedStructure('');
+      setStructureExplanation('');
       setGoogleDocLink('');
       setAiChatUrls(['']);
+      setInspirationLink('');
 
       setError(null);
       alert('Script submitted successfully! (Demo mode - API not available)');
@@ -420,12 +465,12 @@ const Dashboard = () => {
     }
   };
 
-  // Handle type change like in reference
+  // Handle type change
   const handleTypeChange = (e) => {
     setPrefixType(e.target.value);
-    // Reset prefix number when type changes
-    if (e.target.value !== 'Trope') {
-      setPrefixNumber('Choose');
+    // Clear inspiration link if not Remix or Re-write
+    if (e.target.value !== 'Remix' && e.target.value !== 'Re-write') {
+      setInspirationLink('');
     }
   };
 
@@ -692,93 +737,102 @@ const Dashboard = () => {
                     AI Chat URL(s) <span style={{ color: '#ff4444' }}>*</span>
                   </Typography>
 
-                  {/* Multiple URL inputs */}
-                  {aiChatUrls.map((url, index) => (
-                    <Box key={index} sx={{ mb: 1.5, display: 'flex', gap: 1, alignItems: 'center' }}>
-                      <TextField
-                        fullWidth
-                        type="url"
-                        placeholder="https://chatgpt.com/share/..."
-                        value={url}
-                        onChange={(e) => updateAiChatUrl(index, e.target.value)}
-                        size="medium"
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            background: 'rgba(255, 255, 255, 0.04)',
-                            backdropFilter: 'blur(5px)',
-                            border: '1px solid rgba(255, 255, 255, 0.1)',
-                            borderRadius: '8px',
-                            transition: 'all 0.2s ease',
-                            '& fieldset': { border: 'none' },
-                            '&:hover': {
-                              border: '1px solid rgba(102, 126, 234, 0.3)',
-                              background: 'rgba(255, 255, 255, 0.06)',
-                            },
-                            '&.Mui-focused': {
-                              border: '1px solid rgba(102, 126, 234, 0.5)',
-                              background: 'rgba(255, 255, 255, 0.08)',
-                              boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                            },
-                          },
-                          '& .MuiInputBase-input': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            fontSize: '14px',
-                            padding: '10px 12px',
-                            '&::placeholder': {
-                              color: 'rgba(255, 255, 255, 0.4)',
-                            }
-                          },
-                        }}
-                      />
-
-                      {/* Remove button (only show if more than 1 URL) */}
-                      {aiChatUrls.length > 1 && (
-                        <Button
-                          onClick={() => removeAiChatUrl(index)}
-                          variant="contained"
+                  {/* Container box for URL inputs and button */}
+                  <Box sx={{
+                    border: '2px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '8px',
+                    padding: '20px',
+                    background: 'rgba(255, 255, 255, 0.02)'
+                  }}>
+                    {/* Multiple URL inputs */}
+                    {aiChatUrls.map((url, index) => (
+                      <Box key={index} sx={{ mb: index === aiChatUrls.length - 1 ? 0 : 2, display: 'flex', gap: 1, alignItems: 'center' }}>
+                        <TextField
+                          fullWidth
+                          type="url"
+                          placeholder="https://chatgpt.com/share/..."
+                          value={url}
+                          onChange={(e) => updateAiChatUrl(index, e.target.value)}
+                          size="medium"
                           sx={{
-                            background: 'linear-gradient(135deg, #ff4444 0%, #cc3333 100%)',
-                            color: 'white',
-                            fontWeight: '600',
-                            fontSize: '12px',
-                            px: 2,
-                            py: 1,
-                            borderRadius: '8px',
-                            textTransform: 'none',
-                            minWidth: 'auto',
-                            '&:hover': {
-                              background: 'linear-gradient(135deg, #ff3333 0%, #bb2222 100%)',
+                            '& .MuiOutlinedInput-root': {
+                              background: 'rgba(255, 255, 255, 0.04)',
+                              backdropFilter: 'blur(5px)',
+                              border: '1px solid rgba(255, 255, 255, 0.1)',
+                              borderRadius: '8px',
+                              transition: 'all 0.2s ease',
+                              '& fieldset': { border: 'none' },
+                              '&:hover': {
+                                border: '1px solid rgba(102, 126, 234, 0.3)',
+                                background: 'rgba(255, 255, 255, 0.06)',
+                              },
+                              '&.Mui-focused': {
+                                border: '1px solid rgba(102, 126, 234, 0.5)',
+                                background: 'rgba(255, 255, 255, 0.08)',
+                                boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                              },
+                            },
+                            '& .MuiInputBase-input': {
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              fontSize: '14px',
+                              padding: '10px 12px',
+                              '&::placeholder': {
+                                color: 'rgba(255, 255, 255, 0.4)',
+                              }
                             },
                           }}
-                        >
-                          Remove
-                        </Button>
-                      )}
-                    </Box>
-                  ))}
+                        />
 
-                  {/* Add Another Chat button */}
-                  <Button
-                    onClick={addAiChatUrl}
-                    variant="contained"
-                    sx={{
-                      background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
-                      color: 'white',
-                      fontWeight: '600',
-                      fontSize: '13px',
-                      px: 2.5,
-                      py: 1,
-                      borderRadius: '8px',
-                      textTransform: 'none',
-                      border: '2px solid #4CAF50',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)',
-                        border: '2px solid #45a049',
-                      },
-                    }}
-                  >
-                    + Add Another Chat
-                  </Button>
+                        {/* Remove button (only show if more than 1 URL) */}
+                        {aiChatUrls.length > 1 && (
+                          <Button
+                            onClick={() => removeAiChatUrl(index)}
+                            variant="contained"
+                            sx={{
+                              background: 'linear-gradient(135deg, #ff4444 0%, #cc3333 100%)',
+                              color: 'white',
+                              fontWeight: '600',
+                              fontSize: '12px',
+                              px: 2,
+                              py: 1,
+                              borderRadius: '8px',
+                              textTransform: 'none',
+                              minWidth: 'auto',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #ff3333 0%, #bb2222 100%)',
+                              },
+                            }}
+                          >
+                            Remove
+                          </Button>
+                        )}
+                      </Box>
+                    ))}
+
+                    {/* Add Another Chat button */}
+                    <Button
+                      onClick={addAiChatUrl}
+                      variant="contained"
+                      sx={{
+                        background: 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)',
+                        color: 'white',
+                        fontWeight: '600',
+                        fontSize: '13px',
+                        px: 2.5,
+                        py: 1,
+                        mt: 2,
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        border: '2px solid #4CAF50',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #45a049 0%, #3d8b40 100%)',
+                          border: '2px solid #45a049',
+                        },
+                      }}
+                    >
+                      + Add Another Chat
+                    </Button>
+                  </Box>
                 </Box>
 
                 {/* Structure Selection */}
@@ -794,7 +848,12 @@ const Dashboard = () => {
                   <FormControl size="medium" fullWidth>
                     <Select
                       value={selectedStructure}
-                      onChange={(e) => setSelectedStructure(e.target.value)}
+                      onChange={(e) => {
+                        setSelectedStructure(e.target.value);
+                        if (e.target.value !== "No Structure") {
+                          setStructureExplanation("");
+                        }
+                      }}
                       displayEmpty
                       MenuProps={{
                         PaperProps: {
@@ -845,7 +904,7 @@ const Dashboard = () => {
                         '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                       }}
                     >
-                      <MenuItem value="">-- No structure selected --</MenuItem>
+                      <MenuItem value="">-- Select Structure --</MenuItem>
                       {structureList.map((structure) => (
                         <MenuItem key={structure.structure_id || structure.id} value={structure.name}>
                           {structure.name}
@@ -854,6 +913,58 @@ const Dashboard = () => {
                     </Select>
                   </FormControl>
                 </Box>
+
+                {/* Structure Explanation (conditional) */}
+                {selectedStructure === "No Structure" && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Please explain your approach <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+
+                    {/* Container box for explanation */}
+                    <Box sx={{
+                      border: '2px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '8px',
+                      padding: '20px',
+                      background: 'rgba(255, 255, 255, 0.02)'
+                    }}>
+                      <TextField
+                        fullWidth
+                        multiline
+                        rows={4}
+                        value={structureExplanation}
+                        onChange={(e) => setStructureExplanation(e.target.value)}
+                        placeholder="Explain your structure approach (minimum 50 characters)..."
+                        sx={{
+                          '& .MuiOutlinedInput-root': {
+                            background: 'transparent',
+                            border: 'none',
+                            '& fieldset': { border: 'none' },
+                          },
+                          '& .MuiInputBase-input': {
+                            color: 'rgba(255, 255, 255, 0.9)',
+                            fontSize: '14px',
+                            '&::placeholder': {
+                              color: 'rgba(255, 255, 255, 0.4)',
+                            }
+                          },
+                        }}
+                      />
+                      <Typography variant="body2" sx={{
+                        mt: 1,
+                        fontSize: '14px',
+                        color: structureExplanation.length >= 50 ? '#4CAF50' : 'rgba(255, 255, 255, 0.6)'
+                      }}>
+                        {structureExplanation.length}/50 characters
+                      </Typography>
+                    </Box>
+                  </Box>
+                )}
 
                 {/* Modern Type Section */}
                 <Box sx={{ mb: 2.5 }}>
@@ -919,124 +1030,66 @@ const Dashboard = () => {
                           '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                         }}
                       >
-                        <MenuItem value="Trope">Trope</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
+                        <MenuItem value="Remix">Remix</MenuItem>
                         <MenuItem value="Re-write">Re-write</MenuItem>
                         <MenuItem value="STL">STL</MenuItem>
                       </Select>
                     </FormControl>
 
-                    {prefixType === 'Trope' && (
-                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '13px' }}>
-                          Number:
-                        </Typography>
-                        <FormControl size="medium" sx={{ minWidth: '120px' }} required>
-                          <Select
-                            value={prefixNumber}
-                            onChange={(e) => setPrefixNumber(e.target.value)}
-                            MenuProps={{
-                              PaperProps: {
-                                sx: {
-                                  background: 'rgba(255, 255, 255, 0.04)',
-                                  backdropFilter: 'blur(12px)',
-                                  border: '1px solid rgba(255, 255, 255, 0.1)',
-                                  borderRadius: '8px',
-                                  boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
-                                  '& .MuiMenuItem-root': {
-                                    color: 'rgba(255, 255, 255, 0.9)',
-                                    fontSize: '14px',
-                                    padding: '10px 16px',
-                                    '&:hover': {
-                                      background: 'rgba(102, 126, 234, 0.15)',
-                                    },
-                                    '&.Mui-selected': {
-                                      background: 'rgba(102, 126, 234, 0.25)',
-                                      '&:hover': {
-                                        background: 'rgba(102, 126, 234, 0.35)',
-                                      },
-                                    },
-                                  },
-                                },
-                              },
-                            }}
-                            sx={{
-                              background: 'rgba(255, 255, 255, 0.04)',
-                              backdropFilter: 'blur(5px)',
-                              border: '1px solid rgba(255, 255, 255, 0.1)',
-                              borderRadius: '8px',
-                              transition: 'all 0.2s ease',
-                              '& fieldset': { border: 'none' },
-                              '&:hover': {
-                                border: '1px solid rgba(102, 126, 234, 0.3)',
-                                background: 'rgba(255, 255, 255, 0.06)',
-                              },
-                              '&.Mui-focused': {
-                                border: '1px solid rgba(102, 126, 234, 0.5)',
-                                background: 'rgba(255, 255, 255, 0.08)',
-                                boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                              },
-                              '& .MuiInputBase-input': {
-                                color: 'rgba(255, 255, 255, 0.9)',
-                                fontSize: '14px',
-                                padding: '10px 12px'
-                              },
-                              '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
-                            }}
-                          >
-                            <MenuItem value="Choose">Choose</MenuItem>
-                            {tropeList.map((trope, index) => (
-                              <MenuItem key={index} value={index + 1}>
-                                {index + 1}
-                              </MenuItem>
-                            ))}
-                          </Select>
-                        </FormControl>
-                      </Box>
-                    )}
-                  </Box>
 
-                  {/* Trope Description Box - Below the Type section */}
-                  {prefixType === "Trope" && (
-                    <Box sx={{ mb: 2.5, mt: 1.5 }}>
-                      <Box sx={{
-                        width: '100%',
-                        background: 'rgba(255, 255, 255, 0.04)',
-                        backdropFilter: 'blur(5px)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        borderRadius: '8px',
-                        padding: '12px 14px',
-                        minHeight: '38px',
-                        display: 'flex',
-                        alignItems: 'center',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        transition: 'all 0.2s ease',
-                        '&:hover': {
-                          border: '1px solid rgba(102, 126, 234, 0.2)',
-                          background: 'rgba(255, 255, 255, 0.06)',
-                        },
-                      }}>
-                        <Typography variant="body2" sx={{
-                          color: prefixType === "Trope" && prefixNumber !== "Choose"
-                            ? 'rgba(255, 255, 255, 0.9)'
-                            : 'rgba(255, 255, 255, 0.5)',
-                          fontSize: '14px',
-                          fontStyle: prefixType === "Trope" && prefixNumber !== "Choose" ? 'normal' : 'italic',
-                          overflow: 'hidden',
-                          textOverflow: 'ellipsis',
-                          whiteSpace: 'nowrap',
-                          width: '100%',
-                        }}>
-                          {prefixType === "Trope" && prefixNumber !== "Choose"
-                            ? `${tropeList[prefixNumber - 1] || 'Loading...'}`
-                            : "Select a trope number to see description"}
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
+                  </Box>
                 </Box>
+
+                {/* Inspiration Link (conditional) */}
+                {(prefixType === 'Remix' || prefixType === 'Re-write') && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Script that inspired you (Google Doc Link) <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      type="url"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={inspirationLink}
+                      onChange={(e) => setInspirationLink(e.target.value)}
+                      required
+                      size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '& fieldset': { border: 'none' },
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                          },
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '10px 12px',
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
 
                 <Button
                   type="submit"
