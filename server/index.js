@@ -534,7 +534,7 @@ const createTrelloCard = async (
 };
 
 app.post("/api/scripts", async (req, res) => {
-  const { writer_id, title, googleDocLink, aiChatUrl } = req.body;
+  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link } = req.body;
   try {
     // Fetch Trello settings
     const settingsResult = await pool.query(
@@ -597,9 +597,9 @@ app.post("/api/scripts", async (req, res) => {
 
     // Insert script into the database with trello_card_id (only if no errors occurred)
     const { rows } = await pool.query(
-      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, created_at)
-          VALUES ($1, $2, $3, $4, $5, $6, CURRENT_TIMESTAMP) RETURNING *`,
-      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl]
+      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, CURRENT_TIMESTAMP) RETURNING *`,
+      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link]
     );
     const script = rows[0];
 
