@@ -1546,6 +1546,51 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
     }
 
+    // Get virals count (videos with over 1 million total views) from BigQuery
+    let viralsCount = 0;
+    console.log(`🔥 DEBUG: About to query virals count for writer ${writerId}`);
+
+    try {
+      const viralsQuery = `
+        WITH latest_snapshots AS (
+          SELECT
+            video_id,
+            writer_id,
+            writer_name,
+            statistics_view_count,
+            ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+          WHERE writer_name = @writer_name
+            AND writer_name IS NOT NULL
+            AND statistics_view_count IS NOT NULL
+            AND CAST(statistics_view_count AS INT64) > 0
+        )
+        SELECT COUNT(DISTINCT video_id) as virals_count
+        FROM latest_snapshots
+        WHERE rn = 1
+          AND CAST(statistics_view_count AS INT64) >= 1000000
+      `;
+
+      console.log(`🔥 DEBUG: Executing virals query for writer ${writerName}`);
+      const [viralsResult] = await bigquery.query({
+        query: viralsQuery,
+        params: {
+          writer_name: writerName
+        }
+      });
+      console.log(`🔥 DEBUG: Virals query result:`, viralsResult);
+
+      if (viralsResult.length > 0) {
+        const rawCount = viralsResult[0].virals_count;
+        viralsCount = parseInt(rawCount) || 0;
+        console.log(`🔥 Total virals (1M+ views) for writer ${writerName}: ${viralsCount} (raw: ${rawCount})`);
+      } else {
+        console.log(`⚠️ No rows returned from virals query for writer ${writerName}`);
+      }
+    } catch (viralsError) {
+      console.error('❌ Error getting virals count from BigQuery:', viralsError);
+    }
+
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
       totalViews: finalTotalViews,
@@ -1553,6 +1598,7 @@ async function getBigQueryAnalyticsOverview(
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
       totalSubmissions: totalSubmissionsCount, // Add total submissions to the return data
+      viralsCount: viralsCount, // Add virals count (videos with 1M+ views)
       summary: {
         progressToTarget: (finalTotalViews / 100000000) * 100,
         highestDay: dailyTotalsData.length > 0 ? Math.max(...dailyTotalsData.map(d => d.views)) : 0,
