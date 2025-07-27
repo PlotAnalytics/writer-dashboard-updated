@@ -1552,30 +1552,49 @@ async function getBigQueryAnalyticsOverview(
 
     try {
       const viralsQuery = `
-        WITH latest_snapshots AS (
+        WITH video_snapshots AS (
           SELECT
             video_id,
-            writer_id,
             writer_name,
-            statistics_view_count,
-            ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
+            snapshot_date,
+            CAST(statistics_view_count AS INT64) as view_count
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
           WHERE writer_name = @writer_name
             AND writer_name IS NOT NULL
             AND statistics_view_count IS NOT NULL
             AND CAST(statistics_view_count AS INT64) > 0
+        ),
+        before_range AS (
+          SELECT
+            video_id,
+            MAX(view_count) as max_views_before
+          FROM video_snapshots
+          WHERE snapshot_date < @start_date
+          GROUP BY video_id
+        ),
+        during_range AS (
+          SELECT
+            video_id,
+            MAX(view_count) as max_views_during
+          FROM video_snapshots
+          WHERE snapshot_date >= @start_date
+            AND snapshot_date <= @end_date
+          GROUP BY video_id
         )
-        SELECT COUNT(DISTINCT video_id) as virals_count
-        FROM latest_snapshots
-        WHERE rn = 1
-          AND CAST(statistics_view_count AS INT64) >= 1000000
+        SELECT COUNT(DISTINCT d.video_id) as virals_count
+        FROM during_range d
+        LEFT JOIN before_range b ON d.video_id = b.video_id
+        WHERE d.max_views_during >= 1000000
+          AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
       `;
 
-      console.log(`🔥 DEBUG: Executing virals query for writer ${writerName}`);
+      console.log(`🔥 DEBUG: Executing virals query for writer ${writerName}, date range: ${finalStartDate} to ${finalEndDate}`);
       const [viralsResult] = await bigquery.query({
         query: viralsQuery,
         params: {
-          writer_name: writerName
+          writer_name: writerName,
+          start_date: finalStartDate,
+          end_date: finalEndDate
         }
       });
       console.log(`🔥 DEBUG: Virals query result:`, viralsResult);
