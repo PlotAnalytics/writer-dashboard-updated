@@ -1678,32 +1678,7 @@ const Analytics = () => {
                   </Box>
                 )}
 
-                {analyticsData.viralsCount !== undefined && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 70,
-                    background: 'rgba(255, 87, 34, 0.08)',
-                    border: '1px solid rgba(255, 87, 34, 0.2)',
-                    borderRadius: 1,
-                    px: 1.5,
-                    py: 0.5
-                  }}>
-                    <Typography sx={{
-                      color: '#FF5722',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(255, 87, 34, 0.3)'
-                    }}>
-                      {analyticsData.viralsCount}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      VIRALS
-                    </Typography>
-                  </Box>
-                )}
-
-                {analyticsData.viralsCount !== undefined && (
+                {analyticsData && analyticsData.viralsCount !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
                     minWidth: 70,
