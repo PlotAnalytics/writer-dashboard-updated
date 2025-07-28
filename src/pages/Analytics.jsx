@@ -1602,33 +1602,35 @@ const Analytics = () => {
               {/* Compact Metrics */}
               <Box sx={{
                 display: 'flex',
-                gap: { xs: 1, sm: 1.5, md: 2 },
+                gap: 1,
                 alignItems: 'center',
                 flexWrap: 'nowrap',
                 overflow: 'hidden',
-                flex: 1
+                flex: 1,
+                minWidth: 0 // Allow shrinking
               }}>
                 {analyticsData.totalLikes !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(233, 30, 99, 0.08)',
                     border: '1px solid rgba(233, 30, 99, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#E91E63',
                       fontWeight: 700,
-                      fontSize: '1.1rem',
+                      fontSize: '0.9rem',
                       lineHeight: 1,
                       textShadow: '0 0 4px rgba(233, 30, 99, 0.3)'
                     }}>
                       {formatNumber(analyticsData.totalLikes)}
                     </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.6rem', fontWeight: 500 }}>
                       LIKES
                     </Typography>
                   </Box>
@@ -1637,13 +1639,14 @@ const Analytics = () => {
                 {analyticsData.totalComments !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(156, 39, 176, 0.08)',
                     border: '1px solid rgba(156, 39, 176, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#9C27B0',
@@ -1663,13 +1666,14 @@ const Analytics = () => {
                 {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(102, 126, 234, 0.08)',
                     border: '1px solid rgba(102, 126, 234, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
@@ -1692,13 +1696,14 @@ const Analytics = () => {
                 {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(255, 215, 0, 0.08)',
                     border: '1px solid rgba(255, 215, 0, 0.3)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#FFD700',
@@ -1719,13 +1724,14 @@ const Analytics = () => {
                 {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(255, 87, 34, 0.08)',
                     border: '1px solid rgba(255, 87, 34, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#FF5722',
@@ -1746,13 +1752,14 @@ const Analytics = () => {
                 {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(255, 152, 0, 0.08)',
                     border: '1px solid rgba(255, 152, 0, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#FF9800',
@@ -1773,13 +1780,14 @@ const Analytics = () => {
                 {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(76, 175, 80, 0.08)',
                     border: '1px solid rgba(76, 175, 80, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#4CAF50',
@@ -1800,13 +1808,14 @@ const Analytics = () => {
                 {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(158, 158, 158, 0.08)',
                     border: '1px solid rgba(158, 158, 158, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#9E9E9E',
@@ -1826,13 +1835,14 @@ const Analytics = () => {
                 {analyticsData.avgDailyViews !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: { xs: 50, sm: 60, md: 70 },
+                    minWidth: 45,
+                    maxWidth: 70,
                     background: 'rgba(255, 152, 0, 0.08)',
                     border: '1px solid rgba(255, 152, 0, 0.2)',
                     borderRadius: 1,
-                    px: { xs: 1, sm: 1.2, md: 1.5 },
+                    px: 0.8,
                     py: 0.5,
-                    flex: '0 0 auto'
+                    flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#FF9800',
