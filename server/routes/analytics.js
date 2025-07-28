@@ -2247,6 +2247,24 @@ router.get('/debug-30days-june5', async (req, res) => {
   }
 });
 
+// Clear Redis cache endpoint for debugging (no auth for testing)
+router.get('/clear-cache-debug', async (req, res) => {
+  try {
+    const redisService = global.redisService;
+    if (redisService && redisService.isAvailable()) {
+      // Clear all analytics cache
+      await redisService.clearPattern('analytics:*');
+      console.log('✅ Cleared all analytics cache (debug endpoint)');
+      res.json({ success: true, message: 'Analytics cache cleared via debug endpoint' });
+    } else {
+      res.json({ success: false, message: 'Redis not available' });
+    }
+  } catch (error) {
+    console.error('❌ Error clearing cache:', error);
+    res.status(500).json({ error: 'Failed to clear cache' });
+  }
+});
+
 // Clear Redis cache endpoint for debugging
 router.get('/clear-cache', authenticateToken, async (req, res) => {
   try {
@@ -2414,7 +2432,7 @@ async function handleAnalyticsRequest(req, res) {
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
           const cacheKey = `analytics:overview:v4:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
-          await redisService.set(cacheKey, analyticsData, 86400); // Cache for 24 hours
+          await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
           console.log('✅ Cached analytics overview data with FIXED viralsCount logic (snippet_published_at):', analyticsData.viralsCount);
         }
 
@@ -4237,7 +4255,7 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
     // Cache the response data
     if (redisService && redisService.isAvailable()) {
       const cacheKey = `analytics:top-content:writer:${writer_id}:range:${range}:type:${type}:limit:${limit}:start:${start_date || 'null'}:end:${end_date || 'null'}`;
-      await redisService.set(cacheKey, responseData, 86400); // Cache for 24 hours
+      await redisService.set(cacheKey, responseData, 43200); // Cache for 12 hours
       console.log('✅ Cached top content data');
     }
 
@@ -4531,7 +4549,7 @@ router.get('/writer/latest-content', authenticateToken, async (req, res) => {
     // Cache the response data
     if (redisService && redisService.isAvailable()) {
       const cacheKey = `analytics:latest-content:writer:${writer_id}`;
-      await redisService.set(cacheKey, responseData, 86400); // Cache for 24 hours
+      await redisService.set(cacheKey, responseData, 43200); // Cache for 12 hours
       console.log('✅ Cached latest content data');
     }
 
