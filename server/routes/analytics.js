@@ -1546,12 +1546,16 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
     }
 
-    // Get virals count (videos posted in time frame with 1M+ views) from BigQuery
+    // Get video performance breakdown (posted in time frame with different view thresholds) from BigQuery
+    let megaViralsCount = 0;
     let viralsCount = 0;
-    console.log(`🔥 DEBUG: About to query virals count for writer ${writerId} - NEW LOGIC: Posted in timeframe AND 1M+ views`);
+    let almostViralsCount = 0;
+    let decentVideosCount = 0;
+    let flopsCount = 0;
+    console.log(`🔥 DEBUG: About to query video performance breakdown for writer ${writerId} - LOGIC: Posted in timeframe with view thresholds`);
 
     try {
-      const viralsQuery = `
+      const performanceQuery = `
         WITH video_metadata AS (
           SELECT DISTINCT
             video_id,
@@ -1574,31 +1578,45 @@ async function getBigQueryAnalyticsOverview(
           FROM video_metadata
           GROUP BY video_id
         )
-        SELECT COUNT(DISTINCT video_id) as virals_count
+        SELECT
+          COUNT(CASE WHEN max_views >= 3000000 THEN 1 END) as mega_virals_count,
+          COUNT(CASE WHEN max_views >= 1000000 AND max_views < 3000000 THEN 1 END) as virals_count,
+          COUNT(CASE WHEN max_views >= 500000 AND max_views < 1000000 THEN 1 END) as almost_virals_count,
+          COUNT(CASE WHEN max_views >= 100000 AND max_views < 500000 THEN 1 END) as decent_videos_count,
+          COUNT(CASE WHEN max_views < 100000 THEN 1 END) as flops_count
         FROM latest_views
-        WHERE max_views >= 1000000
       `;
 
-      console.log(`🔥 DEBUG: Executing virals query for writer ${writerName}, date range: ${finalStartDate} to ${finalEndDate}`);
-      const [viralsResult] = await bigquery.query({
-        query: viralsQuery,
+      console.log(`🔥 DEBUG: Executing performance breakdown query for writer ${writerName}, date range: ${finalStartDate} to ${finalEndDate}`);
+      const [performanceResult] = await bigquery.query({
+        query: performanceQuery,
         params: {
           writer_name: writerName,
           start_date: finalStartDate,
           end_date: finalEndDate
         }
       });
-      console.log(`🔥 DEBUG: Virals query result:`, viralsResult);
+      console.log(`🔥 DEBUG: Performance breakdown query result:`, performanceResult);
 
-      if (viralsResult.length > 0) {
-        const rawCount = viralsResult[0].virals_count;
-        viralsCount = parseInt(rawCount) || 0;
-        console.log(`🔥 Total virals (1M+ views) for writer ${writerName}: ${viralsCount} (raw: ${rawCount})`);
+      if (performanceResult.length > 0) {
+        const result = performanceResult[0];
+        megaViralsCount = parseInt(result.mega_virals_count) || 0;
+        viralsCount = parseInt(result.virals_count) || 0;
+        almostViralsCount = parseInt(result.almost_virals_count) || 0;
+        decentVideosCount = parseInt(result.decent_videos_count) || 0;
+        flopsCount = parseInt(result.flops_count) || 0;
+
+        console.log(`🔥 Video performance breakdown for writer ${writerName}:`);
+        console.log(`   📈 Mega Virals (3M+): ${megaViralsCount}`);
+        console.log(`   🔥 Virals (1M-3M): ${viralsCount}`);
+        console.log(`   ⚡ Almost Virals (500K-1M): ${almostViralsCount}`);
+        console.log(`   👍 Decent Videos (100K-500K): ${decentVideosCount}`);
+        console.log(`   💔 Flops (<100K): ${flopsCount}`);
       } else {
-        console.log(`⚠️ No rows returned from virals query for writer ${writerName}`);
+        console.log(`⚠️ No rows returned from performance breakdown query for writer ${writerName}`);
       }
-    } catch (viralsError) {
-      console.error('❌ Error getting virals count from BigQuery:', viralsError);
+    } catch (performanceError) {
+      console.error('❌ Error getting video performance breakdown from BigQuery:', performanceError);
     }
 
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
@@ -1608,7 +1626,12 @@ async function getBigQueryAnalyticsOverview(
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
       totalSubmissions: totalSubmissionsCount, // Add total submissions to the return data
-      viralsCount: viralsCount, // Add virals count (videos with 1M+ views)
+      // Video performance breakdown
+      megaViralsCount: megaViralsCount, // 3M+ views
+      viralsCount: viralsCount, // 1M-3M views
+      almostViralsCount: almostViralsCount, // 500K-1M views
+      decentVideosCount: decentVideosCount, // 100K-500K views
+      flopsCount: flopsCount, // <100K views
       summary: {
         progressToTarget: (finalTotalViews / 100000000) * 100,
         highestDay: dailyTotalsData.length > 0 ? Math.max(...dailyTotalsData.map(d => d.views)) : 0,
@@ -2386,7 +2409,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v4:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v5:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2422,7 +2445,11 @@ async function handleAnalyticsRequest(req, res) {
         console.log('📊 BigQuery analytics data sent:', {
           totalViews: analyticsData.totalViews,
           totalSubmissions: analyticsData.totalSubmissions,
+          megaViralsCount: analyticsData.megaViralsCount,
           viralsCount: analyticsData.viralsCount,
+          almostViralsCount: analyticsData.almostViralsCount,
+          decentVideosCount: analyticsData.decentVideosCount,
+          flopsCount: analyticsData.flopsCount,
           topVideosCount: analyticsData.topVideos?.length || 0,
           hasLatestContent: !!analyticsData.latestContent,
           range: analyticsData.range,
@@ -2431,9 +2458,15 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v4:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v5:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
-          console.log('✅ Cached analytics overview data with FIXED viralsCount logic (snippet_published_at):', analyticsData.viralsCount);
+          console.log('✅ Cached analytics overview data with video performance breakdown:', {
+            megaVirals: analyticsData.megaViralsCount,
+            virals: analyticsData.viralsCount,
+            almostVirals: analyticsData.almostViralsCount,
+            decent: analyticsData.decentVideosCount,
+            flops: analyticsData.flopsCount
+          });
         }
 
         res.json(analyticsData);

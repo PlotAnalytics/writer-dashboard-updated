@@ -1678,7 +1678,34 @@ const Analytics = () => {
                   </Box>
                 )}
 
-                {analyticsData && analyticsData.viralsCount !== undefined && (
+                {/* 1. Mega Virals (3M+) */}
+                {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(255, 215, 0, 0.08)',
+                    border: '1px solid rgba(255, 215, 0, 0.3)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#FFD700',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(255, 215, 0, 0.4)'
+                    }}>
+                      {analyticsData.megaViralsCount}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      MEGA VIRALS
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* 2. Virals (1M-3M) */}
+                {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
                   <Box sx={{
                     textAlign: 'center',
                     minWidth: 70,
@@ -1699,6 +1726,84 @@ const Analytics = () => {
                     </Typography>
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       VIRALS
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* 3. Almost Virals (500K-1M) */}
+                {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(255, 152, 0, 0.08)',
+                    border: '1px solid rgba(255, 152, 0, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#FF9800',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(255, 152, 0, 0.3)'
+                    }}>
+                      {analyticsData.almostViralsCount}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      ALMOST VIRALS
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* 4. Decent Videos (100K-500K) */}
+                {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(76, 175, 80, 0.08)',
+                    border: '1px solid rgba(76, 175, 80, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#4CAF50',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(76, 175, 80, 0.3)'
+                    }}>
+                      {analyticsData.decentVideosCount}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      DECENT VIDEOS
+                    </Typography>
+                  </Box>
+                )}
+
+                {/* 5. Flops (<100K) */}
+                {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
+                  <Box sx={{
+                    textAlign: 'center',
+                    minWidth: 70,
+                    background: 'rgba(158, 158, 158, 0.08)',
+                    border: '1px solid rgba(158, 158, 158, 0.2)',
+                    borderRadius: 1,
+                    px: 1.5,
+                    py: 0.5
+                  }}>
+                    <Typography sx={{
+                      color: '#9E9E9E',
+                      fontWeight: 700,
+                      fontSize: '1.1rem',
+                      lineHeight: 1,
+                      textShadow: '0 0 4px rgba(158, 158, 158, 0.3)'
+                    }}>
+                      {analyticsData.flopsCount}
+                    </Typography>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
+                      FLOPS
                     </Typography>
                   </Box>
                 )}
