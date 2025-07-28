@@ -6334,6 +6334,12 @@ router.get('/video-details', async (req, res) => {
     console.log(`🔍 Executing BigQuery for category: ${category} with condition: ${condition}`);
     console.log(`📅 Date range: ${startDate} to ${endDate}`);
 
+    // Use the global BigQuery client
+    const bigqueryClient = getBigQueryClient();
+    if (!bigqueryClient) {
+      throw new Error('BigQuery client not initialized');
+    }
+
     const options = {
       query: query,
       params: {
@@ -6346,7 +6352,7 @@ router.get('/video-details', async (req, res) => {
       }
     };
 
-    const [rows] = await bigQueryClient.query(options);
+    const [rows] = await bigqueryClient.query(options);
 
     console.log(`📊 BigQuery returned ${rows.length} rows`);
 
