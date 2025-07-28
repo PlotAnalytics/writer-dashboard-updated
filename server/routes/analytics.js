@@ -1546,46 +1546,37 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
     }
 
-    // Get virals count (videos with over 1 million total views) from BigQuery
+    // Get virals count (videos posted in time frame with 1M+ views) from BigQuery
     let viralsCount = 0;
-    console.log(`🔥 DEBUG: About to query virals count for writer ${writerId}`);
+    console.log(`🔥 DEBUG: About to query virals count for writer ${writerId} - NEW LOGIC: Posted in timeframe AND 1M+ views`);
 
     try {
       const viralsQuery = `
-        WITH video_snapshots AS (
-          SELECT
+        WITH video_metadata AS (
+          SELECT DISTINCT
             video_id,
             writer_name,
-            snapshot_date,
-            CAST(statistics_view_count AS INT64) as view_count
+            published_at,
+            CAST(statistics_view_count AS INT64) as current_views
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
           WHERE writer_name = @writer_name
             AND writer_name IS NOT NULL
             AND statistics_view_count IS NOT NULL
             AND CAST(statistics_view_count AS INT64) > 0
+            AND published_at IS NOT NULL
+            AND DATE(published_at) >= @start_date
+            AND DATE(published_at) <= @end_date
         ),
-        before_range AS (
+        latest_views AS (
           SELECT
             video_id,
-            MAX(view_count) as max_views_before
-          FROM video_snapshots
-          WHERE snapshot_date < @start_date
-          GROUP BY video_id
-        ),
-        during_range AS (
-          SELECT
-            video_id,
-            MAX(view_count) as max_views_during
-          FROM video_snapshots
-          WHERE snapshot_date >= @start_date
-            AND snapshot_date <= @end_date
+            MAX(current_views) as max_views
+          FROM video_metadata
           GROUP BY video_id
         )
-        SELECT COUNT(DISTINCT d.video_id) as virals_count
-        FROM during_range d
-        LEFT JOIN before_range b ON d.video_id = b.video_id
-        WHERE d.max_views_during >= 1000000
-          AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
+        SELECT COUNT(DISTINCT video_id) as virals_count
+        FROM latest_views
+        WHERE max_views >= 1000000
       `;
 
       console.log(`🔥 DEBUG: Executing virals query for writer ${writerName}, date range: ${finalStartDate} to ${finalEndDate}`);
@@ -2377,7 +2368,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v2:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v3:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2422,9 +2413,9 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v2:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v3:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 86400); // Cache for 24 hours
-          console.log('✅ Cached analytics overview data with viralsCount:', analyticsData.viralsCount);
+          console.log('✅ Cached analytics overview data with NEW viralsCount logic:', analyticsData.viralsCount);
         }
 
         res.json(analyticsData);
@@ -5365,47 +5356,38 @@ router.get('/validate-virals', authenticateToken, async (req, res) => {
 
     console.log(`🔍 VALIDATING VIRALS: writer=${writerName} (${writer_id}), range: ${finalStartDate} to ${finalEndDate}`);
 
-    // Query to get actual viral videos with details
+    // Query to get actual viral videos with details - NEW LOGIC: Posted in timeframe AND 1M+ views
     const viralsDetailQuery = `
-      WITH video_snapshots AS (
-        SELECT
+      WITH video_metadata AS (
+        SELECT DISTINCT
           video_id,
           writer_name,
-          snapshot_date,
-          CAST(statistics_view_count AS INT64) as view_count
+          published_at,
+          CAST(statistics_view_count AS INT64) as current_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
         WHERE writer_name = @writer_name
           AND writer_name IS NOT NULL
           AND statistics_view_count IS NOT NULL
           AND CAST(statistics_view_count AS INT64) > 0
+          AND published_at IS NOT NULL
+          AND DATE(published_at) >= @start_date
+          AND DATE(published_at) <= @end_date
       ),
-      before_range AS (
+      latest_views AS (
         SELECT
           video_id,
-          MAX(view_count) as max_views_before
-        FROM video_snapshots
-        WHERE snapshot_date < @start_date
-        GROUP BY video_id
-      ),
-      during_range AS (
-        SELECT
-          video_id,
-          MAX(view_count) as max_views_during
-        FROM video_snapshots
-        WHERE snapshot_date >= @start_date
-          AND snapshot_date <= @end_date
-        GROUP BY video_id
+          published_at,
+          MAX(current_views) as max_views
+        FROM video_metadata
+        GROUP BY video_id, published_at
       )
       SELECT
-        d.video_id,
-        d.max_views_during,
-        COALESCE(b.max_views_before, 0) as max_views_before,
-        (d.max_views_during - COALESCE(b.max_views_before, 0)) as views_gained_in_period
-      FROM during_range d
-      LEFT JOIN before_range b ON d.video_id = b.video_id
-      WHERE d.max_views_during >= 1000000
-        AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
-      ORDER BY d.max_views_during DESC
+        video_id,
+        published_at,
+        max_views
+      FROM latest_views
+      WHERE max_views >= 1000000
+      ORDER BY max_views DESC
     `;
 
     const [viralsDetailResult] = await bigquery.query({
@@ -5441,10 +5423,9 @@ router.get('/validate-virals', authenticateToken, async (req, res) => {
       video_id: row.video_id,
       title: videoTitles[row.video_id]?.title || 'Unknown Title',
       url: videoTitles[row.video_id]?.url || null,
-      max_views_during_period: parseInt(row.max_views_during),
-      max_views_before_period: parseInt(row.max_views_before),
-      views_gained_in_period: parseInt(row.views_gained_in_period),
-      crossed_1m_in_period: row.max_views_before < 1000000
+      published_at: row.published_at,
+      current_views: parseInt(row.max_views),
+      is_viral: row.max_views >= 1000000
     }));
 
     res.json({
@@ -5458,8 +5439,8 @@ router.get('/validate-virals', authenticateToken, async (req, res) => {
       virals_count: viralVideos.length,
       viral_videos: viralVideos,
       explanation: {
-        criteria: "Videos that reached 1M+ views during the period AND had less than 1M views before the period",
-        note: "This shows videos that 'went viral' during the specified time range"
+        criteria: "Videos that were POSTED during the time period AND have 1M+ views (regardless of when they reached 1M)",
+        note: "NEW LOGIC: Shows videos posted in the timeframe that became viral (1M+ views)"
       }
     });
 
@@ -5498,46 +5479,38 @@ router.get('/debug-virals/:writer_id', async (req, res) => {
 
     console.log(`🔍 DEBUG VIRALS: writer=${writerName} (${writer_id}), range: ${finalStartDate} to ${finalEndDate}`);
 
-    // Get the count using the same logic as the main function
+    // Get the count using the same logic as the main function - NEW LOGIC: Posted in timeframe AND 1M+ views
     const viralsQuery = `
-      WITH video_snapshots AS (
-        SELECT
+      WITH video_metadata AS (
+        SELECT DISTINCT
           video_id,
           writer_name,
-          snapshot_date,
-          CAST(statistics_view_count AS INT64) as view_count
+          published_at,
+          CAST(statistics_view_count AS INT64) as current_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
         WHERE writer_name = @writer_name
           AND writer_name IS NOT NULL
           AND statistics_view_count IS NOT NULL
           AND CAST(statistics_view_count AS INT64) > 0
+          AND published_at IS NOT NULL
+          AND DATE(published_at) >= @start_date
+          AND DATE(published_at) <= @end_date
       ),
-      before_range AS (
+      latest_views AS (
         SELECT
           video_id,
-          MAX(view_count) as max_views_before
-        FROM video_snapshots
-        WHERE snapshot_date < @start_date
-        GROUP BY video_id
-      ),
-      during_range AS (
-        SELECT
-          video_id,
-          MAX(view_count) as max_views_during
-        FROM video_snapshots
-        WHERE snapshot_date >= @start_date
-          AND snapshot_date <= @end_date
-        GROUP BY video_id
+          published_at,
+          MAX(current_views) as max_views
+        FROM video_metadata
+        GROUP BY video_id, published_at
       )
       SELECT
-        d.video_id,
-        d.max_views_during,
-        COALESCE(b.max_views_before, 0) as max_views_before
-      FROM during_range d
-      LEFT JOIN before_range b ON d.video_id = b.video_id
-      WHERE d.max_views_during >= 1000000
-        AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
-      ORDER BY d.max_views_during DESC
+        video_id,
+        published_at,
+        max_views
+      FROM latest_views
+      WHERE max_views >= 1000000
+      ORDER BY max_views DESC
       LIMIT 10
     `;
 
@@ -5558,14 +5531,14 @@ router.get('/debug-virals/:writer_id', async (req, res) => {
       virals_count: viralsResult.length,
       sample_virals: viralsResult.map(row => ({
         video_id: row.video_id,
-        max_views_during: parseInt(row.max_views_during),
-        max_views_before: parseInt(row.max_views_before),
-        crossed_1m_in_period: row.max_views_before < 1000000
+        published_at: row.published_at,
+        current_views: parseInt(row.max_views),
+        is_viral: row.max_views >= 1000000
       })),
       query_used: viralsQuery.replace(/@writer_name/g, `'${writerName}'`)
         .replace(/@start_date/g, `'${finalStartDate}'`)
         .replace(/@end_date/g, `'${finalEndDate}'`),
-      explanation: "Videos that reached 1M+ views during the period AND had less than 1M views before the period"
+      explanation: "NEW LOGIC: Videos that were POSTED during the time period AND have 1M+ views (regardless of when they reached 1M)"
     });
 
   } catch (error) {
