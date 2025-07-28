@@ -565,10 +565,14 @@ const Analytics = () => {
       }
 
       // Fetch video details from API
+      console.log(`🔍 Fetching video details for category: ${category}, startDate: ${startDate}, endDate: ${endDate}`);
       const response = await fetch(`/api/video-details?category=${category}&startDate=${startDate}&endDate=${endDate}`);
       const data = await response.json();
 
+      console.log(`📊 Video details response:`, data);
+
       if (data.success) {
+        console.log(`✅ Found ${data.data.length} videos for category ${category}`);
         setModalVideos(data.data);
       } else {
         console.error('Failed to fetch video details:', data.message);

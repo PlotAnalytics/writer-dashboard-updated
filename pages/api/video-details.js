@@ -23,7 +23,7 @@ const getVideoDetailsByCategory = async (category, startDate, endDate) => {
 
     const query = `
       WITH latest_metadata AS (
-        SELECT 
+        SELECT
           video_id,
           views,
           snippet_title as title,
@@ -31,15 +31,16 @@ const getVideoDetailsByCategory = async (category, startDate, endDate) => {
           snippet_thumbnails,
           ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date BETWEEN @startDate AND @endDate
+        WHERE date <= @endDate
       ),
       previous_day_views AS (
-        SELECT 
+        SELECT
           video_id,
           views as previous_views,
           ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date = DATE_SUB(@endDate, INTERVAL 1 DAY)
+        WHERE date <= DATE_SUB(@endDate, INTERVAL 1 DAY)
+          AND date >= DATE_SUB(@endDate, INTERVAL 7 DAY)
       ),
       video_with_urls AS (
         SELECT 
@@ -87,8 +88,13 @@ const getVideoDetailsByCategory = async (category, startDate, endDate) => {
       }
     };
 
+    console.log(`🔍 Executing BigQuery for category: ${category} with condition: ${condition}`);
+    console.log(`📅 Date range: ${startDate} to ${endDate}`);
+
     const [rows] = await bigquery.query(options);
-    
+
+    console.log(`📊 BigQuery returned ${rows.length} rows`);
+
     return rows.map(row => ({
       video_id: row.video_id,
       views: row.views,
@@ -116,13 +122,16 @@ export default async function handler(req, res) {
   try {
     const { category, startDate, endDate } = req.query;
 
+    console.log(`🔍 API called with params:`, { category, startDate, endDate });
+
     if (!category || !startDate || !endDate) {
-      return res.status(400).json({ 
-        message: 'Missing required parameters: category, startDate, endDate' 
+      return res.status(400).json({
+        message: 'Missing required parameters: category, startDate, endDate'
       });
     }
 
     const videos = await getVideoDetailsByCategory(category, startDate, endDate);
+    console.log(`📊 Query returned ${videos.length} videos for category ${category}`);
     
     res.status(200).json({
       success: true,
