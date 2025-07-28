@@ -566,7 +566,7 @@ const Analytics = () => {
 
       // Fetch video details from API
       console.log(`🔍 Fetching video details for category: ${category}, startDate: ${startDate}, endDate: ${endDate}`);
-      const response = await fetch(`/api/video-details?category=${category}&startDate=${startDate}&endDate=${endDate}`);
+      const response = await fetch(`/api/analytics/video-details?category=${category}&startDate=${startDate}&endDate=${endDate}`);
       const data = await response.json();
 
       console.log(`📊 Video details response:`, data);
