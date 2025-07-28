@@ -5333,6 +5333,247 @@ router.get('/test/top-content', async (req, res) => {
   }
 });
 
+// Validate virals count - shows actual videos counted as virals
+router.get('/validate-virals', authenticateToken, async (req, res) => {
+  try {
+    const { writer_id, range = '30d', start_date, end_date } = req.query;
+
+    if (!writer_id) {
+      return res.status(400).json({ error: 'missing writer_id' });
+    }
+
+    // Get writer name from PostgreSQL
+    const writerResult = await pool.query('SELECT name FROM writers WHERE id = $1', [writer_id]);
+    if (writerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Writer not found' });
+    }
+    const writerName = writerResult.rows[0].name;
+
+    // Calculate date range
+    let finalStartDate, finalEndDate;
+    if (start_date && end_date) {
+      finalStartDate = start_date;
+      finalEndDate = end_date;
+    } else {
+      const days = parseInt(range.replace('d', ''));
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      finalStartDate = startDate.toISOString().split('T')[0];
+      finalEndDate = endDate.toISOString().split('T')[0];
+    }
+
+    console.log(`🔍 VALIDATING VIRALS: writer=${writerName} (${writer_id}), range: ${finalStartDate} to ${finalEndDate}`);
+
+    // Query to get actual viral videos with details
+    const viralsDetailQuery = `
+      WITH video_snapshots AS (
+        SELECT
+          video_id,
+          writer_name,
+          snapshot_date,
+          CAST(statistics_view_count AS INT64) as view_count
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+          AND statistics_view_count IS NOT NULL
+          AND CAST(statistics_view_count AS INT64) > 0
+      ),
+      before_range AS (
+        SELECT
+          video_id,
+          MAX(view_count) as max_views_before
+        FROM video_snapshots
+        WHERE snapshot_date < @start_date
+        GROUP BY video_id
+      ),
+      during_range AS (
+        SELECT
+          video_id,
+          MAX(view_count) as max_views_during
+        FROM video_snapshots
+        WHERE snapshot_date >= @start_date
+          AND snapshot_date <= @end_date
+        GROUP BY video_id
+      )
+      SELECT
+        d.video_id,
+        d.max_views_during,
+        COALESCE(b.max_views_before, 0) as max_views_before,
+        (d.max_views_during - COALESCE(b.max_views_before, 0)) as views_gained_in_period
+      FROM during_range d
+      LEFT JOIN before_range b ON d.video_id = b.video_id
+      WHERE d.max_views_during >= 1000000
+        AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
+      ORDER BY d.max_views_during DESC
+    `;
+
+    const [viralsDetailResult] = await bigquery.query({
+      query: viralsDetailQuery,
+      params: {
+        writer_name: writerName,
+        start_date: finalStartDate,
+        end_date: finalEndDate
+      }
+    });
+
+    // Get video titles from PostgreSQL for the viral videos
+    const videoIds = viralsDetailResult.map(row => row.video_id);
+    let videoTitles = {};
+
+    if (videoIds.length > 0) {
+      const titleQuery = `
+        SELECT id, script_title, url
+        FROM video
+        WHERE id = ANY($1::text[])
+      `;
+      const titleResult = await pool.query(titleQuery, [videoIds]);
+      titleResult.rows.forEach(row => {
+        videoTitles[row.id] = {
+          title: row.script_title,
+          url: row.url
+        };
+      });
+    }
+
+    // Combine the data
+    const viralVideos = viralsDetailResult.map(row => ({
+      video_id: row.video_id,
+      title: videoTitles[row.video_id]?.title || 'Unknown Title',
+      url: videoTitles[row.video_id]?.url || null,
+      max_views_during_period: parseInt(row.max_views_during),
+      max_views_before_period: parseInt(row.max_views_before),
+      views_gained_in_period: parseInt(row.views_gained_in_period),
+      crossed_1m_in_period: row.max_views_before < 1000000
+    }));
+
+    res.json({
+      success: true,
+      writer_name: writerName,
+      writer_id: writer_id,
+      date_range: {
+        start: finalStartDate,
+        end: finalEndDate
+      },
+      virals_count: viralVideos.length,
+      viral_videos: viralVideos,
+      explanation: {
+        criteria: "Videos that reached 1M+ views during the period AND had less than 1M views before the period",
+        note: "This shows videos that 'went viral' during the specified time range"
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Error validating virals:', error);
+    res.status(500).json({ error: 'Failed to validate virals', details: error.message });
+  }
+});
+
+// Debug virals count - no auth required for testing
+router.get('/debug-virals/:writer_id', async (req, res) => {
+  try {
+    const { writer_id } = req.params;
+    const { range = '30d', start_date, end_date } = req.query;
+
+    // Get writer name from PostgreSQL
+    const writerResult = await pool.query('SELECT name FROM writers WHERE id = $1', [writer_id]);
+    if (writerResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Writer not found' });
+    }
+    const writerName = writerResult.rows[0].name;
+
+    // Calculate date range
+    let finalStartDate, finalEndDate;
+    if (start_date && end_date) {
+      finalStartDate = start_date;
+      finalEndDate = end_date;
+    } else {
+      const days = parseInt(range.replace('d', ''));
+      const endDate = new Date();
+      const startDate = new Date();
+      startDate.setDate(endDate.getDate() - days);
+      finalStartDate = startDate.toISOString().split('T')[0];
+      finalEndDate = endDate.toISOString().split('T')[0];
+    }
+
+    console.log(`🔍 DEBUG VIRALS: writer=${writerName} (${writer_id}), range: ${finalStartDate} to ${finalEndDate}`);
+
+    // Get the count using the same logic as the main function
+    const viralsQuery = `
+      WITH video_snapshots AS (
+        SELECT
+          video_id,
+          writer_name,
+          snapshot_date,
+          CAST(statistics_view_count AS INT64) as view_count
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+          AND statistics_view_count IS NOT NULL
+          AND CAST(statistics_view_count AS INT64) > 0
+      ),
+      before_range AS (
+        SELECT
+          video_id,
+          MAX(view_count) as max_views_before
+        FROM video_snapshots
+        WHERE snapshot_date < @start_date
+        GROUP BY video_id
+      ),
+      during_range AS (
+        SELECT
+          video_id,
+          MAX(view_count) as max_views_during
+        FROM video_snapshots
+        WHERE snapshot_date >= @start_date
+          AND snapshot_date <= @end_date
+        GROUP BY video_id
+      )
+      SELECT
+        d.video_id,
+        d.max_views_during,
+        COALESCE(b.max_views_before, 0) as max_views_before
+      FROM during_range d
+      LEFT JOIN before_range b ON d.video_id = b.video_id
+      WHERE d.max_views_during >= 1000000
+        AND (b.max_views_before IS NULL OR b.max_views_before < 1000000)
+      ORDER BY d.max_views_during DESC
+      LIMIT 10
+    `;
+
+    const [viralsResult] = await bigquery.query({
+      query: viralsQuery,
+      params: {
+        writer_name: writerName,
+        start_date: finalStartDate,
+        end_date: finalEndDate
+      }
+    });
+
+    res.json({
+      success: true,
+      writer_name: writerName,
+      writer_id: writer_id,
+      date_range: `${finalStartDate} to ${finalEndDate}`,
+      virals_count: viralsResult.length,
+      sample_virals: viralsResult.map(row => ({
+        video_id: row.video_id,
+        max_views_during: parseInt(row.max_views_during),
+        max_views_before: parseInt(row.max_views_before),
+        crossed_1m_in_period: row.max_views_before < 1000000
+      })),
+      query_used: viralsQuery.replace(/@writer_name/g, `'${writerName}'`)
+        .replace(/@start_date/g, `'${finalStartDate}'`)
+        .replace(/@end_date/g, `'${finalEndDate}'`),
+      explanation: "Videos that reached 1M+ views during the period AND had less than 1M views before the period"
+    });
+
+  } catch (error) {
+    console.error('❌ Error debugging virals:', error);
+    res.status(500).json({ error: 'Failed to debug virals', details: error.message });
+  }
+});
+
 // Fast Writer Leaderboard endpoint - using pre-calculated cache table
 router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
   try {
