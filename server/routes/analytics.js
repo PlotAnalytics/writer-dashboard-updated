@@ -2443,7 +2443,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v6:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v7:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2492,7 +2492,7 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v6:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v7:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
           console.log('✅ Cached analytics overview data with video performance breakdown:', {
             megaVirals: analyticsData.megaViralsCount,
