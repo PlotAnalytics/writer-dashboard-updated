@@ -1518,32 +1518,41 @@ async function getBigQueryAnalyticsOverview(
     console.log(`📊 BigQuery total views: ${totalViews.toLocaleString()}`);
     console.log(`📊 InfluxDB data points: ${influxData.length}`);
 
-    // Get total submissions count for this writer from PostgreSQL (all YouTube videos)
+    // Get total submissions count for this writer from BigQuery (videos posted in timeframe)
     let totalSubmissionsCount = 0; // default fallback
-    console.log(`🔍 DEBUG: About to query total submissions for writer ${writerId}`);
+    console.log(`🔍 DEBUG: About to query total submissions for writer ${writerId} - LOGIC: Posted in timeframe (snippet_published_at)`);
 
     try {
       const totalSubmissionsQuery = `
-        SELECT COUNT(*) as total_count
-        FROM video
-        WHERE writer_id = $1
-          AND (url LIKE '%youtube.com%' OR url LIKE '%youtu.be%')
-          AND url IS NOT NULL
+        SELECT COUNT(DISTINCT video_id) as total_count
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+          AND snippet_published_at IS NOT NULL
+          AND DATE(snippet_published_at) >= @start_date
+          AND DATE(snippet_published_at) <= @end_date
       `;
 
-      console.log(`🔍 DEBUG: Executing total submissions query for writer ${writerId}`);
-      const totalSubmissionsResult = await pool.query(totalSubmissionsQuery, [writerId]);
-      console.log(`🔍 DEBUG: Query result:`, totalSubmissionsResult.rows);
+      console.log(`🔍 DEBUG: Executing total submissions query for writer ${writerName}, date range: ${finalStartDate} to ${finalEndDate}`);
+      const [totalSubmissionsResult] = await bigquery.query({
+        query: totalSubmissionsQuery,
+        params: {
+          writer_name: writerName,
+          start_date: finalStartDate,
+          end_date: finalEndDate
+        }
+      });
+      console.log(`🔍 DEBUG: Submissions query result:`, totalSubmissionsResult);
 
-      if (totalSubmissionsResult.rows.length > 0) {
-        const rawCount = totalSubmissionsResult.rows[0].total_count;
+      if (totalSubmissionsResult.length > 0) {
+        const rawCount = totalSubmissionsResult[0].total_count;
         totalSubmissionsCount = parseInt(rawCount) || 0;
-        console.log(`📊 Total YouTube submissions for writer ${writerId}: ${totalSubmissionsCount} (raw: ${rawCount}, all time from PostgreSQL)`);
+        console.log(`📊 Total submissions posted in timeframe for writer ${writerName}: ${totalSubmissionsCount} (raw: ${rawCount}, ${finalStartDate} to ${finalEndDate})`);
       } else {
-        console.log(`⚠️ No rows returned from total submissions query for writer ${writerId}`);
+        console.log(`⚠️ No rows returned from total submissions query for writer ${writerName}`);
       }
     } catch (totalSubmissionsError) {
-      console.error('❌ Error getting total submissions count from PostgreSQL:', totalSubmissionsError);
+      console.error('❌ Error getting total submissions count from BigQuery:', totalSubmissionsError);
     }
 
     // Get video performance breakdown (posted in time frame with different view thresholds) from BigQuery
@@ -2409,7 +2418,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v5:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v6:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2458,7 +2467,7 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v5:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v6:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
           console.log('✅ Cached analytics overview data with video performance breakdown:', {
             megaVirals: analyticsData.megaViralsCount,
