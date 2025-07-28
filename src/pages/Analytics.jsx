@@ -1681,7 +1681,7 @@ const Analytics = () => {
               {/* Compact Metrics */}
               <Box sx={{
                 display: 'flex',
-                gap: 1,
+                gap: 1.5,
                 alignItems: 'center',
                 flexWrap: 'nowrap',
                 overflow: 'hidden',
@@ -1691,25 +1691,25 @@ const Analytics = () => {
                 {analyticsData.totalLikes !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
+                    minWidth: 60,
+                    maxWidth: 90,
                     background: 'rgba(233, 30, 99, 0.08)',
                     border: '1px solid rgba(233, 30, 99, 0.2)',
                     borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
+                    px: 1,
+                    py: 0.8,
                     flex: '1 1 auto'
                   }}>
                     <Typography sx={{
                       color: '#E91E63',
                       fontWeight: 700,
-                      fontSize: '0.9rem',
+                      fontSize: '1rem',
                       lineHeight: 1,
                       textShadow: '0 0 4px rgba(233, 30, 99, 0.3)'
                     }}>
                       {formatNumber(analyticsData.totalLikes)}
                     </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.6rem', fontWeight: 500 }}>
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       LIKES
                     </Typography>
                   </Box>
@@ -1718,13 +1718,13 @@ const Analytics = () => {
                 {analyticsData.totalComments !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
+                    minWidth: 60,
+                    maxWidth: 90,
                     background: 'rgba(156, 39, 176, 0.08)',
                     border: '1px solid rgba(156, 39, 176, 0.2)',
                     borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
+                    px: 1,
+                    py: 0.8,
                     flex: '1 1 auto'
                   }}>
                     <Typography sx={{
@@ -1745,13 +1745,13 @@ const Analytics = () => {
                 {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
+                    minWidth: 60,
+                    maxWidth: 90,
                     background: 'rgba(102, 126, 234, 0.08)',
                     border: '1px solid rgba(102, 126, 234, 0.2)',
                     borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
+                    px: 1,
+                    py: 0.8,
                     flex: '1 1 auto'
                   }}>
                     <Typography sx={{
@@ -1777,13 +1777,13 @@ const Analytics = () => {
                     onClick={() => handleOpenVideoModal('megaVirals')}
                     sx={{
                       textAlign: 'center',
-                      minWidth: 45,
-                      maxWidth: 70,
+                      minWidth: 60,
+                      maxWidth: 90,
                       background: 'rgba(255, 215, 0, 0.08)',
                       border: '1px solid rgba(255, 215, 0, 0.3)',
                       borderRadius: 1,
-                      px: 0.8,
-                      py: 0.5,
+                      px: 1,
+                      py: 0.8,
                       flex: '1 1 auto',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -1815,13 +1815,13 @@ const Analytics = () => {
                     onClick={() => handleOpenVideoModal('virals')}
                     sx={{
                       textAlign: 'center',
-                      minWidth: 45,
-                      maxWidth: 70,
+                      minWidth: 60,
+                      maxWidth: 90,
                       background: 'rgba(255, 87, 34, 0.08)',
                       border: '1px solid rgba(255, 87, 34, 0.2)',
                       borderRadius: 1,
-                      px: 0.8,
-                      py: 0.5,
+                      px: 1,
+                      py: 0.8,
                       flex: '1 1 auto',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -1853,13 +1853,13 @@ const Analytics = () => {
                     onClick={() => handleOpenVideoModal('almostVirals')}
                     sx={{
                       textAlign: 'center',
-                      minWidth: 45,
-                      maxWidth: 70,
+                      minWidth: 60,
+                      maxWidth: 90,
                       background: 'rgba(255, 152, 0, 0.08)',
                       border: '1px solid rgba(255, 152, 0, 0.2)',
                       borderRadius: 1,
-                      px: 0.8,
-                      py: 0.5,
+                      px: 1,
+                      py: 0.8,
                       flex: '1 1 auto',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -1891,13 +1891,13 @@ const Analytics = () => {
                     onClick={() => handleOpenVideoModal('decentVideos')}
                     sx={{
                       textAlign: 'center',
-                      minWidth: 45,
-                      maxWidth: 70,
+                      minWidth: 60,
+                      maxWidth: 90,
                       background: 'rgba(76, 175, 80, 0.08)',
                       border: '1px solid rgba(76, 175, 80, 0.2)',
                       borderRadius: 1,
-                      px: 0.8,
-                      py: 0.5,
+                      px: 1,
+                      py: 0.8,
                       flex: '1 1 auto',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -1929,13 +1929,13 @@ const Analytics = () => {
                     onClick={() => handleOpenVideoModal('flops')}
                     sx={{
                       textAlign: 'center',
-                      minWidth: 45,
-                      maxWidth: 70,
+                      minWidth: 60,
+                      maxWidth: 90,
                       background: 'rgba(158, 158, 158, 0.08)',
                       border: '1px solid rgba(158, 158, 158, 0.2)',
                       borderRadius: 1,
-                      px: 0.8,
-                      py: 0.5,
+                      px: 1,
+                      py: 0.8,
                       flex: '1 1 auto',
                       cursor: 'pointer',
                       transition: 'all 0.2s ease',
@@ -1964,13 +1964,13 @@ const Analytics = () => {
                 {analyticsData.avgDailyViews !== undefined && (
                   <Box sx={{
                     textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
+                    minWidth: 60,
+                    maxWidth: 90,
                     background: 'rgba(255, 152, 0, 0.08)',
                     border: '1px solid rgba(255, 152, 0, 0.2)',
                     borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
+                    px: 1,
+                    py: 0.8,
                     flex: '1 1 auto'
                   }}>
                     <Typography sx={{
