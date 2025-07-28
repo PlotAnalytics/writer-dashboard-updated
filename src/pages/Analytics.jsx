@@ -27,6 +27,7 @@ import Layout from '../components/Layout.jsx';
 import { buildApiUrl, API_CONFIG } from '../config/api.js';
 import RealtimeWidget from '../components/RealtimeWidget';
 import WriterLeaderboard from '../components/WriterLeaderboard.jsx';
+import VideoDetailsModal from '../components/VideoDetailsModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
@@ -268,6 +269,12 @@ const Analytics = () => {
   const [isChartLoading, setIsChartLoading] = useState(false);
   const [loadTime, setLoadTime] = useState(null);
 
+  // Modal state for video details
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalCategory, setModalCategory] = useState(null);
+  const [modalVideos, setModalVideos] = useState([]);
+  const [modalLoading, setModalLoading] = useState(false);
+
   const dateRangeOptions = [
     { value: 'last7days', label: 'Last 7 days' },
     { value: 'last30days', label: 'Last 30 days' },
@@ -507,6 +514,78 @@ const Analytics = () => {
       setLoadTime(loadTimeMs);
       console.log(`⚡ Analytics fetch completed in ${loadTimeMs.toFixed(2)}ms`);
     }
+  };
+
+  // Handle opening video details modal
+  const handleOpenVideoModal = async (category) => {
+    setModalCategory(category);
+    setModalOpen(true);
+    setModalLoading(true);
+    setModalVideos([]);
+
+    try {
+      // Get current date range
+      let startDate, endDate;
+
+      if (dateRange === 'custom') {
+        startDate = customStartDate;
+        endDate = customEndDate;
+      } else {
+        // Calculate date range based on selection
+        const today = new Date();
+        endDate = today.toISOString().split('T')[0];
+
+        switch (dateRange) {
+          case 'last7days':
+            const sevenDaysAgo = new Date(today);
+            sevenDaysAgo.setDate(today.getDate() - 7);
+            startDate = sevenDaysAgo.toISOString().split('T')[0];
+            break;
+          case 'last30days':
+            const thirtyDaysAgo = new Date(today);
+            thirtyDaysAgo.setDate(today.getDate() - 30);
+            startDate = thirtyDaysAgo.toISOString().split('T')[0];
+            break;
+          case 'last90days':
+            const ninetyDaysAgo = new Date(today);
+            ninetyDaysAgo.setDate(today.getDate() - 90);
+            startDate = ninetyDaysAgo.toISOString().split('T')[0];
+            break;
+          case 'last365days':
+            const oneYearAgo = new Date(today);
+            oneYearAgo.setDate(today.getDate() - 365);
+            startDate = oneYearAgo.toISOString().split('T')[0];
+            break;
+          default:
+            // For other ranges, use a reasonable default
+            const defaultStart = new Date(today);
+            defaultStart.setDate(today.getDate() - 30);
+            startDate = defaultStart.toISOString().split('T')[0];
+        }
+      }
+
+      // Fetch video details from API
+      const response = await fetch(`/api/video-details?category=${category}&startDate=${startDate}&endDate=${endDate}`);
+      const data = await response.json();
+
+      if (data.success) {
+        setModalVideos(data.data);
+      } else {
+        console.error('Failed to fetch video details:', data.message);
+        setModalVideos([]);
+      }
+    } catch (error) {
+      console.error('Error fetching video details:', error);
+      setModalVideos([]);
+    } finally {
+      setModalLoading(false);
+    }
+  };
+
+  const handleCloseVideoModal = () => {
+    setModalOpen(false);
+    setModalCategory(null);
+    setModalVideos([]);
   };
 
   // Fetch analytics with specific date range (for calendar selections)
@@ -1694,17 +1773,27 @@ const Analytics = () => {
 
                 {/* 1. Mega Virals (3M+) */}
                 {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
-                    background: 'rgba(255, 215, 0, 0.08)',
-                    border: '1px solid rgba(255, 215, 0, 0.3)',
-                    borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
-                    flex: '1 1 auto'
-                  }}>
+                  <Box
+                    onClick={() => handleOpenVideoModal('megaVirals')}
+                    sx={{
+                      textAlign: 'center',
+                      minWidth: 45,
+                      maxWidth: 70,
+                      background: 'rgba(255, 215, 0, 0.08)',
+                      border: '1px solid rgba(255, 215, 0, 0.3)',
+                      borderRadius: 1,
+                      px: 0.8,
+                      py: 0.5,
+                      flex: '1 1 auto',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        background: 'rgba(255, 215, 0, 0.15)',
+                        border: '1px solid rgba(255, 215, 0, 0.5)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(255, 215, 0, 0.2)'
+                      }
+                    }}>
                     <Typography sx={{
                       color: '#FFD700',
                       fontWeight: 700,
@@ -1722,17 +1811,27 @@ const Analytics = () => {
 
                 {/* 2. Virals (1M-3M) */}
                 {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
-                    background: 'rgba(255, 87, 34, 0.08)',
-                    border: '1px solid rgba(255, 87, 34, 0.2)',
-                    borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
-                    flex: '1 1 auto'
-                  }}>
+                  <Box
+                    onClick={() => handleOpenVideoModal('virals')}
+                    sx={{
+                      textAlign: 'center',
+                      minWidth: 45,
+                      maxWidth: 70,
+                      background: 'rgba(255, 87, 34, 0.08)',
+                      border: '1px solid rgba(255, 87, 34, 0.2)',
+                      borderRadius: 1,
+                      px: 0.8,
+                      py: 0.5,
+                      flex: '1 1 auto',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        background: 'rgba(255, 87, 34, 0.15)',
+                        border: '1px solid rgba(255, 87, 34, 0.4)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(255, 87, 34, 0.2)'
+                      }
+                    }}>
                     <Typography sx={{
                       color: '#FF5722',
                       fontWeight: 700,
@@ -1750,17 +1849,27 @@ const Analytics = () => {
 
                 {/* 3. Almost Virals (500K-1M) */}
                 {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
-                    background: 'rgba(255, 152, 0, 0.08)',
-                    border: '1px solid rgba(255, 152, 0, 0.2)',
-                    borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
-                    flex: '1 1 auto'
-                  }}>
+                  <Box
+                    onClick={() => handleOpenVideoModal('almostVirals')}
+                    sx={{
+                      textAlign: 'center',
+                      minWidth: 45,
+                      maxWidth: 70,
+                      background: 'rgba(255, 152, 0, 0.08)',
+                      border: '1px solid rgba(255, 152, 0, 0.2)',
+                      borderRadius: 1,
+                      px: 0.8,
+                      py: 0.5,
+                      flex: '1 1 auto',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        background: 'rgba(255, 152, 0, 0.15)',
+                        border: '1px solid rgba(255, 152, 0, 0.4)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(255, 152, 0, 0.2)'
+                      }
+                    }}>
                     <Typography sx={{
                       color: '#FF9800',
                       fontWeight: 700,
@@ -1778,17 +1887,27 @@ const Analytics = () => {
 
                 {/* 4. Decent Videos (100K-500K) */}
                 {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
-                    background: 'rgba(76, 175, 80, 0.08)',
-                    border: '1px solid rgba(76, 175, 80, 0.2)',
-                    borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
-                    flex: '1 1 auto'
-                  }}>
+                  <Box
+                    onClick={() => handleOpenVideoModal('decentVideos')}
+                    sx={{
+                      textAlign: 'center',
+                      minWidth: 45,
+                      maxWidth: 70,
+                      background: 'rgba(76, 175, 80, 0.08)',
+                      border: '1px solid rgba(76, 175, 80, 0.2)',
+                      borderRadius: 1,
+                      px: 0.8,
+                      py: 0.5,
+                      flex: '1 1 auto',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        background: 'rgba(76, 175, 80, 0.15)',
+                        border: '1px solid rgba(76, 175, 80, 0.4)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)'
+                      }
+                    }}>
                     <Typography sx={{
                       color: '#4CAF50',
                       fontWeight: 700,
@@ -1806,17 +1925,27 @@ const Analytics = () => {
 
                 {/* 5. Flops (<100K) */}
                 {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 45,
-                    maxWidth: 70,
-                    background: 'rgba(158, 158, 158, 0.08)',
-                    border: '1px solid rgba(158, 158, 158, 0.2)',
-                    borderRadius: 1,
-                    px: 0.8,
-                    py: 0.5,
-                    flex: '1 1 auto'
-                  }}>
+                  <Box
+                    onClick={() => handleOpenVideoModal('flops')}
+                    sx={{
+                      textAlign: 'center',
+                      minWidth: 45,
+                      maxWidth: 70,
+                      background: 'rgba(158, 158, 158, 0.08)',
+                      border: '1px solid rgba(158, 158, 158, 0.2)',
+                      borderRadius: 1,
+                      px: 0.8,
+                      py: 0.5,
+                      flex: '1 1 auto',
+                      cursor: 'pointer',
+                      transition: 'all 0.2s ease',
+                      '&:hover': {
+                        background: 'rgba(158, 158, 158, 0.15)',
+                        border: '1px solid rgba(158, 158, 158, 0.4)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 12px rgba(158, 158, 158, 0.2)'
+                      }
+                    }}>
                     <Typography sx={{
                       color: '#9E9E9E',
                       fontWeight: 700,
@@ -3039,6 +3168,15 @@ const Analytics = () => {
           </>
         )}
       </Box>
+
+      {/* Video Details Modal */}
+      <VideoDetailsModal
+        open={modalOpen}
+        onClose={handleCloseVideoModal}
+        category={modalCategory}
+        videos={modalVideos}
+        loading={modalLoading}
+      />
     </Layout>
   );
 };
