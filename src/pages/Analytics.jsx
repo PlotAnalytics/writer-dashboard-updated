@@ -1807,6 +1807,16 @@ const Analytics = () => {
                     }}>
                       {analyticsData.megaViralsCount}
                     </Typography>
+                    {analyticsData.megaViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                      <Typography sx={{
+                        color: 'rgba(255, 215, 0, 0.8)',
+                        fontSize: '0.55rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                      }}>
+                        ({analyticsData.megaViralsPercentage}%)
+                      </Typography>
+                    )}
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       MEGA VIRALS
                     </Typography>
@@ -1845,6 +1855,16 @@ const Analytics = () => {
                     }}>
                       {analyticsData.viralsCount}
                     </Typography>
+                    {analyticsData.viralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                      <Typography sx={{
+                        color: 'rgba(255, 87, 34, 0.8)',
+                        fontSize: '0.55rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                      }}>
+                        ({analyticsData.viralsPercentage}%)
+                      </Typography>
+                    )}
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       VIRALS
                     </Typography>
@@ -1883,6 +1903,16 @@ const Analytics = () => {
                     }}>
                       {analyticsData.almostViralsCount}
                     </Typography>
+                    {analyticsData.almostViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                      <Typography sx={{
+                        color: 'rgba(255, 152, 0, 0.8)',
+                        fontSize: '0.55rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                      }}>
+                        ({analyticsData.almostViralsPercentage}%)
+                      </Typography>
+                    )}
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       ALMOST VIRALS
                     </Typography>
@@ -1921,6 +1951,16 @@ const Analytics = () => {
                     }}>
                       {analyticsData.decentVideosCount}
                     </Typography>
+                    {analyticsData.decentVideosPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                      <Typography sx={{
+                        color: 'rgba(76, 175, 80, 0.8)',
+                        fontSize: '0.55rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                      }}>
+                        ({analyticsData.decentVideosPercentage}%)
+                      </Typography>
+                    )}
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       DECENT VIDEOS
                     </Typography>
@@ -1959,6 +1999,16 @@ const Analytics = () => {
                     }}>
                       {analyticsData.flopsCount}
                     </Typography>
+                    {analyticsData.flopsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                      <Typography sx={{
+                        color: 'rgba(158, 158, 158, 0.8)',
+                        fontSize: '0.55rem',
+                        fontWeight: 600,
+                        lineHeight: 1
+                      }}>
+                        ({analyticsData.flopsPercentage}%)
+                      </Typography>
+                    )}
                     <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
                       FLOPS
                     </Typography>

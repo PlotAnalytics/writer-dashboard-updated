@@ -1628,6 +1628,25 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting video performance breakdown from BigQuery:', performanceError);
     }
 
+    // Calculate hit rate percentages
+    const calculatePercentage = (count, total) => {
+      if (total === 0) return 0;
+      return Math.round((count / total) * 100 * 10) / 10; // Round to 1 decimal place
+    };
+
+    const megaViralsPercentage = calculatePercentage(megaViralsCount, totalSubmissionsCount);
+    const viralsPercentage = calculatePercentage(viralsCount, totalSubmissionsCount);
+    const almostViralsPercentage = calculatePercentage(almostViralsCount, totalSubmissionsCount);
+    const decentVideosPercentage = calculatePercentage(decentVideosCount, totalSubmissionsCount);
+    const flopsPercentage = calculatePercentage(flopsCount, totalSubmissionsCount);
+
+    console.log(`📊 Hit Rate Percentages for writer ${writerName}:`);
+    console.log(`   📈 Mega Virals: ${megaViralsCount}/${totalSubmissionsCount} (${megaViralsPercentage}%)`);
+    console.log(`   🔥 Virals: ${viralsCount}/${totalSubmissionsCount} (${viralsPercentage}%)`);
+    console.log(`   ⚡ Almost Virals: ${almostViralsCount}/${totalSubmissionsCount} (${almostViralsPercentage}%)`);
+    console.log(`   👍 Decent Videos: ${decentVideosCount}/${totalSubmissionsCount} (${decentVideosPercentage}%)`);
+    console.log(`   💔 Flops: ${flopsCount}/${totalSubmissionsCount} (${flopsPercentage}%)`);
+
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
       totalViews: finalTotalViews,
@@ -1635,12 +1654,18 @@ async function getBigQueryAnalyticsOverview(
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
       totalSubmissions: totalSubmissionsCount, // Add total submissions to the return data
-      // Video performance breakdown
+      // Video performance breakdown with counts
       megaViralsCount: megaViralsCount, // 3M+ views
       viralsCount: viralsCount, // 1M-3M views
       almostViralsCount: almostViralsCount, // 500K-1M views
       decentVideosCount: decentVideosCount, // 100K-500K views
       flopsCount: flopsCount, // <100K views
+      // Video performance breakdown with percentages (hit rates)
+      megaViralsPercentage: megaViralsPercentage,
+      viralsPercentage: viralsPercentage,
+      almostViralsPercentage: almostViralsPercentage,
+      decentVideosPercentage: decentVideosPercentage,
+      flopsPercentage: flopsPercentage,
       summary: {
         progressToTarget: (finalTotalViews / 100000000) * 100,
         highestDay: dailyTotalsData.length > 0 ? Math.max(...dailyTotalsData.map(d => d.views)) : 0,
