@@ -2377,11 +2377,12 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v2:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
         console.log('✅ Returning cached analytics overview data');
+        console.log('🔍 DEBUG: Cached data includes viralsCount?', cachedData.viralsCount !== undefined ? `YES (${cachedData.viralsCount})` : 'NO');
         return res.json(cachedData);
       } else {
         console.log('❌ Cache MISS for key:', cacheKey);
@@ -2412,6 +2413,7 @@ async function handleAnalyticsRequest(req, res) {
         console.log('📊 BigQuery analytics data sent:', {
           totalViews: analyticsData.totalViews,
           totalSubmissions: analyticsData.totalSubmissions,
+          viralsCount: analyticsData.viralsCount,
           topVideosCount: analyticsData.topVideos?.length || 0,
           hasLatestContent: !!analyticsData.latestContent,
           range: analyticsData.range,
@@ -2420,9 +2422,9 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v2:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 86400); // Cache for 24 hours
-          console.log('✅ Cached analytics overview data');
+          console.log('✅ Cached analytics overview data with viralsCount:', analyticsData.viralsCount);
         }
 
         res.json(analyticsData);
