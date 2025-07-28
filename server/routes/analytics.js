@@ -6334,15 +6334,55 @@ router.get('/video-details', async (req, res) => {
     console.log(`🔍 Executing BigQuery for category: ${category} with condition: ${condition}`);
     console.log(`📅 Date range: ${startDate} to ${endDate}`);
 
-    // Use the global BigQuery client
-    console.log(`🔍 Debug: global.bigqueryClient exists:`, !!global.bigqueryClient);
-    console.log(`🔍 Debug: local bigquery exists:`, !!bigquery);
-
-    const bigqueryClient = getBigQueryClient();
-    console.log(`🔍 Debug: getBigQueryClient() returned:`, !!bigqueryClient);
+    // Initialize BigQuery client if not available
+    let bigqueryClient = global.bigqueryClient;
 
     if (!bigqueryClient) {
-      throw new Error('BigQuery client not initialized - both global and local clients are null');
+      console.log('⚠️ Global BigQuery client not available, attempting to initialize...');
+
+      // Try to initialize BigQuery client directly
+      const { BigQuery } = require('@google-cloud/bigquery');
+      const fs = require('fs');
+      const path = require('path');
+
+      try {
+        // Try to load credentials from admin_dashboard.json file first
+        let credentials;
+        const credentialsPath = path.join(__dirname, '..', '..', 'admin_dashboard.json');
+
+        if (fs.existsSync(credentialsPath)) {
+          console.log(`🔍 Loading credentials from admin_dashboard.json`);
+          const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+          credentials = JSON.parse(credentialsFile);
+        } else {
+          // Fallback to environment variable
+          const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+          if (!credentialsJson) {
+            throw new Error('No BigQuery credentials available');
+          }
+
+          console.log(`🔍 Loading credentials from environment variable`);
+          credentials = JSON.parse(credentialsJson);
+        }
+
+        const projectId = credentials.project_id || process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
+
+        bigqueryClient = new BigQuery({
+          credentials: credentials,
+          projectId: projectId,
+          location: "US",
+        });
+
+        console.log(`✅ BigQuery client initialized for video-details endpoint`);
+
+        // Set global client for future use
+        global.bigqueryClient = bigqueryClient;
+
+      } catch (initError) {
+        console.error('❌ Failed to initialize BigQuery client:', initError);
+        throw new Error('BigQuery client initialization failed');
+      }
     }
 
     const options = {
