@@ -6335,9 +6335,14 @@ router.get('/video-details', async (req, res) => {
     console.log(`📅 Date range: ${startDate} to ${endDate}`);
 
     // Use the global BigQuery client
+    console.log(`🔍 Debug: global.bigqueryClient exists:`, !!global.bigqueryClient);
+    console.log(`🔍 Debug: local bigquery exists:`, !!bigquery);
+
     const bigqueryClient = getBigQueryClient();
+    console.log(`🔍 Debug: getBigQueryClient() returned:`, !!bigqueryClient);
+
     if (!bigqueryClient) {
-      throw new Error('BigQuery client not initialized');
+      throw new Error('BigQuery client not initialized - both global and local clients are null');
     }
 
     const options = {
