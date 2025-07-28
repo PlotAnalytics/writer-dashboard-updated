@@ -1556,16 +1556,16 @@ async function getBigQueryAnalyticsOverview(
           SELECT DISTINCT
             video_id,
             writer_name,
-            published_at,
+            snippet_published_at,
             CAST(statistics_view_count AS INT64) as current_views
           FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
           WHERE writer_name = @writer_name
             AND writer_name IS NOT NULL
             AND statistics_view_count IS NOT NULL
             AND CAST(statistics_view_count AS INT64) > 0
-            AND published_at IS NOT NULL
-            AND DATE(published_at) >= @start_date
-            AND DATE(published_at) <= @end_date
+            AND snippet_published_at IS NOT NULL
+            AND DATE(snippet_published_at) >= @start_date
+            AND DATE(snippet_published_at) <= @end_date
         ),
         latest_views AS (
           SELECT
@@ -2368,7 +2368,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v3:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v4:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2413,9 +2413,9 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v3:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v4:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 86400); // Cache for 24 hours
-          console.log('✅ Cached analytics overview data with NEW viralsCount logic:', analyticsData.viralsCount);
+          console.log('✅ Cached analytics overview data with FIXED viralsCount logic (snippet_published_at):', analyticsData.viralsCount);
         }
 
         res.json(analyticsData);
@@ -5362,28 +5362,28 @@ router.get('/validate-virals', authenticateToken, async (req, res) => {
         SELECT DISTINCT
           video_id,
           writer_name,
-          published_at,
+          snippet_published_at,
           CAST(statistics_view_count AS INT64) as current_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
         WHERE writer_name = @writer_name
           AND writer_name IS NOT NULL
           AND statistics_view_count IS NOT NULL
           AND CAST(statistics_view_count AS INT64) > 0
-          AND published_at IS NOT NULL
-          AND DATE(published_at) >= @start_date
-          AND DATE(published_at) <= @end_date
+          AND snippet_published_at IS NOT NULL
+          AND DATE(snippet_published_at) >= @start_date
+          AND DATE(snippet_published_at) <= @end_date
       ),
       latest_views AS (
         SELECT
           video_id,
-          published_at,
+          snippet_published_at,
           MAX(current_views) as max_views
         FROM video_metadata
-        GROUP BY video_id, published_at
+        GROUP BY video_id, snippet_published_at
       )
       SELECT
         video_id,
-        published_at,
+        snippet_published_at,
         max_views
       FROM latest_views
       WHERE max_views >= 1000000
@@ -5423,7 +5423,7 @@ router.get('/validate-virals', authenticateToken, async (req, res) => {
       video_id: row.video_id,
       title: videoTitles[row.video_id]?.title || 'Unknown Title',
       url: videoTitles[row.video_id]?.url || null,
-      published_at: row.published_at,
+      published_at: row.snippet_published_at,
       current_views: parseInt(row.max_views),
       is_viral: row.max_views >= 1000000
     }));
@@ -5485,28 +5485,28 @@ router.get('/debug-virals/:writer_id', async (req, res) => {
         SELECT DISTINCT
           video_id,
           writer_name,
-          published_at,
+          snippet_published_at,
           CAST(statistics_view_count AS INT64) as current_views
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
         WHERE writer_name = @writer_name
           AND writer_name IS NOT NULL
           AND statistics_view_count IS NOT NULL
           AND CAST(statistics_view_count AS INT64) > 0
-          AND published_at IS NOT NULL
-          AND DATE(published_at) >= @start_date
-          AND DATE(published_at) <= @end_date
+          AND snippet_published_at IS NOT NULL
+          AND DATE(snippet_published_at) >= @start_date
+          AND DATE(snippet_published_at) <= @end_date
       ),
       latest_views AS (
         SELECT
           video_id,
-          published_at,
+          snippet_published_at,
           MAX(current_views) as max_views
         FROM video_metadata
-        GROUP BY video_id, published_at
+        GROUP BY video_id, snippet_published_at
       )
       SELECT
         video_id,
-        published_at,
+        snippet_published_at,
         max_views
       FROM latest_views
       WHERE max_views >= 1000000
@@ -5531,7 +5531,7 @@ router.get('/debug-virals/:writer_id', async (req, res) => {
       virals_count: viralsResult.length,
       sample_virals: viralsResult.map(row => ({
         video_id: row.video_id,
-        published_at: row.published_at,
+        published_at: row.snippet_published_at,
         current_views: parseInt(row.max_views),
         is_viral: row.max_views >= 1000000
       })),
