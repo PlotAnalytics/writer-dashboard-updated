@@ -19,8 +19,14 @@ import {
   useTheme
 } from '@mui/material';
 import {
-  Refresh as RefreshIcon
+  Refresh as RefreshIcon,
+  TrendingUp as TrendingUpIcon,
+  Whatshot as WhatshotIcon,
+  FlashOn as FlashOnIcon,
+  ThumbUp as ThumbUpIcon,
+  SentimentDissatisfied as SentimentDissatisfiedIcon
 } from '@mui/icons-material';
+import { keyframes } from '@mui/system';
 import ReactECharts from 'echarts-for-react';
 import dayjs from 'dayjs';
 import Layout from '../components/Layout.jsx';
@@ -31,6 +37,16 @@ import VideoDetailsModal from '../components/VideoDetailsModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
+
+// Shimmer animation for progress bar
+const shimmer = keyframes`
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+`;
 
 // Utility functions like WriterAnalytics.jsx
 const formatNumber = (value) => {
@@ -1572,420 +1588,771 @@ const Analytics = () => {
                 background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)'
               }
             }}>
-              {/* Main Views */}
-              <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                <Box>
-                  <Typography sx={{
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    WebkitBackgroundClip: 'text',
-                    WebkitTextFillColor: 'transparent',
-                    fontWeight: 700,
-                    fontSize: '1.5rem',
-                    lineHeight: 1
-                  }}>
-                    {formatNumber(analyticsData.totalViews || 0)}
-                  </Typography>
-                  <Typography sx={{
-                    color: 'rgba(255, 255, 255, 0.6)',
-                    fontSize: '0.7rem',
-                    fontWeight: 500
-                  }}>
-                    views • {getDateRangeLabel()}
-                  </Typography>
-                </Box>
-
-                {/* Progress Bar */}
-                {analyticsData.summary?.progressToTarget !== undefined && (
-                  <Box sx={{ minWidth: 140 }}>
-                    <Typography sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      fontSize: '0.75rem',
-                      fontWeight: 600,
-                      mb: 0.5
-                    }}>
-                      {analyticsData.summary.progressToTarget.toFixed(1)}% to 100M
-                    </Typography>
-                    <LinearProgress
-                      variant="determinate"
-                      value={Math.min(analyticsData.summary.progressToTarget, 100)}
-                      sx={{
-                        height: 8,
-                        borderRadius: 4,
-                        bgcolor: 'rgba(255, 255, 255, 0.12)',
-                        border: '1px solid rgba(102, 126, 234, 0.2)',
-                        '& .MuiLinearProgress-bar': {
-                          background: 'linear-gradient(90deg, #667eea 0%, #764ba2 100%)',
-                          borderRadius: 4,
-                          boxShadow: '0 0 8px rgba(102, 126, 234, 0.4)'
-                        }
-                      }}
-                    />
-                  </Box>
-                )}
-              </Box>
-
-              {/* Compact Metrics */}
+              {/* Modern KPI Performance Cards - Fixed Layout */}
               <Box sx={{
                 display: 'flex',
-                gap: 1.5,
-                alignItems: 'center',
-                flexWrap: 'nowrap',
-                overflow: 'hidden',
+                flexDirection: 'column',
+                gap: 2,
                 flex: 1,
-                minWidth: 0 // Allow shrinking
+                minWidth: 0
               }}>
-                {analyticsData.totalLikes !== undefined && (
+                {/* Top Row: 3 cards side by side */}
+                <Box sx={{
+                  display: 'flex',
+                  gap: 2,
+                  '& > *': {
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    maxWidth: 'calc(33.333% - 8px)'
+                  }
+                }}>
+                  {/* Total Views Card - First position with circular progress */}
                   <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 60,
-                    maxWidth: 90,
-                    background: 'rgba(233, 30, 99, 0.08)',
-                    border: '1px solid rgba(233, 30, 99, 0.2)',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.8,
-                    flex: '1 1 auto'
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(102, 126, 234, 0.25)',
+                    borderRadius: 3,
+                    p: 2.5,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minHeight: '60px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                      transform: 'translateY(-2px)',
+                      boxShadow: '0 12px 32px rgba(102, 126, 234, 0.25)',
+                      border: '1px solid rgba(102, 126, 234, 0.4)',
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.12) 100%)',
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      background: 'linear-gradient(90deg, #667eea, #764ba2)',
+                    }
                   }}>
-                    <Typography sx={{
-                      color: '#E91E63',
-                      fontWeight: 700,
-                      fontSize: '1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(233, 30, 99, 0.3)'
-                    }}>
-                      {formatNumber(analyticsData.totalLikes)}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      LIKES
-                    </Typography>
-                  </Box>
-                )}
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                      <Typography variant="h4" sx={{
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        WebkitBackgroundClip: 'text',
+                        WebkitTextFillColor: 'transparent',
+                        fontWeight: 800,
+                        fontSize: '2rem',
+                        lineHeight: 1,
+                        filter: 'drop-shadow(0 2px 8px rgba(102, 126, 234, 0.4))'
+                      }}>
+                        {formatNumber(analyticsData.totalViews || 0)}
+                      </Typography>
 
-                {analyticsData.totalComments !== undefined && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 60,
-                    maxWidth: 90,
-                    background: 'rgba(156, 39, 176, 0.08)',
-                    border: '1px solid rgba(156, 39, 176, 0.2)',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.8,
-                    flex: '1 1 auto'
-                  }}>
-                    <Typography sx={{
-                      color: '#9C27B0',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(156, 39, 176, 0.3)'
-                    }}>
-                      {formatNumber(analyticsData.totalComments)}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      COMMENTS
-                    </Typography>
+                      {/* Circular Progress Meter */}
+                      {analyticsData.summary?.progressToTarget !== undefined && (
+                        <Box sx={{
+                          position: 'relative',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 50,
+                          height: 50
+                        }}>
+                          {/* Background Circle */}
+                          <svg width="50" height="50" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+                            <circle
+                              cx="25"
+                              cy="25"
+                              r="20"
+                              fill="none"
+                              stroke="rgba(255, 255, 255, 0.1)"
+                              strokeWidth="3"
+                            />
+                            {/* Progress Arc */}
+                            <circle
+                              cx="25"
+                              cy="25"
+                              r="20"
+                              fill="none"
+                              stroke="url(#progressGradient)"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 20}`}
+                              strokeDashoffset={`${2 * Math.PI * 20 * (1 - Math.min(analyticsData.summary.progressToTarget, 100) / 100)}`}
+                              style={{
+                                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                filter: 'drop-shadow(0 0 6px rgba(102, 126, 234, 0.6))'
+                              }}
+                            />
+                            <defs>
+                              <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#667eea" />
+                                <stop offset="100%" stopColor="#764ba2" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          {/* Percentage Text */}
+                          <Typography sx={{
+                            position: 'absolute',
+                            color: '#667eea',
+                            fontWeight: 800,
+                            fontSize: '0.7rem',
+                            textAlign: 'center',
+                            lineHeight: 1,
+                            textShadow: '0 2px 4px rgba(102, 126, 234, 0.3)'
+                          }}>
+                            {analyticsData.summary.progressToTarget.toFixed(0)}%
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                    <Box>
+                      <Typography sx={{
+                        color: 'white',
+                        fontWeight: 700,
+                        fontSize: '0.75rem',
+                        letterSpacing: '0.5px',
+                        mb: 0.5
+                      }}>
+                        TOTAL VIEWS
+                      </Typography>
+                      <Typography variant="caption" sx={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '0.7rem',
+                        display: 'block'
+                      }}>
+                        {getDateRangeLabel()}
+                      </Typography>
+                    </Box>
                   </Box>
-                )}
 
-                {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 60,
-                    maxWidth: 90,
-                    background: 'rgba(102, 126, 234, 0.08)',
-                    border: '1px solid rgba(102, 126, 234, 0.2)',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.8,
-                    flex: '1 1 auto'
-                  }}>
-                    <Typography sx={{
-                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                      WebkitBackgroundClip: 'text',
-                      WebkitTextFillColor: 'transparent',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      filter: 'drop-shadow(0 0 4px rgba(102, 126, 234, 0.3))'
-                    }}>
-                      {analyticsData.totalSubmissions || analyticsData.topVideos?.length || 50}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      SUBMISSIONS
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 1. Mega Virals (3M+) */}
-                {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
-                  <Box
-                    onClick={() => handleOpenVideoModal('megaVirals')}
-                    sx={{
-                      textAlign: 'center',
-                      minWidth: 60,
-                      maxWidth: 90,
-                      background: 'rgba(255, 215, 0, 0.08)',
-                      border: '1px solid rgba(255, 215, 0, 0.3)',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.8,
-                      flex: '1 1 auto',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                  {/* Submissions Card */}
+                  {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(102, 126, 234, 0.25)',
+                      borderRadius: 3,
+                      p: 2.5,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '60px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                       '&:hover': {
-                        background: 'rgba(255, 215, 0, 0.15)',
-                        border: '1px solid rgba(255, 215, 0, 0.5)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 215, 0, 0.2)'
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 32px rgba(102, 126, 234, 0.25)',
+                        border: '1px solid rgba(102, 126, 234, 0.4)',
+                        background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.12) 100%)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: 'linear-gradient(90deg, #667eea, #764ba2)',
                       }
                     }}>
-                    <Typography sx={{
-                      color: '#FFD700',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(255, 215, 0, 0.4)'
-                    }}>
-                      {analyticsData.megaViralsCount}
-                    </Typography>
-                    {analyticsData.megaViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                      <Typography sx={{
-                        color: 'rgba(255, 215, 0, 0.8)',
-                        fontSize: '0.55rem',
-                        fontWeight: 600,
-                        lineHeight: 1
-                      }}>
-                        ({analyticsData.megaViralsPercentage}%)
-                      </Typography>
-                    )}
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      MEGA VIRALS
-                    </Typography>
-                  </Box>
-                )}
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          filter: 'drop-shadow(0 2px 8px rgba(102, 126, 234, 0.4))'
+                        }}>
+                          {analyticsData.totalSubmissions || analyticsData.topVideos?.length || 50}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(102, 126, 234, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <TrendingUpIcon sx={{ color: '#667eea', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          SUBMISSIONS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block'
+                        }}>
+                          Total Videos
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
 
-                {/* 2. Virals (1M-3M) */}
-                {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
-                  <Box
-                    onClick={() => handleOpenVideoModal('virals')}
-                    sx={{
-                      textAlign: 'center',
-                      minWidth: 60,
-                      maxWidth: 90,
-                      background: 'rgba(255, 87, 34, 0.08)',
-                      border: '1px solid rgba(255, 87, 34, 0.2)',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.8,
-                      flex: '1 1 auto',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
+                  {/* Mega Virals Card */}
+                  {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('megaVirals')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.15) 0%, rgba(255, 193, 7, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 215, 0, 0.25)',
+                        borderRadius: 3,
+                        p: 2.5,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '60px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-4px) scale(1.02)',
+                          boxShadow: '0 16px 40px rgba(255, 215, 0, 0.3)',
+                          border: '1px solid rgba(255, 215, 0, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 215, 0, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #FFD700, #FFC107)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#FFD700',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(255, 215, 0, 0.4)'
+                        }}>
+                          {analyticsData.megaViralsCount}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(255, 215, 0, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <TrendingUpIcon sx={{ color: '#FFD700', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          MEGA VIRALS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          mb: 1
+                        }}>
+                          3M+ Views
+                        </Typography>
+                        {analyticsData.megaViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                          <Box sx={{
+                            background: 'rgba(255, 215, 0, 0.15)',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.5,
+                            display: 'inline-block'
+                          }}>
+                            <Typography variant="caption" sx={{
+                              color: '#FFD700',
+                              fontWeight: 700,
+                              fontSize: '0.75rem'
+                            }}>
+                              {analyticsData.megaViralsPercentage}% Hit Rate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Virals Card */}
+                  {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('virals')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(255, 87, 34, 0.15) 0%, rgba(244, 67, 54, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 87, 34, 0.25)',
+                        borderRadius: 3,
+                        p: 2.5,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '60px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-4px) scale(1.02)',
+                          boxShadow: '0 16px 40px rgba(255, 87, 34, 0.3)',
+                          border: '1px solid rgba(255, 87, 34, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 87, 34, 0.25) 0%, rgba(244, 67, 54, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #FF5722, #F44336)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#FF5722',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(255, 87, 34, 0.4)'
+                        }}>
+                          {analyticsData.viralsCount}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(255, 87, 34, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <WhatshotIcon sx={{ color: '#FF5722', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          VIRALS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          mb: 1
+                        }}>
+                          1M-3M Views
+                        </Typography>
+                        {analyticsData.viralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                          <Box sx={{
+                            background: 'rgba(255, 87, 34, 0.15)',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.5,
+                            display: 'inline-block'
+                          }}>
+                            <Typography variant="caption" sx={{
+                              color: '#FF5722',
+                              fontWeight: 700,
+                              fontSize: '0.75rem'
+                            }}>
+                              {analyticsData.viralsPercentage}% Hit Rate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+
+                </Box>
+
+                {/* Bottom Row: 4 cards side by side */}
+                <Box sx={{
+                  display: 'flex',
+                  gap: 2,
+                  '& > *': {
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    maxWidth: 'calc(25% - 12px)'
+                  }
+                }}>
+                  {/* Almost Virals Card - First position in bottom row */}
+                  {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('almostVirals')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 193, 7, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 152, 0, 0.25)',
+                        borderRadius: 3,
+                        p: 2.5,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '60px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-4px) scale(1.02)',
+                          boxShadow: '0 16px 40px rgba(255, 152, 0, 0.3)',
+                          border: '1px solid rgba(255, 152, 0, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #FF9800, #FFC107)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#FF9800',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(255, 152, 0, 0.4)'
+                        }}>
+                          {analyticsData.almostViralsCount}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(255, 152, 0, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <FlashOnIcon sx={{ color: '#FF9800', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          ALMOST VIRALS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          mb: 1
+                        }}>
+                          500K-1M Views
+                        </Typography>
+                        {analyticsData.almostViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                          <Box sx={{
+                            background: 'rgba(255, 152, 0, 0.15)',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.5,
+                            display: 'inline-block'
+                          }}>
+                            <Typography variant="caption" sx={{
+                              color: '#FF9800',
+                              fontWeight: 700,
+                              fontSize: '0.75rem'
+                            }}>
+                              {analyticsData.almostViralsPercentage}% Hit Rate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Decent Videos Card */}
+                  {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('decentVideos')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(139, 195, 74, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(76, 175, 80, 0.25)',
+                        borderRadius: 3,
+                        p: 2.5,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '60px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-4px) scale(1.02)',
+                          boxShadow: '0 16px 40px rgba(76, 175, 80, 0.3)',
+                          border: '1px solid rgba(76, 175, 80, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.25) 0%, rgba(139, 195, 74, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #4CAF50, #8BC34A)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#4CAF50',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(76, 175, 80, 0.4)'
+                        }}>
+                          {analyticsData.decentVideosCount}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(76, 175, 80, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <ThumbUpIcon sx={{ color: '#4CAF50', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          DECENT VIDEOS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          mb: 1
+                        }}>
+                          100K-500K Views
+                        </Typography>
+                        {analyticsData.decentVideosPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                          <Box sx={{
+                            background: 'rgba(76, 175, 80, 0.15)',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.5,
+                            display: 'inline-block'
+                          }}>
+                            <Typography variant="caption" sx={{
+                              color: '#4CAF50',
+                              fontWeight: 700,
+                              fontSize: '0.75rem'
+                            }}>
+                              {analyticsData.decentVideosPercentage}% Hit Rate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Flops Card */}
+                  {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('flops')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(158, 158, 158, 0.15) 0%, rgba(121, 121, 121, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(158, 158, 158, 0.25)',
+                        borderRadius: 3,
+                        p: 2.5,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '60px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-4px) scale(1.02)',
+                          boxShadow: '0 16px 40px rgba(158, 158, 158, 0.3)',
+                          border: '1px solid rgba(158, 158, 158, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(158, 158, 158, 0.25) 0%, rgba(121, 121, 121, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #9E9E9E, #757575)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#9E9E9E',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(158, 158, 158, 0.4)'
+                        }}>
+                          {analyticsData.flopsCount}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(158, 158, 158, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <SentimentDissatisfiedIcon sx={{ color: '#9E9E9E', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          FLOPS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block',
+                          mb: 1
+                        }}>
+                          &lt;100K Views
+                        </Typography>
+                        {analyticsData.flopsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                          <Box sx={{
+                            background: 'rgba(158, 158, 158, 0.15)',
+                            borderRadius: 1.5,
+                            px: 1.5,
+                            py: 0.5,
+                            display: 'inline-block'
+                          }}>
+                            <Typography variant="caption" sx={{
+                              color: '#9E9E9E',
+                              fontWeight: 700,
+                              fontSize: '0.75rem'
+                            }}>
+                              {analyticsData.flopsPercentage}% Hit Rate
+                            </Typography>
+                          </Box>
+                        )}
+                      </Box>
+                    </Box>
+                  )}
+
+
+
+                  {/* Daily Average Card */}
+                  {analyticsData.avgDailyViews !== undefined && (
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.15) 0%, rgba(30, 136, 229, 0.08) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(33, 150, 243, 0.25)',
+                      borderRadius: 3,
+                      p: 2.5,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '60px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
                       '&:hover': {
-                        background: 'rgba(255, 87, 34, 0.15)',
-                        border: '1px solid rgba(255, 87, 34, 0.4)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 87, 34, 0.2)'
+                        transform: 'translateY(-2px)',
+                        boxShadow: '0 12px 32px rgba(33, 150, 243, 0.25)',
+                        border: '1px solid rgba(33, 150, 243, 0.4)',
+                        background: 'linear-gradient(135deg, rgba(33, 150, 243, 0.2) 0%, rgba(30, 136, 229, 0.12) 100%)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: 'linear-gradient(90deg, #2196F3, #1E88E5)',
                       }
                     }}>
-                    <Typography sx={{
-                      color: '#FF5722',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(255, 87, 34, 0.3)'
-                    }}>
-                      {analyticsData.viralsCount}
-                    </Typography>
-                    {analyticsData.viralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                      <Typography sx={{
-                        color: 'rgba(255, 87, 34, 0.8)',
-                        fontSize: '0.55rem',
-                        fontWeight: 600,
-                        lineHeight: 1
-                      }}>
-                        ({analyticsData.viralsPercentage}%)
-                      </Typography>
-                    )}
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      VIRALS
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 3. Almost Virals (500K-1M) */}
-                {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
-                  <Box
-                    onClick={() => handleOpenVideoModal('almostVirals')}
-                    sx={{
-                      textAlign: 'center',
-                      minWidth: 60,
-                      maxWidth: 90,
-                      background: 'rgba(255, 152, 0, 0.08)',
-                      border: '1px solid rgba(255, 152, 0, 0.2)',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.8,
-                      flex: '1 1 auto',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        background: 'rgba(255, 152, 0, 0.15)',
-                        border: '1px solid rgba(255, 152, 0, 0.4)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(255, 152, 0, 0.2)'
-                      }
-                    }}>
-                    <Typography sx={{
-                      color: '#FF9800',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(255, 152, 0, 0.3)'
-                    }}>
-                      {analyticsData.almostViralsCount}
-                    </Typography>
-                    {analyticsData.almostViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                      <Typography sx={{
-                        color: 'rgba(255, 152, 0, 0.8)',
-                        fontSize: '0.55rem',
-                        fontWeight: 600,
-                        lineHeight: 1
-                      }}>
-                        ({analyticsData.almostViralsPercentage}%)
-                      </Typography>
-                    )}
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      ALMOST VIRALS
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 4. Decent Videos (100K-500K) */}
-                {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
-                  <Box
-                    onClick={() => handleOpenVideoModal('decentVideos')}
-                    sx={{
-                      textAlign: 'center',
-                      minWidth: 60,
-                      maxWidth: 90,
-                      background: 'rgba(76, 175, 80, 0.08)',
-                      border: '1px solid rgba(76, 175, 80, 0.2)',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.8,
-                      flex: '1 1 auto',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        background: 'rgba(76, 175, 80, 0.15)',
-                        border: '1px solid rgba(76, 175, 80, 0.4)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(76, 175, 80, 0.2)'
-                      }
-                    }}>
-                    <Typography sx={{
-                      color: '#4CAF50',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(76, 175, 80, 0.3)'
-                    }}>
-                      {analyticsData.decentVideosCount}
-                    </Typography>
-                    {analyticsData.decentVideosPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                      <Typography sx={{
-                        color: 'rgba(76, 175, 80, 0.8)',
-                        fontSize: '0.55rem',
-                        fontWeight: 600,
-                        lineHeight: 1
-                      }}>
-                        ({analyticsData.decentVideosPercentage}%)
-                      </Typography>
-                    )}
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      DECENT VIDEOS
-                    </Typography>
-                  </Box>
-                )}
-
-                {/* 5. Flops (<100K) */}
-                {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
-                  <Box
-                    onClick={() => handleOpenVideoModal('flops')}
-                    sx={{
-                      textAlign: 'center',
-                      minWidth: 60,
-                      maxWidth: 90,
-                      background: 'rgba(158, 158, 158, 0.08)',
-                      border: '1px solid rgba(158, 158, 158, 0.2)',
-                      borderRadius: 1,
-                      px: 1,
-                      py: 0.8,
-                      flex: '1 1 auto',
-                      cursor: 'pointer',
-                      transition: 'all 0.2s ease',
-                      '&:hover': {
-                        background: 'rgba(158, 158, 158, 0.15)',
-                        border: '1px solid rgba(158, 158, 158, 0.4)',
-                        transform: 'translateY(-1px)',
-                        boxShadow: '0 4px 12px rgba(158, 158, 158, 0.2)'
-                      }
-                    }}>
-                    <Typography sx={{
-                      color: '#9E9E9E',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(158, 158, 158, 0.3)'
-                    }}>
-                      {analyticsData.flopsCount}
-                    </Typography>
-                    {analyticsData.flopsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                      <Typography sx={{
-                        color: 'rgba(158, 158, 158, 0.8)',
-                        fontSize: '0.55rem',
-                        fontWeight: 600,
-                        lineHeight: 1
-                      }}>
-                        ({analyticsData.flopsPercentage}%)
-                      </Typography>
-                    )}
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      FLOPS
-                    </Typography>
-                  </Box>
-                )}
-
-                {analyticsData.avgDailyViews !== undefined && (
-                  <Box sx={{
-                    textAlign: 'center',
-                    minWidth: 60,
-                    maxWidth: 90,
-                    background: 'rgba(255, 152, 0, 0.08)',
-                    border: '1px solid rgba(255, 152, 0, 0.2)',
-                    borderRadius: 1,
-                    px: 1,
-                    py: 0.8,
-                    flex: '1 1 auto'
-                  }}>
-                    <Typography sx={{
-                      color: '#FF9800',
-                      fontWeight: 700,
-                      fontSize: '1.1rem',
-                      lineHeight: 1,
-                      textShadow: '0 0 4px rgba(255, 152, 0, 0.3)'
-                    }}>
-                      {formatNumber(analyticsData.avgDailyViews)}
-                    </Typography>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '0.65rem', fontWeight: 500 }}>
-                      DAILY AVG
-                    </Typography>
-                  </Box>
-                )}
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 1 }}>
+                        <Typography variant="h4" sx={{
+                          color: '#2196F3',
+                          fontWeight: 800,
+                          fontSize: '2rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(33, 150, 243, 0.4)'
+                        }}>
+                          {formatNumber(analyticsData.avgDailyViews)}
+                        </Typography>
+                        <Box sx={{
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          borderRadius: 2,
+                          p: 1,
+                          backdropFilter: 'blur(5px)'
+                        }}>
+                          <TrendingUpIcon sx={{ color: '#2196F3', fontSize: 20 }} />
+                        </Box>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 700,
+                          fontSize: '0.75rem',
+                          letterSpacing: '0.5px',
+                          mb: 0.5
+                        }}>
+                          DAILY AVG
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.7rem',
+                          display: 'block'
+                        }}>
+                          Views per Day
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+                </Box>
               </Box>
+
+
+
+
+
+
             </Box>
 
             {/* Data Source Indicator */}
