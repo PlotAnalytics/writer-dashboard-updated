@@ -6162,13 +6162,27 @@ router.get('/video-details', async (req, res) => {
       });
     }
 
-    // Define view thresholds for each category
+    // Get writer info from token
+    const writerId = req.user?.writerId || req.user?.userId;
+    if (!writerId) {
+      return res.status(401).json({ message: 'Writer ID not found in token' });
+    }
+
+    // Get writer name from PostgreSQL
+    const writerQuery = `SELECT name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [writerId]);
+    if (writerRows.length === 0) {
+      return res.status(404).json({ message: 'Writer not found' });
+    }
+    const writerName = writerRows[0].name;
+
+    // Define view thresholds for each category - using same logic as counts
     const categoryConditions = {
-      megaVirals: 'mh.views >= 3000000',
-      virals: 'mh.views >= 1000000 AND mh.views < 3000000',
-      almostVirals: 'mh.views >= 500000 AND mh.views < 1000000',
-      decentVideos: 'mh.views >= 100000 AND mh.views < 500000',
-      flops: 'mh.views < 100000'
+      megaVirals: 'max_views >= 3000000',
+      virals: 'max_views >= 1000000 AND max_views < 3000000',
+      almostVirals: 'max_views >= 500000 AND max_views < 1000000',
+      decentVideos: 'max_views >= 100000 AND max_views < 500000',
+      flops: 'max_views < 100000'
     };
 
     const condition = categoryConditions[category];
@@ -6176,255 +6190,81 @@ router.get('/video-details', async (req, res) => {
       return res.status(400).json({ message: `Invalid category: ${category}` });
     }
 
+    // Use SAME query logic as the counts - from youtube_metadata_historical
     const query = `
-      WITH latest_metadata AS (
-        SELECT
+      WITH video_metadata AS (
+        SELECT DISTINCT
           video_id,
-          views,
-          snippet_title as title,
-          snippet_published_at as published_date,
+          writer_name,
+          snippet_published_at,
+          snippet_title,
           snippet_thumbnails,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date <= $1
+          CAST(statistics_view_count AS INT64) as current_views
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+          AND statistics_view_count IS NOT NULL
+          AND CAST(statistics_view_count AS INT64) > 0
+          AND snippet_published_at IS NOT NULL
+          AND DATE(snippet_published_at) >= @start_date
+          AND DATE(snippet_published_at) <= @end_date
       ),
-      previous_day_views AS (
+      latest_views AS (
         SELECT
           video_id,
-          views as previous_views,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date <= DATE_SUB($1, INTERVAL 1 DAY)
-          AND date >= DATE_SUB($1, INTERVAL 7 DAY)
+          snippet_published_at,
+          snippet_title,
+          snippet_thumbnails,
+          MAX(current_views) as max_views
+        FROM video_metadata
+        GROUP BY video_id, snippet_published_at, snippet_title, snippet_thumbnails
       ),
-      video_with_urls AS (
+      filtered_videos AS (
+        SELECT *
+        FROM latest_views
+        WHERE ${condition}
+      ),
+      videos_with_urls AS (
         SELECT
-          mh.video_id,
-          mh.views,
-          mh.title,
-          mh.published_date,
-          mh.snippet_thumbnails,
-          COALESCE(mh.views - pdv.previous_views, 0) as last_day_views,
-          v.url,
+          fv.*,
+          CONCAT('https://www.youtube.com/watch?v=', fv.video_id) as url,
           v.trello_card_id
-        FROM latest_metadata mh
-        LEFT JOIN previous_day_views pdv ON mh.video_id = pdv.video_id AND pdv.rn = 1
+        FROM filtered_videos fv
         LEFT JOIN \`speedy-web-461014-g3.postgres.video\` v
-          ON CONCAT('https://www.youtube.com/watch?v=', mh.video_id) LIKE CONCAT(SPLIT(v.url, '&')[OFFSET(0)], '%')
-        WHERE mh.rn = 1
-          AND ${condition}
+          ON CONCAT('https://www.youtube.com/watch?v=', fv.video_id) LIKE CONCAT(SPLIT(v.url, '&')[OFFSET(0)], '%')
       )
       SELECT
         vwu.video_id,
-        vwu.views,
-        vwu.title,
-        vwu.published_date,
+        vwu.max_views as views,
+        vwu.snippet_title as title,
+        vwu.snippet_published_at as published_date,
         vwu.snippet_thumbnails,
-        vwu.last_day_views,
+        0 as last_day_views,  -- TODO: Calculate if needed
         vwu.url,
         s.google_doc_link,
         s.ai_chat_url
-      FROM video_with_urls vwu
+      FROM videos_with_urls vwu
       LEFT JOIN \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
         ON vwu.trello_card_id = s.trello_card_id
-      ORDER BY vwu.views DESC
+      ORDER BY vwu.max_views DESC
       LIMIT 50
     `;
 
     console.log(`🔍 Executing BigQuery for category: ${category} with condition: ${condition}`);
-    console.log(`📅 Date range: ${startDate} to ${endDate}`);
-
-    const options = {
-      query: query,
-      params: [endDate],
-      types: ['DATE']
-    };
-
-    const [rows] = await bigQueryClient.query(options);
-
-    console.log(`📊 BigQuery returned ${rows.length} rows`);
-
-    const videos = rows.map(row => ({
-      video_id: row.video_id,
-      views: row.views,
-      title: row.title,
-      published_date: row.published_date,
-      snippet_thumbnails: row.snippet_thumbnails,
-      last_day_views: row.last_day_views,
-      url: row.url,
-      google_doc_link: row.google_doc_link,
-      ai_chat_url: row.ai_chat_url
-    }));
-
-    console.log(`📊 Query returned ${videos.length} videos for category ${category}`);
-
-    res.status(200).json({
-      success: true,
-      data: videos,
-      count: videos.length
-    });
-
-  } catch (error) {
-    console.error('API Error:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch video details',
-      error: error.message
-    });
-  }
-});
-
-// Video details by category endpoint for performance modals
-router.get('/video-details', async (req, res) => {
-  try {
-    const { category, startDate, endDate } = req.query;
-
-    console.log(`🔍 API called with params:`, { category, startDate, endDate });
-
-    if (!category || !startDate || !endDate) {
-      return res.status(400).json({
-        message: 'Missing required parameters: category, startDate, endDate'
-      });
-    }
-
-    // Define view thresholds for each category
-    const categoryConditions = {
-      megaVirals: 'mh.views >= 3000000',
-      virals: 'mh.views >= 1000000 AND mh.views < 3000000',
-      almostVirals: 'mh.views >= 500000 AND mh.views < 1000000',
-      decentVideos: 'mh.views >= 100000 AND mh.views < 500000',
-      flops: 'mh.views < 100000'
-    };
-
-    const condition = categoryConditions[category];
-    if (!condition) {
-      return res.status(400).json({ message: `Invalid category: ${category}` });
-    }
-
-    const query = `
-      WITH latest_metadata AS (
-        SELECT
-          video_id,
-          views,
-          snippet_title as title,
-          snippet_published_at as published_date,
-          snippet_thumbnails,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date <= @endDate
-      ),
-      previous_day_views AS (
-        SELECT
-          video_id,
-          views as previous_views,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY date DESC) as rn
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.metadata_historical\`
-        WHERE date <= DATE_SUB(@endDate, INTERVAL 1 DAY)
-          AND date >= DATE_SUB(@endDate, INTERVAL 7 DAY)
-      ),
-      video_with_urls AS (
-        SELECT
-          mh.video_id,
-          mh.views,
-          mh.title,
-          mh.published_date,
-          mh.snippet_thumbnails,
-          COALESCE(mh.views - pdv.previous_views, 0) as last_day_views,
-          v.url,
-          v.trello_card_id
-        FROM latest_metadata mh
-        LEFT JOIN previous_day_views pdv ON mh.video_id = pdv.video_id AND pdv.rn = 1
-        LEFT JOIN \`speedy-web-461014-g3.postgres.video\` v
-          ON CONCAT('https://www.youtube.com/watch?v=', mh.video_id) LIKE CONCAT(SPLIT(v.url, '&')[OFFSET(0)], '%')
-        WHERE mh.rn = 1
-          AND ${condition}
-      )
-      SELECT
-        vwu.video_id,
-        vwu.views,
-        vwu.title,
-        vwu.published_date,
-        vwu.snippet_thumbnails,
-        vwu.last_day_views,
-        vwu.url,
-        s.google_doc_link,
-        s.ai_chat_url
-      FROM video_with_urls vwu
-      LEFT JOIN \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
-        ON vwu.trello_card_id = s.trello_card_id
-      ORDER BY vwu.views DESC
-      LIMIT 50
-    `;
-
-    console.log(`🔍 Executing BigQuery for category: ${category} with condition: ${condition}`);
-    console.log(`📅 Date range: ${startDate} to ${endDate}`);
-
-    // Initialize BigQuery client if not available
-    let bigqueryClient = global.bigqueryClient;
-
-    if (!bigqueryClient) {
-      console.log('⚠️ Global BigQuery client not available, attempting to initialize...');
-
-      // Try to initialize BigQuery client directly
-      const { BigQuery } = require('@google-cloud/bigquery');
-      const fs = require('fs');
-      const path = require('path');
-
-      try {
-        // Try to load credentials from admin_dashboard.json file first
-        let credentials;
-        const credentialsPath = path.join(__dirname, '..', '..', 'admin_dashboard.json');
-
-        if (fs.existsSync(credentialsPath)) {
-          console.log(`🔍 Loading credentials from admin_dashboard.json`);
-          const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
-          credentials = JSON.parse(credentialsFile);
-        } else {
-          // Fallback to environment variable
-          const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-
-          if (!credentialsJson) {
-            throw new Error('No BigQuery credentials available');
-          }
-
-          console.log(`🔍 Loading credentials from environment variable`);
-          credentials = JSON.parse(credentialsJson);
-        }
-
-        const projectId = credentials.project_id || process.env.BIGQUERY_PROJECT_ID || "speedy-web-461014-g3";
-
-        bigqueryClient = new BigQuery({
-          credentials: credentials,
-          projectId: projectId,
-          location: "US",
-        });
-
-        console.log(`✅ BigQuery client initialized for video-details endpoint`);
-
-        // Set global client for future use
-        global.bigqueryClient = bigqueryClient;
-
-      } catch (initError) {
-        console.error('❌ Failed to initialize BigQuery client:', initError);
-        throw new Error('BigQuery client initialization failed');
-      }
-    }
+    console.log(`📅 Date range: ${startDate} to ${endDate}, Writer: ${writerName}`);
 
     const options = {
       query: query,
       params: {
-        startDate: startDate,
-        endDate: endDate
-      },
-      types: {
-        startDate: 'DATE',
-        endDate: 'DATE'
+        writer_name: writerName,
+        start_date: startDate,
+        end_date: endDate
       }
     };
 
-    const [rows] = await bigqueryClient.query(options);
+    const [rows] = await bigQueryClient.query(options);
 
-    console.log(`📊 BigQuery returned ${rows.length} rows`);
+    console.log(`📊 BigQuery returned ${rows.length} rows for ${category}`);
 
     const videos = rows.map(row => ({
       video_id: row.video_id,
@@ -6455,6 +6295,8 @@ router.get('/video-details', async (req, res) => {
     });
   }
 });
+
+
 
 module.exports = router;
 module.exports.bigquery = bigquery;
