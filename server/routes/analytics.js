@@ -6150,7 +6150,7 @@ router.get('/test-frontend-july-8th', async (req, res) => {
 });
 
 // Video details by category endpoint for performance modals
-router.get('/video-details', async (req, res) => {
+router.get('/video-details', authenticateToken, async (req, res) => {
   try {
     const { category, startDate, endDate } = req.query;
 
