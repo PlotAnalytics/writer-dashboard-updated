@@ -516,84 +516,18 @@ const Analytics = () => {
     }
   };
 
-  // Handle opening video details modal
-  const handleOpenVideoModal = async (category) => {
+  // Handle opening video details modal - now uses data already loaded
+  const handleOpenVideoModal = (category) => {
     setModalCategory(category);
     setModalOpen(true);
-    setModalLoading(true);
-    setModalVideos([]);
+    setModalLoading(false); // No loading needed since data is already available
 
-    try {
-      // Get current date range
-      let startDate, endDate;
+    // Get videos for this category from already loaded data
+    const categoryVideos = analyticsData?.categoryVideos || {};
+    const videos = categoryVideos[category] || [];
 
-      if (dateRange === 'custom') {
-        startDate = customStartDate;
-        endDate = customEndDate;
-      } else {
-        // Calculate date range based on selection
-        const today = new Date();
-        endDate = today.toISOString().split('T')[0];
-
-        switch (dateRange) {
-          case 'last7days':
-            const sevenDaysAgo = new Date(today);
-            sevenDaysAgo.setDate(today.getDate() - 7);
-            startDate = sevenDaysAgo.toISOString().split('T')[0];
-            break;
-          case 'last30days':
-            const thirtyDaysAgo = new Date(today);
-            thirtyDaysAgo.setDate(today.getDate() - 30);
-            startDate = thirtyDaysAgo.toISOString().split('T')[0];
-            break;
-          case 'last90days':
-            const ninetyDaysAgo = new Date(today);
-            ninetyDaysAgo.setDate(today.getDate() - 90);
-            startDate = ninetyDaysAgo.toISOString().split('T')[0];
-            break;
-          case 'last365days':
-            const oneYearAgo = new Date(today);
-            oneYearAgo.setDate(today.getDate() - 365);
-            startDate = oneYearAgo.toISOString().split('T')[0];
-            break;
-          default:
-            // For other ranges, use a reasonable default
-            const defaultStart = new Date(today);
-            defaultStart.setDate(today.getDate() - 30);
-            startDate = defaultStart.toISOString().split('T')[0];
-        }
-      }
-
-      // Use the existing working analytics API with video details parameter
-      console.log(`🔍 Fetching video details for category: ${category}, startDate: ${startDate}, endDate: ${endDate}`);
-
-      const result = await analyticsApi.getOverview({
-        params: {
-          getVideoDetails: true,
-          category: category,
-          startDate: startDate,
-          endDate: endDate,
-          _t: Date.now() // cache busting
-        }
-      });
-
-      const data = result.data;
-
-      console.log(`📊 Video details response:`, data);
-
-      if (data.success) {
-        console.log(`✅ Found ${data.data.length} videos for category ${category}`);
-        setModalVideos(data.data);
-      } else {
-        console.error('Failed to fetch video details:', data.message);
-        setModalVideos([]);
-      }
-    } catch (error) {
-      console.error('Error fetching video details:', error);
-      setModalVideos([]);
-    } finally {
-      setModalLoading(false);
-    }
+    console.log(`🎬 Opening modal for ${category} with ${videos.length} videos from loaded data`);
+    setModalVideos(videos);
   };
 
   const handleCloseVideoModal = () => {

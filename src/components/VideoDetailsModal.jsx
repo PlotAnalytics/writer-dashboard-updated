@@ -22,6 +22,8 @@ import CloseIcon from '@mui/icons-material/Close';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import DescriptionIcon from '@mui/icons-material/Description';
 import ChatIcon from '@mui/icons-material/Chat';
+import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import YouTubeIcon from '@mui/icons-material/YouTube';
 import { formatNumber } from '../utils/formatNumber';
 
 const VideoDetailsModal = ({ 
@@ -154,21 +156,21 @@ const VideoDetailsModal = ({
           }}>
             <Table>
               <TableHead>
-                <TableRow sx={{ 
+                <TableRow sx={{
                   background: 'rgba(255, 255, 255, 0.02)',
                   borderBottom: '1px solid rgba(255, 255, 255, 0.1)'
                 }}>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600, border: 'none' }}>
-                    Video
+                    Video ID
                   </TableCell>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600, border: 'none' }}>
-                    Views (Last Day)
+                    Views
                   </TableCell>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600, border: 'none' }}>
-                    Published
+                    Google Doc
                   </TableCell>
                   <TableCell sx={{ color: 'rgba(255, 255, 255, 0.9)', fontWeight: 600, border: 'none' }}>
-                    Links
+                    AI Chat
                   </TableCell>
                 </TableRow>
               </TableHead>
@@ -185,44 +187,43 @@ const VideoDetailsModal = ({
                   >
                     <TableCell sx={{ border: 'none', py: 2 }}>
                       <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Avatar
-                          src={getBestThumbnail(video.snippet_thumbnails)}
-                          variant="rounded"
-                          sx={{ 
-                            width: 80, 
-                            height: 45,
-                            border: '1px solid rgba(255, 255, 255, 0.1)'
+                        <Typography
+                          variant="body2"
+                          sx={{
+                            color: 'white',
+                            fontFamily: 'monospace',
+                            fontSize: '0.9rem'
                           }}
-                        />
-                        <Box sx={{ flex: 1, minWidth: 0 }}>
-                          <Link
-                            href={video.url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            sx={{
-                              color: 'white',
-                              textDecoration: 'none',
-                              fontWeight: 500,
-                              fontSize: '0.9rem',
-                              display: 'block',
-                              '&:hover': { color: categoryInfo.color }
-                            }}
-                          >
-                            {video.title || 'Untitled Video'}
-                          </Link>
-                          <Typography variant="caption" sx={{ 
-                            color: 'rgba(255, 255, 255, 0.6)',
-                            display: 'block',
-                            mt: 0.5
-                          }}>
-                            ID: {video.video_id}
-                          </Typography>
-                        </Box>
+                        >
+                          {video.video_id}
+                        </Typography>
+                        <IconButton
+                          size="small"
+                          onClick={() => navigator.clipboard.writeText(video.video_id)}
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            '&:hover': { color: categoryInfo.color }
+                          }}
+                          title="Copy Video ID"
+                        >
+                          <ContentCopyIcon fontSize="small" />
+                        </IconButton>
+                        <IconButton
+                          size="small"
+                          onClick={() => window.open(`https://youtube.com/watch?v=${video.video_id}`, '_blank')}
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.5)',
+                            '&:hover': { color: '#FF0000' }
+                          }}
+                          title="Open on YouTube"
+                        >
+                          <YouTubeIcon fontSize="small" />
+                        </IconButton>
                       </Box>
                     </TableCell>
                     <TableCell sx={{ border: 'none' }}>
                       <Chip
-                        label={formatNumber(video.last_day_views || 0)}
+                        label={formatNumber(video.views || 0)}
                         sx={{
                           background: `${categoryInfo.color}20`,
                           color: categoryInfo.color,
@@ -231,58 +232,49 @@ const VideoDetailsModal = ({
                         }}
                       />
                     </TableCell>
-                    <TableCell sx={{ border: 'none', color: 'rgba(255, 255, 255, 0.8)' }}>
-                      {formatDate(video.published_date)}
-                    </TableCell>
                     <TableCell sx={{ border: 'none' }}>
-                      <Box sx={{ display: 'flex', gap: 1 }}>
-                        {video.google_doc_link && (
-                          <IconButton
-                            component="a"
-                            href={video.google_doc_link}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="small"
-                            sx={{
-                              color: 'rgba(255, 255, 255, 0.7)',
-                              '&:hover': { color: '#4285f4' }
-                            }}
-                            title="Google Doc"
-                          >
-                            <DescriptionIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                        {video.ai_chat_url && (
-                          <IconButton
-                            component="a"
-                            href={video.ai_chat_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            size="small"
-                            sx={{
-                              color: 'rgba(255, 255, 255, 0.7)',
-                              '&:hover': { color: '#00d4aa' }
-                            }}
-                            title="AI Chat"
-                          >
-                            <ChatIcon fontSize="small" />
-                          </IconButton>
-                        )}
+                      {video.google_doc_link ? (
                         <IconButton
                           component="a"
-                          href={video.url}
+                          href={video.google_doc_link}
                           target="_blank"
                           rel="noopener noreferrer"
                           size="small"
                           sx={{
                             color: 'rgba(255, 255, 255, 0.7)',
-                            '&:hover': { color: '#ff0000' }
+                            '&:hover': { color: '#4285f4' }
                           }}
-                          title="YouTube Video"
+                          title="Open Google Doc"
                         >
-                          <OpenInNewIcon fontSize="small" />
+                          <DescriptionIcon fontSize="small" />
                         </IconButton>
-                      </Box>
+                      ) : (
+                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                          No Doc
+                        </Typography>
+                      )}
+                    </TableCell>
+                    <TableCell sx={{ border: 'none' }}>
+                      {video.ai_chat_url ? (
+                        <IconButton
+                          component="a"
+                          href={video.ai_chat_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          size="small"
+                          sx={{
+                            color: 'rgba(255, 255, 255, 0.7)',
+                            '&:hover': { color: '#00d4aa' }
+                          }}
+                          title="Open AI Chat"
+                        >
+                          <ChatIcon fontSize="small" />
+                        </IconButton>
+                      ) : (
+                        <Typography variant="caption" sx={{ color: 'rgba(255, 255, 255, 0.3)' }}>
+                          No Chat
+                        </Typography>
+                      )}
                     </TableCell>
                   </TableRow>
                 ))}

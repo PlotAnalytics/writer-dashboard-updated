@@ -1647,6 +1647,104 @@ async function getBigQueryAnalyticsOverview(
     console.log(`   👍 Decent Videos: ${decentVideosCount}/${totalSubmissionsCount} (${decentVideosPercentage}%)`);
     console.log(`   💔 Flops: ${flopsCount}/${totalSubmissionsCount} (${flopsPercentage}%)`);
 
+    // ———————————————— 7.5) Get video details for each category ————————————————
+    let categoryVideos = {
+      megaVirals: [],
+      virals: [],
+      almostVirals: [],
+      decentVideos: [],
+      flops: []
+    };
+
+    try {
+      console.log(`🎬 Getting video details for each category for writer ${writerName}`);
+
+      const videoDetailsQuery = `
+        WITH video_metadata AS (
+          SELECT DISTINCT
+            video_id,
+            writer_name,
+            snippet_published_at,
+            CAST(statistics_view_count AS INT64) as current_views
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+          WHERE writer_name = @writer_name
+            AND writer_name IS NOT NULL
+            AND statistics_view_count IS NOT NULL
+            AND CAST(statistics_view_count AS INT64) > 0
+            AND snippet_published_at IS NOT NULL
+            AND DATE(snippet_published_at) >= @start_date
+            AND DATE(snippet_published_at) <= @end_date
+        ),
+        latest_views AS (
+          SELECT
+            video_id,
+            MAX(current_views) as max_views
+          FROM video_metadata
+          GROUP BY video_id
+        ),
+        video_with_trello AS (
+          SELECT
+            lv.video_id,
+            lv.max_views,
+            v.trello_card_id,
+            CASE
+              WHEN lv.max_views >= 3000000 THEN 'megaVirals'
+              WHEN lv.max_views >= 1000000 AND lv.max_views < 3000000 THEN 'virals'
+              WHEN lv.max_views >= 500000 AND lv.max_views < 1000000 THEN 'almostVirals'
+              WHEN lv.max_views >= 100000 AND lv.max_views < 500000 THEN 'decentVideos'
+              ELSE 'flops'
+            END as category
+          FROM latest_views lv
+          LEFT JOIN \`speedy-web-461014-g3.postgres.video\` v
+            ON v.url LIKE CONCAT('%', lv.video_id, '%')
+        )
+        SELECT
+          vt.video_id,
+          vt.max_views as views,
+          vt.category,
+          s.google_doc_link,
+          s.ai_chat_url
+        FROM video_with_trello vt
+        LEFT JOIN \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+          ON s.trello_card_id = vt.trello_card_id
+        ORDER BY vt.max_views DESC
+      `;
+
+      const [videoDetailsResult] = await bigquery.query({
+        query: videoDetailsQuery,
+        params: {
+          writer_name: writerName,
+          start_date: finalStartDate,
+          end_date: finalEndDate
+        }
+      });
+
+      console.log(`🎬 Found ${videoDetailsResult.length} videos with details`);
+
+      // Group videos by category
+      videoDetailsResult.forEach(row => {
+        const category = row.category;
+        if (categoryVideos[category]) {
+          categoryVideos[category].push({
+            video_id: row.video_id,
+            views: parseInt(row.views),
+            google_doc_link: row.google_doc_link,
+            ai_chat_url: row.ai_chat_url
+          });
+        }
+      });
+
+      console.log(`🎬 Video details by category:`);
+      console.log(`   📈 Mega Virals: ${categoryVideos.megaVirals.length} videos`);
+      console.log(`   🔥 Virals: ${categoryVideos.virals.length} videos`);
+      console.log(`   ⚡ Almost Virals: ${categoryVideos.almostVirals.length} videos`);
+      console.log(`   👍 Decent Videos: ${categoryVideos.decentVideos.length} videos`);
+      console.log(`   💔 Flops: ${categoryVideos.flops.length} videos`);
+
+    } catch (videoDetailsError) {
+      console.error('❌ Error getting video details by category:', videoDetailsError);
+    }
+
     // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
       totalViews: finalTotalViews,
@@ -1666,6 +1764,8 @@ async function getBigQueryAnalyticsOverview(
       almostViralsPercentage: almostViralsPercentage,
       decentVideosPercentage: decentVideosPercentage,
       flopsPercentage: flopsPercentage,
+      // Video details for each category (video_id and views)
+      categoryVideos: categoryVideos,
       summary: {
         progressToTarget: (finalTotalViews / 100000000) * 100,
         highestDay: dailyTotalsData.length > 0 ? Math.max(...dailyTotalsData.map(d => d.views)) : 0,
@@ -2489,11 +2589,8 @@ async function handleAnalyticsRequest(req, res) {
   try {
     console.log('🔥 OVERVIEW ENDPOINT CALLED! Query params:', req.query);
 
-    // Check if this is a video details request
-    if (req.query.getVideoDetails === 'true') {
-      console.log('🎬 Video details request detected, delegating...');
-      return await handleVideoDetailsRequest(req, res);
-    }
+    // Video details are now embedded in the main analytics response
+    // No separate handling needed
 
     let { range = '30d', start_date, end_date } = req.query;
 
