@@ -6149,6 +6149,11 @@ router.get('/test-frontend-july-8th', async (req, res) => {
   }
 });
 
+// Test endpoint - no auth
+router.get('/video-details-test', async (req, res) => {
+  res.json({ success: true, message: 'Test endpoint works!', params: req.query });
+});
+
 // Video details by category endpoint for performance modals
 router.get('/video-details', authenticateToken, async (req, res) => {
   try {
