@@ -564,17 +564,20 @@ const Analytics = () => {
         }
       }
 
-      // Fetch video details from API using the same pattern as working analytics calls
+      // Use the existing working analytics API with video details parameter
       console.log(`🔍 Fetching video details for category: ${category}, startDate: ${startDate}, endDate: ${endDate}`);
-      const url = `${buildApiUrl('/api/analytics/video-details')}?category=${category}&startDate=${startDate}&endDate=${endDate}`;
-      const token = localStorage.getItem('token');
-      const response = await fetch(url, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+
+      const result = await analyticsApi.getOverview({
+        params: {
+          getVideoDetails: true,
+          category: category,
+          startDate: startDate,
+          endDate: endDate,
+          _t: Date.now() // cache busting
         }
       });
-      const data = await response.json();
+
+      const data = result.data;
 
       console.log(`📊 Video details response:`, data);
 

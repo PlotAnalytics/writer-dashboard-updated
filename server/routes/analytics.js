@@ -2345,10 +2345,156 @@ router.get('/', authenticateToken, async (req, res) => {
   return await handleAnalyticsRequest(req, res);
 });
 
+// Handle video details requests using same auth as main analytics
+async function handleVideoDetailsRequest(req, res) {
+  try {
+    const { category, startDate, endDate } = req.query;
+
+    console.log(`🔍 Video details request: category=${category}, startDate=${startDate}, endDate=${endDate}`);
+
+    if (!category || !startDate || !endDate) {
+      return res.status(400).json({
+        success: false,
+        message: 'Missing required parameters: category, startDate, endDate'
+      });
+    }
+
+    // Get writer info from token (same as main analytics)
+    const writerId = req.user?.writerId || req.user?.userId;
+    if (!writerId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Writer ID not found in token'
+      });
+    }
+
+    // Get writer name from PostgreSQL
+    const writerQuery = `SELECT name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [writerId]);
+    if (writerRows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Writer not found'
+      });
+    }
+    const writerName = writerRows[0].name;
+
+    // Define view thresholds for each category - using same logic as counts
+    const categoryConditions = {
+      megaVirals: 'max_views >= 3000000',
+      virals: 'max_views >= 1000000 AND max_views < 3000000',
+      almostVirals: 'max_views >= 500000 AND max_views < 1000000',
+      decentVideos: 'max_views >= 100000 AND max_views < 500000',
+      flops: 'max_views < 100000'
+    };
+
+    const condition = categoryConditions[category];
+    if (!condition) {
+      return res.status(400).json({
+        success: false,
+        message: `Invalid category: ${category}`
+      });
+    }
+
+    // Use SAME query logic as the counts - from youtube_metadata_historical
+    const query = `
+      WITH video_metadata AS (
+        SELECT DISTINCT
+          video_id,
+          writer_name,
+          snippet_published_at,
+          snippet_title,
+          snippet_thumbnails,
+          CAST(statistics_view_count AS INT64) as current_views
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_name = @writer_name
+          AND writer_name IS NOT NULL
+          AND statistics_view_count IS NOT NULL
+          AND CAST(statistics_view_count AS INT64) > 0
+          AND snippet_published_at IS NOT NULL
+          AND DATE(snippet_published_at) >= @start_date
+          AND DATE(snippet_published_at) <= @end_date
+      ),
+      latest_views AS (
+        SELECT
+          video_id,
+          snippet_published_at,
+          snippet_title,
+          snippet_thumbnails,
+          MAX(current_views) as max_views
+        FROM video_metadata
+        GROUP BY video_id, snippet_published_at, snippet_title, snippet_thumbnails
+      ),
+      filtered_videos AS (
+        SELECT *
+        FROM latest_views
+        WHERE ${condition}
+      )
+      SELECT
+        fv.video_id,
+        fv.max_views as views,
+        fv.snippet_title as title,
+        fv.snippet_published_at as published_date,
+        fv.snippet_thumbnails,
+        0 as last_day_views,
+        CONCAT('https://www.youtube.com/watch?v=', fv.video_id) as url
+      FROM filtered_videos fv
+      ORDER BY fv.max_views DESC
+      LIMIT 50
+    `;
+
+    console.log(`🔍 Executing video details query for category: ${category}, writer: ${writerName}`);
+
+    const options = {
+      query: query,
+      params: {
+        writer_name: writerName,
+        start_date: startDate,
+        end_date: endDate
+      }
+    };
+
+    const [rows] = await bigQueryClient.query(options);
+
+    console.log(`📊 Video details query returned ${rows.length} videos for category ${category}`);
+
+    const videos = rows.map(row => ({
+      video_id: row.video_id,
+      views: row.views,
+      title: row.title,
+      published_date: row.published_date,
+      snippet_thumbnails: row.snippet_thumbnails,
+      last_day_views: row.last_day_views,
+      url: row.url
+    }));
+
+    return res.status(200).json({
+      success: true,
+      data: videos,
+      count: videos.length
+    });
+
+  } catch (error) {
+    console.error('❌ Video details error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to fetch video details',
+      error: error.message
+    });
+  }
+}
+
 // Main analytics logic (extracted for reuse)
 async function handleAnalyticsRequest(req, res) {
   try {
     console.log('🔥 OVERVIEW ENDPOINT CALLED! Query params:', req.query);
+
+    // Check if this is a video details request
+    if (req.query.getVideoDetails === 'true') {
+      console.log('🎬 Video details request detected, delegating...');
+      return await handleVideoDetailsRequest(req, res);
+    }
+
     let { range = '30d', start_date, end_date } = req.query;
 
     let writerId = req.user.writerId || req.user.userId;
