@@ -564,10 +564,11 @@ const Analytics = () => {
         }
       }
 
-      // Fetch video details from API
+      // Fetch video details from API using the same pattern as working analytics calls
       console.log(`🔍 Fetching video details for category: ${category}, startDate: ${startDate}, endDate: ${endDate}`);
+      const url = `${buildApiUrl('/api/analytics/video-details')}?category=${category}&startDate=${startDate}&endDate=${endDate}`;
       const token = localStorage.getItem('token');
-      const response = await fetch(`/api/analytics/video-details?category=${category}&startDate=${startDate}&endDate=${endDate}`, {
+      const response = await fetch(url, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
