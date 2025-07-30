@@ -1944,142 +1944,7 @@ const Analytics = () => {
                     </Box>
                   )}
 
-                  {/* Average Views Card */}
-                  <Box sx={{
-                    background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(139, 195, 74, 0.08) 100%)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(76, 175, 80, 0.25)',
-                    borderRadius: 1,
-                    p: 0.75,
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minHeight: '30px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 16px rgba(76, 175, 80, 0.25)',
-                      border: '1px solid rgba(76, 175, 80, 0.4)',
-                      background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(139, 195, 74, 0.12) 100%)',
-                    },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      background: 'linear-gradient(90deg, #4CAF50, #8BC34A)',
-                    }
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
-                      <Typography variant="h6" sx={{
-                        color: '#4CAF50',
-                        fontWeight: 700,
-                        fontSize: '1.1rem',
-                        lineHeight: 1,
-                        textShadow: '0 2px 8px rgba(76, 175, 80, 0.4)'
-                      }}>
-                        {formatNumber(analyticsData.avgVideoViews || 0)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography sx={{
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.6rem',
-                        letterSpacing: '0.1px',
-                        mb: 0.0625
-                      }}>
-                        AVERAGE VIEWS
-                      </Typography>
-                      <Typography variant="caption" sx={{
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        fontSize: '0.55rem',
-                        display: 'block'
-                      }}>
-                        Per Video
-                      </Typography>
-                    </Box>
-                  </Box>
-
-                  {/* Median Views Card */}
-                  <Box sx={{
-                    background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(142, 36, 170, 0.08) 100%)',
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(156, 39, 176, 0.25)',
-                    borderRadius: 1,
-                    p: 0.75,
-                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    minHeight: '30px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between',
-                    '&:hover': {
-                      transform: 'translateY(-1px)',
-                      boxShadow: '0 4px 16px rgba(156, 39, 176, 0.25)',
-                      border: '1px solid rgba(156, 39, 176, 0.4)',
-                      background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(142, 36, 170, 0.12) 100%)',
-                    },
-                    '&::before': {
-                      content: '""',
-                      position: 'absolute',
-                      top: 0,
-                      left: 0,
-                      right: 0,
-                      height: '3px',
-                      background: 'linear-gradient(90deg, #9C27B0, #8E24AA)',
-                    }
-                  }}>
-                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
-                      <Typography variant="h6" sx={{
-                        color: '#9C27B0',
-                        fontWeight: 700,
-                        fontSize: '1.1rem',
-                        lineHeight: 1,
-                        textShadow: '0 2px 8px rgba(156, 39, 176, 0.4)'
-                      }}>
-                        {formatNumber(analyticsData.medianVideoViews || 0)}
-                      </Typography>
-                    </Box>
-                    <Box>
-                      <Typography sx={{
-                        color: 'white',
-                        fontWeight: 600,
-                        fontSize: '0.6rem',
-                        letterSpacing: '0.1px',
-                        mb: 0.0625
-                      }}>
-                        MEDIAN VIEWS
-                      </Typography>
-                      <Typography variant="caption" sx={{
-                        color: 'rgba(255, 255, 255, 0.7)',
-                        fontSize: '0.55rem',
-                        display: 'block'
-                      }}>
-                        Per Video
-                      </Typography>
-                    </Box>
-                  </Box>
-
-
-                </Box>
-
-                {/* Bottom Row: 6 cards side by side */}
-                <Box sx={{
-                  display: 'flex',
-                  gap: 0.75,
-                  '& > *': {
-                    flex: '1 1 0',
-                    minWidth: 0,
-                    maxWidth: 'calc(16.666% - 3.75px)'
-                  }
-                }}>
-                  {/* Mega Virals Card - Moved to bottom row */}
+                  {/* Mega Virals Card - Third position in top row */}
                   {analyticsData && analyticsData.megaViralsCount !== undefined && analyticsData.megaViralsCount > 0 && (
                     <Box
                       onClick={() => handleOpenVideoModal('megaVirals')}
@@ -2195,6 +2060,20 @@ const Analytics = () => {
                       </Box>
                     </Box>
                   )}
+
+                </Box>
+
+                {/* Bottom Row: 5 cards side by side */}
+                <Box sx={{
+                  display: 'flex',
+                  gap: 0.75,
+                  '& > *': {
+                    flex: '1 1 0',
+                    minWidth: 0,
+                    maxWidth: 'calc(20% - 3px)'
+                  }
+                }}>
+
 
                   {/* Almost Virals Card */}
                   {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
