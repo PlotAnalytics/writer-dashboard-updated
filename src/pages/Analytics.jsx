@@ -1618,14 +1618,14 @@ const Analytics = () => {
                 flex: 1,
                 minWidth: 0
               }}>
-                {/* Top Row: 5 cards side by side */}
+                {/* Top Row: 3 cards side by side */}
                 <Box sx={{
                   display: 'flex',
                   gap: 0.75,
                   '& > *': {
                     flex: '1 1 0',
                     minWidth: 0,
-                    maxWidth: 'calc(20% - 3px)'
+                    maxWidth: 'calc(33.333% - 3px)'
                   }
                 }}>
                   {/* Total Views Card - First position with circular progress */}
@@ -1825,122 +1825,7 @@ const Analytics = () => {
                     </Box>
                   )}
 
-                  {/* Almost Virals Card - Moved to top row */}
-                  {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
-                    <Box
-                      onClick={() => handleOpenVideoModal('almostVirals')}
-                      sx={{
-                        background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 193, 7, 0.08) 100%)',
-                        backdropFilter: 'blur(10px)',
-                        border: '1px solid rgba(255, 152, 0, 0.25)',
-                        borderRadius: 1,
-                        p: 0.75,
-                        cursor: 'pointer',
-                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        minHeight: '30px',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'space-between',
-                        '&:hover': {
-                          transform: 'translateY(-1px) scale(1.005)',
-                          boxShadow: '0 6px 20px rgba(255, 152, 0, 0.3)',
-                          border: '1px solid rgba(255, 152, 0, 0.5)',
-                          background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
-                        },
-                        '&::before': {
-                          content: '""',
-                          position: 'absolute',
-                          top: 0,
-                          left: 0,
-                          right: 0,
-                          height: '3px',
-                          background: 'linear-gradient(90deg, #FF9800, #FFC107)',
-                        }
-                      }}>
-                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
-                        <Typography variant="h6" sx={{
-                          color: '#FF9800',
-                          fontWeight: 700,
-                          fontSize: '1.1rem',
-                          lineHeight: 1,
-                          textShadow: '0 2px 8px rgba(255, 152, 0, 0.4)'
-                        }}>
-                          {analyticsData.almostViralsCount}
-                        </Typography>
-                      </Box>
-                      {/* Circular Progress for Hit Rate */}
-                      {analyticsData.almostViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
-                        <Box sx={{
-                          position: 'absolute',
-                          top: '50%',
-                          right: 4,
-                          transform: 'translateY(-50%)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          width: 70,
-                          height: 70
-                        }}>
-                          <svg width="70" height="70" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
-                            <circle
-                              cx="35"
-                              cy="35"
-                              r="30"
-                              fill="none"
-                              stroke="rgba(255, 152, 0, 0.2)"
-                              strokeWidth="4"
-                            />
-                            <circle
-                              cx="35"
-                              cy="35"
-                              r="30"
-                              fill="none"
-                              stroke="#FF9800"
-                              strokeWidth="4"
-                              strokeLinecap="round"
-                              strokeDasharray={`${2 * Math.PI * 30}`}
-                              strokeDashoffset={`${2 * Math.PI * 30 * (1 - analyticsData.almostViralsPercentage / 100)}`}
-                              style={{
-                                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                filter: 'drop-shadow(0 0 6px rgba(255, 152, 0, 0.6))'
-                              }}
-                            />
-                          </svg>
-                          <Typography sx={{
-                            position: 'absolute',
-                            color: '#FF9800',
-                            fontWeight: 800,
-                            fontSize: '0.9rem',
-                            textAlign: 'center',
-                            lineHeight: 1,
-                            textShadow: '0 2px 4px rgba(255, 152, 0, 0.3)'
-                          }}>
-                            {analyticsData.almostViralsPercentage}%
-                          </Typography>
-                        </Box>
-                      )}
-                      <Box>
-                        <Typography sx={{
-                          color: 'white',
-                          fontWeight: 600,
-                          fontSize: '0.6rem',
-                          letterSpacing: '0.1px',
-                          mb: 0.0625
-                        }}>
-                          ALMOST VIRALS
-                        </Typography>
-                        <Typography variant="caption" sx={{
-                          color: 'rgba(255, 255, 255, 0.7)',
-                          fontSize: '0.55rem',
-                          display: 'block'
-                        }}>
-                          500K-1M Views
-                        </Typography>
-                      </Box>
-                    </Box>
-                  )}
+
 
                   {/* Virals Card */}
                   {analyticsData && analyticsData.viralsCount !== undefined && analyticsData.viralsCount > 0 && (
@@ -2184,14 +2069,14 @@ const Analytics = () => {
 
                 </Box>
 
-                {/* Bottom Row: 4 cards side by side */}
+                {/* Bottom Row: 6 cards side by side */}
                 <Box sx={{
                   display: 'flex',
                   gap: 0.75,
                   '& > *': {
                     flex: '1 1 0',
                     minWidth: 0,
-                    maxWidth: 'calc(25% - 4.5px)'
+                    maxWidth: 'calc(16.666% - 3.75px)'
                   }
                 }}>
                   {/* Mega Virals Card - Moved to bottom row */}
@@ -2306,6 +2191,123 @@ const Analytics = () => {
                           display: 'block'
                         }}>
                           3M+ Views
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
+
+                  {/* Almost Virals Card */}
+                  {analyticsData && analyticsData.almostViralsCount !== undefined && analyticsData.almostViralsCount > 0 && (
+                    <Box
+                      onClick={() => handleOpenVideoModal('almostVirals')}
+                      sx={{
+                        background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.15) 0%, rgba(255, 193, 7, 0.08) 100%)',
+                        backdropFilter: 'blur(10px)',
+                        border: '1px solid rgba(255, 152, 0, 0.25)',
+                        borderRadius: 1,
+                        p: 0.75,
+                        cursor: 'pointer',
+                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        minHeight: '30px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        justifyContent: 'space-between',
+                        '&:hover': {
+                          transform: 'translateY(-1px) scale(1.005)',
+                          boxShadow: '0 6px 20px rgba(255, 152, 0, 0.3)',
+                          border: '1px solid rgba(255, 152, 0, 0.5)',
+                          background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 193, 7, 0.15) 100%)',
+                        },
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '3px',
+                          background: 'linear-gradient(90deg, #FF9800, #FFC107)',
+                        }
+                      }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
+                        <Typography variant="h6" sx={{
+                          color: '#FF9800',
+                          fontWeight: 700,
+                          fontSize: '1.1rem',
+                          lineHeight: 1,
+                          textShadow: '0 2px 8px rgba(255, 152, 0, 0.4)'
+                        }}>
+                          {analyticsData.almostViralsCount}
+                        </Typography>
+                      </Box>
+                      {/* Circular Progress for Hit Rate */}
+                      {analyticsData.almostViralsPercentage !== undefined && analyticsData.totalSubmissions > 0 && (
+                        <Box sx={{
+                          position: 'absolute',
+                          top: '50%',
+                          right: 4,
+                          transform: 'translateY(-50%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          width: 70,
+                          height: 70
+                        }}>
+                          <svg width="70" height="70" style={{ position: 'absolute', transform: 'rotate(-90deg)' }}>
+                            <circle
+                              cx="35"
+                              cy="35"
+                              r="30"
+                              fill="none"
+                              stroke="rgba(255, 152, 0, 0.2)"
+                              strokeWidth="4"
+                            />
+                            <circle
+                              cx="35"
+                              cy="35"
+                              r="30"
+                              fill="none"
+                              stroke="#FF9800"
+                              strokeWidth="4"
+                              strokeLinecap="round"
+                              strokeDasharray={`${2 * Math.PI * 30}`}
+                              strokeDashoffset={`${2 * Math.PI * 30 * (1 - analyticsData.almostViralsPercentage / 100)}`}
+                              style={{
+                                transition: 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                filter: 'drop-shadow(0 0 6px rgba(255, 152, 0, 0.6))'
+                              }}
+                            />
+                          </svg>
+                          <Typography sx={{
+                            position: 'absolute',
+                            color: '#FF9800',
+                            fontWeight: 800,
+                            fontSize: '0.9rem',
+                            textAlign: 'center',
+                            lineHeight: 1,
+                            textShadow: '0 2px 4px rgba(255, 152, 0, 0.3)'
+                          }}>
+                            {analyticsData.almostViralsPercentage}%
+                          </Typography>
+                        </Box>
+                      )}
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.6rem',
+                          letterSpacing: '0.1px',
+                          mb: 0.0625
+                        }}>
+                          ALMOST VIRALS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.55rem',
+                          display: 'block'
+                        }}>
+                          500K-1M Views
                         </Typography>
                       </Box>
                     </Box>
@@ -2617,6 +2619,128 @@ const Analytics = () => {
                       </Box>
                     </Box>
                   )}
+
+                  {/* Average Views Card */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.15) 0%, rgba(139, 195, 74, 0.08) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(76, 175, 80, 0.25)',
+                    borderRadius: 1,
+                    p: 0.75,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minHeight: '30px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 16px rgba(76, 175, 80, 0.25)',
+                      border: '1px solid rgba(76, 175, 80, 0.4)',
+                      background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.2) 0%, rgba(139, 195, 74, 0.12) 100%)',
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      background: 'linear-gradient(90deg, #4CAF50, #8BC34A)',
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
+                      <Typography variant="h6" sx={{
+                        color: '#4CAF50',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        lineHeight: 1,
+                        textShadow: '0 2px 8px rgba(76, 175, 80, 0.4)'
+                      }}>
+                        {formatNumber(analyticsData.avgVideoViews || 0)}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.6rem',
+                        letterSpacing: '0.1px',
+                        mb: 0.0625
+                      }}>
+                        AVERAGE VIEWS
+                      </Typography>
+                      <Typography variant="caption" sx={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '0.55rem',
+                        display: 'block'
+                      }}>
+                        Per Video
+                      </Typography>
+                    </Box>
+                  </Box>
+
+                  {/* Median Views Card */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.15) 0%, rgba(142, 36, 170, 0.08) 100%)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(156, 39, 176, 0.25)',
+                    borderRadius: 1,
+                    p: 0.75,
+                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                    position: 'relative',
+                    overflow: 'hidden',
+                    minHeight: '30px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between',
+                    '&:hover': {
+                      transform: 'translateY(-1px)',
+                      boxShadow: '0 4px 16px rgba(156, 39, 176, 0.25)',
+                      border: '1px solid rgba(156, 39, 176, 0.4)',
+                      background: 'linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(142, 36, 170, 0.12) 100%)',
+                    },
+                    '&::before': {
+                      content: '""',
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '3px',
+                      background: 'linear-gradient(90deg, #9C27B0, #8E24AA)',
+                    }
+                  }}>
+                    <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
+                      <Typography variant="h6" sx={{
+                        color: '#9C27B0',
+                        fontWeight: 700,
+                        fontSize: '1.1rem',
+                        lineHeight: 1,
+                        textShadow: '0 2px 8px rgba(156, 39, 176, 0.4)'
+                      }}>
+                        {formatNumber(analyticsData.medianVideoViews || 0)}
+                      </Typography>
+                    </Box>
+                    <Box>
+                      <Typography sx={{
+                        color: 'white',
+                        fontWeight: 600,
+                        fontSize: '0.6rem',
+                        letterSpacing: '0.1px',
+                        mb: 0.0625
+                      }}>
+                        MEDIAN VIEWS
+                      </Typography>
+                      <Typography variant="caption" sx={{
+                        color: 'rgba(255, 255, 255, 0.7)',
+                        fontSize: '0.55rem',
+                        display: 'block'
+                      }}>
+                        Per Video
+                      </Typography>
+                    </Box>
+                  </Box>
                 </Box>
               </Box>
 
