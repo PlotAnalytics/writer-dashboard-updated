@@ -452,6 +452,11 @@ const Analytics = () => {
       const latestContentData = await fetchLatestContent();
       console.log('📊 fetchLatestContent returned:', latestContentData);
 
+      // Fetch ALL videos for proper median calculation
+      console.log('📊 Fetching ALL videos for median calculation');
+      const allVideosData = await fetchAllVideosForMedian(dateRange);
+      console.log('📊 fetchAllVideosForMedian returned:', allVideosData?.length || 0, 'videos');
+
       console.log('📊 Top content received:', topVideosData?.length || 0, 'videos');
       console.log('📊 Latest content received:', latestContentData?.title || 'None');
 
@@ -466,12 +471,13 @@ const Analytics = () => {
         latestContent: latestContentData,
         // Calculate additional metrics from BigQuery data
         avgDailyViews: chartData.length > 0 ? Math.round(totalViews / chartData.length) : 0,
-        // Calculate average and median views per video
-        avgVideoViews: topVideosData && topVideosData.length > 0 ?
-          Math.round(topVideosData.reduce((sum, video) => sum + (video.views || 0), 0) / topVideosData.length) : 0,
-        medianVideoViews: topVideosData && topVideosData.length > 0 ?
+        // Calculate average views per video: Total Views / Total Submissions
+        avgVideoViews: overviewData.totalSubmissions > 0 ?
+          Math.round(totalViews / overviewData.totalSubmissions) : 0,
+        // Calculate median views from ALL videos in the time range
+        medianVideoViews: allVideosData && allVideosData.length > 0 ?
           (() => {
-            const sortedViews = topVideosData.map(video => video.views || 0).sort((a, b) => a - b);
+            const sortedViews = allVideosData.map(video => video.views_total || video.views || 0).sort((a, b) => a - b);
             const mid = Math.floor(sortedViews.length / 2);
             return sortedViews.length % 2 === 0
               ? Math.round((sortedViews[mid - 1] + sortedViews[mid]) / 2)
@@ -683,6 +689,11 @@ const Analytics = () => {
       const topVideosData = await fetchTopContentWithCustomRange(contentFilter, customRange, startDate, endDate);
       const latestContentData = await fetchLatestContent();
 
+      // Fetch ALL videos for proper median calculation
+      console.log('📊 Fetching ALL videos for median calculation (custom range)');
+      const allVideosData = await fetchAllVideosForMedian(customRange);
+      console.log('📊 fetchAllVideosForMedian (custom) returned:', allVideosData?.length || 0, 'videos');
+
       // Combine all data
       const combinedData = {
         ...overviewData,
@@ -692,12 +703,13 @@ const Analytics = () => {
         topVideos: topVideosData || [],
         latestContent: latestContentData,
         avgDailyViews: chartData.length > 0 ? Math.round(totalViews / chartData.length) : 0,
-        // Calculate average and median views per video
-        avgVideoViews: topVideosData && topVideosData.length > 0 ?
-          Math.round(topVideosData.reduce((sum, video) => sum + (video.views || 0), 0) / topVideosData.length) : 0,
-        medianVideoViews: topVideosData && topVideosData.length > 0 ?
+        // Calculate average views per video: Total Views / Total Submissions
+        avgVideoViews: overviewData.totalSubmissions > 0 ?
+          Math.round(totalViews / overviewData.totalSubmissions) : 0,
+        // Calculate median views from ALL videos in the time range
+        medianVideoViews: allVideosData && allVideosData.length > 0 ?
           (() => {
-            const sortedViews = topVideosData.map(video => video.views || 0).sort((a, b) => a - b);
+            const sortedViews = allVideosData.map(video => video.views_total || video.views || 0).sort((a, b) => a - b);
             const mid = Math.floor(sortedViews.length / 2);
             return sortedViews.length % 2 === 0
               ? Math.round((sortedViews[mid - 1] + sortedViews[mid]) / 2)
@@ -882,6 +894,81 @@ const Analytics = () => {
       }
     } catch (error) {
       console.error('❌ Error fetching top content:', error);
+      return [];
+    }
+  };
+
+  // Fetch ALL videos for median calculation
+  const fetchAllVideosForMedian = async (dateRange) => {
+    try {
+      const token = localStorage.getItem('token');
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      if (!writerId) {
+        console.error('❌ No writer ID available for fetching all videos');
+        return [];
+      }
+
+      // Convert dateRange to range parameter
+      let range = '30';
+      let startDate = null;
+      let endDate = null;
+
+      if (dateRange.startsWith('custom_')) {
+        const parts = dateRange.split('_');
+        if (parts.length === 3) {
+          startDate = parts[1];
+          endDate = parts[2];
+          range = 'custom';
+        }
+      } else {
+        switch (dateRange) {
+          case 'last7days':
+            range = '7';
+            break;
+          case 'last30days':
+            range = '30';
+            break;
+          case 'last90days':
+            range = '90';
+            break;
+          case 'last365days':
+            range = '365';
+            break;
+          case 'lifetime':
+            range = 'lifetime';
+            break;
+          default:
+            range = '28';
+        }
+      }
+
+      // Build URL to get ALL videos (high limit)
+      let url = `${buildApiUrl('/api/writer/videos')}?writer_id=${writerId}&range=${range}&limit=1000&type=all`;
+      if (range === 'custom' && startDate && endDate) {
+        url += `&start_date=${startDate}&end_date=${endDate}`;
+      }
+
+      console.log('📊 Fetching ALL videos for median calculation:', url);
+
+      const response = await fetch(url, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        const allVideos = result.videos || result.data || [];
+        console.log('📊 Fetched ALL videos for median:', allVideos.length);
+        return allVideos;
+      } else {
+        console.error('❌ Error fetching all videos for median:', response.status);
+        return [];
+      }
+    } catch (error) {
+      console.error('❌ Error fetching all videos for median:', error);
       return [];
     }
   };
