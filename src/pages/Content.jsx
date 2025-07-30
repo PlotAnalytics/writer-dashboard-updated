@@ -34,6 +34,7 @@ import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import axios from 'axios';
 import { contentApi } from '../utils/simpleApi.js';
+import { buildApiUrl } from '../config/api.js';
 
 const Content = () => {
   const navigate = useNavigate();
@@ -62,6 +63,78 @@ const Content = () => {
 
   // Modern search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // STL (Script To Link) specific state
+  const [stlUrl, setStlUrl] = useState('');
+  const [stlResult, setStlResult] = useState(null);
+  const [stlLoading, setStlLoading] = useState(false);
+  const [stlError, setStlError] = useState(null);
+
+  // Function to extract video ID from YouTube URL
+  const extractVideoId = (url) => {
+    if (!url) return null;
+
+    // Handle different YouTube URL formats
+    const patterns = [
+      /(?:https?:\/\/)?(?:www\.)?youtu\.be\/([a-zA-Z0-9_-]{11})/,  // youtu.be/VIDEO_ID
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/watch\?v=([a-zA-Z0-9_-]{11})/,  // youtube.com/watch?v=VIDEO_ID
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,  // youtube.com/shorts/VIDEO_ID
+      /(?:https?:\/\/)?(?:www\.)?youtube\.com\/embed\/([a-zA-Z0-9_-]{11})/,  // youtube.com/embed/VIDEO_ID
+    ];
+
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        return match[1];
+      }
+    }
+
+    return null;
+  };
+
+  // Function to search for script using video ID
+  const searchScript = async () => {
+    if (!stlUrl.trim()) {
+      setStlError('Please enter a YouTube URL');
+      return;
+    }
+
+    const videoId = extractVideoId(stlUrl.trim());
+    if (!videoId) {
+      setStlError('Invalid YouTube URL. Please enter a valid YouTube URL.');
+      return;
+    }
+
+    setStlLoading(true);
+    setStlError(null);
+    setStlResult(null);
+
+    try {
+      // Use the buildApiUrl helper to construct the proper API URL
+      const apiUrl = buildApiUrl(`/api/search-script?videoId=${encodeURIComponent(videoId)}`);
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to search for script');
+      }
+
+      if (data.success && data.googleDocLink) {
+        setStlResult({
+          videoId: videoId,
+          googleDocLink: data.googleDocLink,
+          trelloCardId: data.trelloCardId
+        });
+      } else {
+        setStlError('No script found for this video. The video might not be in our database or might not have an associated script.');
+      }
+    } catch (error) {
+      console.error('Error searching for script:', error);
+      setStlError(error.message || 'An error occurred while searching for the script');
+    } finally {
+      setStlLoading(false);
+    }
+  };
 
   // Fetch writer-specific videos from InfluxDB and PostgreSQL
   const fetchContentData = async () => {
@@ -449,6 +522,13 @@ const Content = () => {
               } else if (newValue === 1) {
                 console.log('🔄 Setting filter to: video');
                 setVideoTypeFilter('video'); // Videos tab
+              } else if (newValue === 2) {
+                console.log('🔄 Setting filter to: stl');
+                setVideoTypeFilter('stl'); // STL tab
+                // Reset STL state when switching to STL tab
+                setStlUrl('');
+                setStlResult(null);
+                setStlError(null);
               }
               setCurrentPage(1); // Reset to first page when changing tabs
             }}
@@ -471,7 +551,8 @@ const Content = () => {
           >
             <Tab label="Shorts" />
             <Tab label="Videos" />
-           
+            <Tab label="STL" />
+
           </Tabs>
         </Box>
 
@@ -617,8 +698,140 @@ const Content = () => {
           />
         </Box>
 
-        {/* Content Table */}
-        <TableContainer>
+        {/* STL (Script To Link) Content */}
+        {videoTypeFilter === 'stl' ? (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ color: 'white', mb: 3 }}>
+              Script To Link (STL)
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#888', mb: 3 }}>
+              Enter a YouTube URL to find the associated script document.
+            </Typography>
+
+            {/* URL Input */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+              <TextField
+                fullWidth
+                placeholder="Enter YouTube URL (e.g., https://youtu.be/a8-VQUH489I or https://youtube.com/shorts/Ozt2mn5nJ3Y)"
+                value={stlUrl}
+                onChange={(e) => setStlUrl(e.target.value)}
+                size="small"
+                slotProps={{
+                  input: {
+                    sx: {
+                      color: 'white',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      borderRadius: '8px',
+                      '&:hover': {
+                        border: '1px solid rgba(102, 126, 234, 0.5)',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                      },
+                      '&.Mui-focused': {
+                        border: '1px solid rgba(102, 126, 234, 0.7)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.2)',
+                      },
+                      '& .MuiInputBase-input': {
+                        color: 'white',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          opacity: 1,
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+              <Button
+                variant="contained"
+                onClick={searchScript}
+                disabled={stlLoading || !stlUrl.trim()}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  px: 3,
+                  py: 1,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 600,
+                  minWidth: '120px',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                  },
+                  '&:disabled': {
+                    background: 'rgba(255, 255, 255, 0.1)',
+                    color: 'rgba(255, 255, 255, 0.3)',
+                  },
+                }}
+              >
+                {stlLoading ? 'Searching...' : 'Search'}
+              </Button>
+            </Box>
+
+            {/* Error Message */}
+            {stlError && (
+              <Box sx={{
+                p: 2,
+                mb: 3,
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                border: '1px solid rgba(244, 67, 54, 0.3)',
+                borderRadius: '8px',
+              }}>
+                <Typography variant="body2" sx={{ color: '#f44336' }}>
+                  {stlError}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Result */}
+            {stlResult && (
+              <Box sx={{
+                p: 3,
+                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                border: '1px solid rgba(76, 175, 80, 0.3)',
+                borderRadius: '8px',
+              }}>
+                <Typography variant="h6" sx={{ color: '#4caf50', mb: 2 }}>
+                  Script Found!
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
+                  Video ID: <span style={{ color: 'white', fontFamily: 'monospace' }}>{stlResult.videoId}</span>
+                </Typography>
+                <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
+                  Trello Card ID: <span style={{ color: 'white', fontFamily: 'monospace' }}>{stlResult.trelloCardId}</span>
+                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                  <Typography variant="body2" sx={{ color: '#888' }}>
+                    Google Doc:
+                  </Typography>
+                  <Button
+                    variant="outlined"
+                    href={stlResult.googleDocLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    sx={{
+                      color: '#4caf50',
+                      borderColor: '#4caf50',
+                      textTransform: 'none',
+                      '&:hover': {
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        borderColor: '#66bb6a',
+                      },
+                    }}
+                  >
+                    Open Script Document
+                  </Button>
+                </Box>
+              </Box>
+            )}
+          </Box>
+        ) : (
+          <>
+            {/* Content Table */}
+            <TableContainer>
           <Table>
             <TableHead>
               <TableRow sx={{ borderBottom: '1px solid #333' }}>
@@ -1025,6 +1238,8 @@ const Content = () => {
             </Box>
           </Box>
         </Box>
+        </>
+        )}
       </Box>
     </Layout>
   );

@@ -14,6 +14,7 @@ const userRoutes = require("./routes/user");
 const influxRoutes = require("./routes/influx");
 const dataExplorerRoutes = require("./routes/dataExplorer");
 const notificationRoutes = require("./routes/notifications");
+const searchScriptRoutes = require("./routes/searchScript");
 const RedisService = require("./services/redisService");
 
 dotenv.config();
@@ -137,6 +138,7 @@ app.use("/api/user", userRoutes);
 app.use("/api/influx", influxRoutes);
 app.use("/api/data-explorer", dataExplorerRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api", searchScriptRoutes);
 
 // Feedback endpoint for Slack integration
 app.post('/api/feedback', async (req, res) => {
