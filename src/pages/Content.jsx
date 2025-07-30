@@ -551,7 +551,7 @@ const Content = () => {
           >
             <Tab label="Shorts" />
             <Tab label="Videos" />
-            <Tab label="STL" />
+            <Tab label="Script to Link" />
 
           </Tabs>
         </Box>
@@ -702,7 +702,7 @@ const Content = () => {
         {videoTypeFilter === 'stl' ? (
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ color: 'white', mb: 3 }}>
-              Script To Link (STL)
+              Script to Link
             </Typography>
             <Typography variant="body2" sx={{ color: '#888', mb: 3 }}>
               Enter a YouTube URL to find the associated script document.
