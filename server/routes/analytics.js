@@ -1564,6 +1564,12 @@ async function getBigQueryAnalyticsOverview(
     console.log(`🔥 DEBUG: About to query video performance breakdown for writer ${writerId} - LOGIC: Posted in timeframe with view thresholds`);
 
     try {
+      // Check if this is an STL writer with different thresholds
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+      const isSTLWriter = stlWriters.includes(writerName);
+
+      console.log(`🔍 Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
+
       const performanceQuery = `
         WITH video_metadata AS (
           SELECT DISTINCT
@@ -1588,11 +1594,19 @@ async function getBigQueryAnalyticsOverview(
           GROUP BY video_id
         )
         SELECT
+          ${isSTLWriter ? `
+          COUNT(CASE WHEN max_views >= 1500000 THEN 1 END) as mega_virals_count,
+          COUNT(CASE WHEN max_views >= 500000 AND max_views < 1500000 THEN 1 END) as virals_count,
+          COUNT(CASE WHEN max_views >= 250000 AND max_views < 500000 THEN 1 END) as almost_virals_count,
+          COUNT(CASE WHEN max_views >= 50000 AND max_views < 250000 THEN 1 END) as decent_videos_count,
+          COUNT(CASE WHEN max_views < 50000 THEN 1 END) as flops_count
+          ` : `
           COUNT(CASE WHEN max_views >= 3000000 THEN 1 END) as mega_virals_count,
           COUNT(CASE WHEN max_views >= 1000000 AND max_views < 3000000 THEN 1 END) as virals_count,
           COUNT(CASE WHEN max_views >= 500000 AND max_views < 1000000 THEN 1 END) as almost_virals_count,
           COUNT(CASE WHEN max_views >= 100000 AND max_views < 500000 THEN 1 END) as decent_videos_count,
           COUNT(CASE WHEN max_views < 100000 THEN 1 END) as flops_count
+          `}
         FROM latest_views
       `;
 
@@ -1659,6 +1673,10 @@ async function getBigQueryAnalyticsOverview(
     try {
       console.log(`🎬 Getting video details for each category for writer ${writerName}`);
 
+      // Check if this is an STL writer with different thresholds
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+      const isSTLWriter = stlWriters.includes(writerName);
+
       const videoDetailsQuery = `
         WITH video_metadata AS (
           SELECT DISTINCT
@@ -1688,11 +1706,19 @@ async function getBigQueryAnalyticsOverview(
             lv.max_views,
             v.trello_card_id,
             CASE
+              ${isSTLWriter ? `
+              WHEN lv.max_views >= 1500000 THEN 'megaVirals'
+              WHEN lv.max_views >= 500000 AND lv.max_views < 1500000 THEN 'virals'
+              WHEN lv.max_views >= 250000 AND lv.max_views < 500000 THEN 'almostVirals'
+              WHEN lv.max_views >= 50000 AND lv.max_views < 250000 THEN 'decentVideos'
+              ELSE 'flops'
+              ` : `
               WHEN lv.max_views >= 3000000 THEN 'megaVirals'
               WHEN lv.max_views >= 1000000 AND lv.max_views < 3000000 THEN 'virals'
               WHEN lv.max_views >= 500000 AND lv.max_views < 1000000 THEN 'almostVirals'
               WHEN lv.max_views >= 100000 AND lv.max_views < 500000 THEN 'decentVideos'
               ELSE 'flops'
+              `}
             END as category
           FROM latest_views lv
           LEFT JOIN \`speedy-web-461014-g3.postgres.video\` v
@@ -2479,8 +2505,20 @@ async function handleVideoDetailsRequest(req, res) {
     }
     const writerName = writerRows[0].name;
 
+    // Check if this is an STL writer with different thresholds
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    const isSTLWriter = stlWriters.includes(writerName);
+
+    console.log(`🔍 Video Details - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
+
     // Define view thresholds for each category - using same logic as counts
-    const categoryConditions = {
+    const categoryConditions = isSTLWriter ? {
+      megaVirals: 'max_views >= 1500000',
+      virals: 'max_views >= 500000 AND max_views < 1500000',
+      almostVirals: 'max_views >= 250000 AND max_views < 500000',
+      decentVideos: 'max_views >= 50000 AND max_views < 250000',
+      flops: 'max_views < 50000'
+    } : {
       megaVirals: 'max_views >= 3000000',
       virals: 'max_views >= 1000000 AND max_views < 3000000',
       almostVirals: 'max_views >= 500000 AND max_views < 1000000',
@@ -6424,8 +6462,20 @@ router.get('/video-details', authenticateToken, async (req, res) => {
     }
     const writerName = writerRows[0].name;
 
+    // Check if this is an STL writer with different thresholds
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    const isSTLWriter = stlWriters.includes(writerName);
+
+    console.log(`🔍 Video Details v2 - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
+
     // Define view thresholds for each category - using same logic as counts
-    const categoryConditions = {
+    const categoryConditions = isSTLWriter ? {
+      megaVirals: 'max_views >= 1500000',
+      virals: 'max_views >= 500000 AND max_views < 1500000',
+      almostVirals: 'max_views >= 250000 AND max_views < 500000',
+      decentVideos: 'max_views >= 50000 AND max_views < 250000',
+      flops: 'max_views < 50000'
+    } : {
       megaVirals: 'max_views >= 3000000',
       virals: 'max_views >= 1000000 AND max_views < 3000000',
       almostVirals: 'max_views >= 500000 AND max_views < 1000000',
