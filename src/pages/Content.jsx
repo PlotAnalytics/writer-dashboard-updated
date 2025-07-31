@@ -800,9 +800,6 @@ const Content = () => {
                 <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
                   Video ID: <span style={{ color: 'white', fontFamily: 'monospace' }}>{stlResult.videoId}</span>
                 </Typography>
-                <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
-                  Trello Card ID: <span style={{ color: 'white', fontFamily: 'monospace' }}>{stlResult.trelloCardId}</span>
-                </Typography>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                   <Typography variant="body2" sx={{ color: '#888' }}>
                     Google Doc:
