@@ -210,10 +210,31 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     let allData = [];
 */
 
-// NEW: Daily view increase calculation using youtube_metadata_historical
+// Helper function to parse YouTube PT duration format (PT2M58S, PT43S)
+function parseYouTubeDuration(duration) {
+  if (!duration || typeof duration !== 'string') return 0;
+
+  // Match PT format: PT2M58S, PT43S, PT1H2M3S, etc.
+  const match = duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+  if (!match) return 0;
+
+  const hours = parseInt(match[1] || 0);
+  const minutes = parseInt(match[2] || 0);
+  const seconds = parseInt(match[3] || 0);
+
+  return (hours * 3600) + (minutes * 60) + seconds;
+}
+
+// NEW: Daily view increase calculation using youtube_metadata_historical with shorts/long split
 async function getBigQueryViews(writerId, startDate, endDate, influxService = null) {
   try {
     console.log(`📊 NEW APPROACH: Getting daily view increases for writer ${writerId} from ${startDate} to ${endDate}`);
+
+    // Check if this writer should get shorts/long split
+    const splitWriters = [1001, 1002, 1004, 130, 136, 131];
+    const shouldSplitByType = splitWriters.includes(parseInt(writerId));
+
+    console.log(`📊 Writer ${writerId} split by type: ${shouldSplitByType}`);
 
     // Use global BigQuery client
     const bigqueryClient = getBigQueryClient();
@@ -342,7 +363,50 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
     if (videoIds.length === 0) {
       console.log(`📊 No videos found for writer ${writerName} in date range`);
-      return [];
+      return shouldSplitByType ? { shorts: [], longs: [] } : [];
+    }
+
+    // Step 1.5: Get video durations for type categorization (only for split writers)
+    let videoDurations = new Map();
+    if (shouldSplitByType && videoIds.length > 0) {
+      console.log(`📊 Getting video durations for ${videoIds.length} videos to categorize shorts vs longs`);
+
+      const durationsQuery = `
+        SELECT DISTINCT
+          video_id,
+          content_details_duration
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE video_id IN UNNEST(@video_ids)
+          AND content_details_duration IS NOT NULL
+      `;
+
+      try {
+        const [durationsRows] = await bigqueryClient.query({
+          query: durationsQuery,
+          params: { video_ids: videoIds }
+        });
+
+        console.log(`📊 Retrieved ${durationsRows.length} duration records`);
+
+        durationsRows.forEach(row => {
+          if (row.video_id && row.content_details_duration) {
+            const durationSeconds = parseYouTubeDuration(row.content_details_duration);
+            const isShort = durationSeconds > 0 && durationSeconds <= 193; // 3 minutes 13 seconds
+            videoDurations.set(row.video_id, {
+              duration: row.content_details_duration,
+              seconds: durationSeconds,
+              isShort: isShort,
+              type: isShort ? 'short' : 'long'
+            });
+
+            console.log(`📊 Video ${row.video_id}: ${row.content_details_duration} = ${durationSeconds}s = ${isShort ? 'SHORT' : 'LONG'}`);
+          }
+        });
+
+        console.log(`📊 Categorized ${videoDurations.size} videos by duration`);
+      } catch (durationError) {
+        console.warn(`⚠️ Failed to get video durations: ${durationError.message}`);
+      }
     }
 
     // Step 2: Get daily view counts from youtube_metadata_historical for these videos
@@ -378,6 +442,8 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
 
     // Step 3: Calculate daily increases for each video
     const videoViewIncreases = new Map();
+    const shortsViewIncreases = new Map(); // For shorts videos
+    const longsViewIncreases = new Map();  // For long videos
 
     // Group by video_id
     const videoGroups = new Map();
@@ -450,6 +516,27 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
           console.log(`📊 Video ${videoId} on ${currentDate}: ${previousViews.toLocaleString()} → ${currentViews.toLocaleString()} = +${dailyIncrease.toLocaleString()}`);
         }
 
+        // Aggregate increases by video type if splitting is enabled
+        if (shouldSplitByType) {
+          const videoDuration = videoDurations.get(videoId);
+          const isShort = videoDuration ? videoDuration.isShort : false; // Default to long if no duration data
+
+          if (isShort) {
+            if (!shortsViewIncreases.has(currentDate)) {
+              shortsViewIncreases.set(currentDate, 0);
+            }
+            shortsViewIncreases.set(currentDate, shortsViewIncreases.get(currentDate) + dailyIncrease);
+            console.log(`📊 SHORT Video ${videoId} on ${currentDate}: +${dailyIncrease.toLocaleString()} views`);
+          } else {
+            if (!longsViewIncreases.has(currentDate)) {
+              longsViewIncreases.set(currentDate, 0);
+            }
+            longsViewIncreases.set(currentDate, longsViewIncreases.get(currentDate) + dailyIncrease);
+            console.log(`📊 LONG Video ${videoId} on ${currentDate}: +${dailyIncrease.toLocaleString()} views`);
+          }
+        }
+
+        // Always aggregate total increases for backward compatibility
         if (!videoViewIncreases.has(currentDate)) {
           videoViewIncreases.set(currentDate, 0);
         }
@@ -460,6 +547,7 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     });
 
     // Step 4: Convert to the expected format
+    // Always create combined data for backward compatibility
     const allData = [];
     videoViewIncreases.forEach((totalIncrease, date) => {
       allData.push({
@@ -468,15 +556,50 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
         source: 'BigQuery_Daily_Increases'
       });
     });
-
-    // Sort by date
     allData.sort((a, b) => new Date(a.time.value) - new Date(b.time.value));
 
-    console.log(`📊 NEW APPROACH: Calculated daily increases for ${allData.length} days`);
-    console.log(`📊 Sample data:`, allData.slice(0, 3));
-    console.log(`📊 Total videos processed: ${videoGroups.size}`);
+    if (shouldSplitByType) {
+      // Create separate data arrays for shorts and longs
+      const shortsData = [];
+      shortsViewIncreases.forEach((totalIncrease, date) => {
+        shortsData.push({
+          time: { value: date },
+          views: totalIncrease,
+          source: 'BigQuery_Daily_Increases_Shorts'
+        });
+      });
 
-    return allData;
+      const longsData = [];
+      longsViewIncreases.forEach((totalIncrease, date) => {
+        longsData.push({
+          time: { value: date },
+          views: totalIncrease,
+          source: 'BigQuery_Daily_Increases_Longs'
+        });
+      });
+
+      // Sort by date
+      shortsData.sort((a, b) => new Date(a.time.value) - new Date(b.time.value));
+      longsData.sort((a, b) => new Date(a.time.value) - new Date(b.time.value));
+
+      console.log(`📊 NEW APPROACH (SPLIT): Calculated daily increases for ${shortsData.length} days (shorts), ${longsData.length} days (longs)`);
+      console.log(`📊 Shorts sample:`, shortsData.slice(0, 3));
+      console.log(`📊 Longs sample:`, longsData.slice(0, 3));
+      console.log(`📊 Total videos processed: ${videoGroups.size} (${videoDurations.size} categorized by duration)`);
+
+      return {
+        shorts: shortsData,
+        longs: longsData,
+        combined: allData // Also return combined for backward compatibility
+      };
+    } else {
+      // Original behavior for non-split writers
+      console.log(`📊 NEW APPROACH: Calculated daily increases for ${allData.length} days`);
+      console.log(`📊 Sample data:`, allData.slice(0, 3));
+      console.log(`📊 Total videos processed: ${videoGroups.size}`);
+
+      return allData;
+    }
 
   } catch (error) {
     console.error('❌ NEW APPROACH: Error calculating daily view increases:', error);
@@ -2747,6 +2870,10 @@ async function handleAnalyticsRequest(req, res) {
           customEndDate
         });
 
+        // Check if this writer should get shorts/long split
+        const splitWriters = [1001, 1002, 1004, 130, 136, 131];
+        const shouldSplitByType = splitWriters.includes(parseInt(writerId));
+
         // Use BigQuery for analytics overview with writer name from PostgreSQL
         const analyticsData = await getBigQueryAnalyticsOverview(
           writerId,
@@ -2756,6 +2883,63 @@ async function handleAnalyticsRequest(req, res) {
           customStartDate,
           customEndDate
         );
+
+        // If this writer should get split data, add shorts/longs breakdown
+        if (shouldSplitByType) {
+          console.log(`📊 Adding shorts/longs split for writer ${writerId}`);
+
+          // Calculate date range for split data
+          let splitStartDate, splitEndDate;
+          if (customStartDate && customEndDate) {
+            splitStartDate = customStartDate;
+            splitEndDate = customEndDate;
+          } else {
+            // Calculate predefined range dates
+            const endDate = new Date();
+            const startDate = new Date();
+            let days;
+            switch (range) {
+              case '7d': days = 7; break;
+              case '30d': days = 30; break;
+              case '90d': days = 90; break;
+              case '1y': days = 365; break;
+              default: days = 30;
+            }
+            startDate.setDate(endDate.getDate() - days);
+            splitStartDate = startDate.toISOString().split('T')[0];
+            splitEndDate = endDate.toISOString().split('T')[0];
+          }
+
+          try {
+            const splitData = await getBigQueryViews(writerId, splitStartDate, splitEndDate);
+
+            if (splitData && splitData.shorts && splitData.longs) {
+              console.log(`📊 Split data retrieved: ${splitData.shorts.length} shorts points, ${splitData.longs.length} longs points`);
+
+              // Add split data to analytics response
+              analyticsData.shortsData = splitData.shorts.map(item => ({
+                date: item.time.value,
+                views: item.views,
+                formattedDate: new Date(item.time.value).toLocaleDateString(),
+                source: item.source
+              }));
+
+              analyticsData.longsData = splitData.longs.map(item => ({
+                date: item.time.value,
+                views: item.views,
+                formattedDate: new Date(item.time.value).toLocaleDateString(),
+                source: item.source
+              }));
+
+              analyticsData.hasSplitData = true;
+
+              console.log(`📊 Added split data to analytics response`);
+            }
+          } catch (splitError) {
+            console.warn(`⚠️ Failed to get split data for writer ${writerId}:`, splitError.message);
+            analyticsData.hasSplitData = false;
+          }
+        }
 
         console.log('📊 BigQuery analytics data sent:', {
           totalViews: analyticsData.totalViews,
@@ -4945,6 +5129,35 @@ router.get('/test-new-bigquery', async (req, res) => {
       success: false,
       error: error.message,
       message: 'New BigQuery function test failed'
+    });
+  }
+});
+
+// Test endpoint for shorts/longs split functionality
+router.get('/test-shorts-split', async (req, res) => {
+  try {
+    const { writer_id = '130', start_date = '2025-07-01', end_date = '2025-07-10' } = req.query;
+
+    console.log(`🔍 Testing shorts/longs split for writer ${writer_id} from ${start_date} to ${end_date}`);
+
+    // Use the new BigQuery function with split functionality
+    const result = await getBigQueryViews(writer_id, start_date, end_date);
+
+    res.json({
+      success: true,
+      writerId: writer_id,
+      dateRange: { start: start_date, end: end_date },
+      data: result,
+      isSplit: typeof result === 'object' && result.shorts && result.longs,
+      shortsCount: result.shorts ? result.shorts.length : 0,
+      longsCount: result.longs ? result.longs.length : 0
+    });
+
+  } catch (error) {
+    console.error('❌ Shorts/longs split test error:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
     });
   }
 });

@@ -2841,40 +2841,83 @@ const Analytics = () => {
                       borderWidth: 1,
                       textStyle: { color: '#fff' },
                       formatter: (params) => {
-                        const dataIndex = params[0]?.dataIndex;
-                        const dailyTotalPoint = analyticsData.aggregatedViewsData?.[dataIndex];
+                        if (!params || params.length === 0) return '';
 
-                        if (!dailyTotalPoint) {
-                          const date = params[0]?.axisValue || 'N/A';
-                          const value = params[0]?.value || 0;
-                          const formattedValue = formatNumber(value);
+                        const date = params[0]?.axisValue || 'N/A';
+
+                        // Check if we have split data (shorts vs longs)
+                        if (analyticsData.hasSplitData && params.length === 2) {
+                          let shortsValue = 0;
+                          let longsValue = 0;
+
+                          params.forEach(param => {
+                            if (param.seriesName === 'Shorts Videos') {
+                              shortsValue = param.value || 0;
+                            } else if (param.seriesName === 'Long Videos') {
+                              longsValue = param.value || 0;
+                            }
+                          });
+
+                          const totalValue = shortsValue + longsValue;
+
                           return `
-                            <div style="min-width: 200px;">
-                              <div style="font-size: 12px; color: #ccc;">${date}</div>
-                              <div style="font-size: 18px, font-weight: 600; color: #fff;">${formattedValue} views</div>
+                            <div style="padding: 12px; min-width: 200px;">
+                              <div style="font-size: 14px; font-weight: 600; color: #fff; margin-bottom: 8px; border-bottom: 1px solid #666; padding-bottom: 4px;">${date}</div>
+
+                              <div style="margin-bottom: 6px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background-color: #4fc3f7; border-radius: 50%; margin-right: 8px;"></span>
+                                <span style="color: #fff; font-weight: 500;">Shorts Videos:</span>
+                                <span style="color: #4fc3f7; font-weight: 600; float: right;">${formatNumber(shortsValue)}</span>
+                              </div>
+
+                              <div style="margin-bottom: 8px;">
+                                <span style="display: inline-block; width: 10px; height: 10px; background-color: #FF9800; border-radius: 50%; margin-right: 8px;"></span>
+                                <span style="color: #fff; font-weight: 500;">Long Videos:</span>
+                                <span style="color: #FF9800; font-weight: 600; float: right;">${formatNumber(longsValue)}</span>
+                              </div>
+
+                              <div style="border-top: 1px solid #666; padding-top: 6px; margin-top: 8px;">
+                                <span style="color: #fff; font-weight: 600;">Total Views:</span>
+                                <span style="color: #fff; font-weight: 700; font-size: 16px; float: right;">${formatNumber(totalValue)}</span>
+                              </div>
+
+                              <div style="font-size: 11px; color: #aaa; margin-top: 6px; text-align: center;">📊 BigQuery Daily Increases</div>
+                            </div>
+                          `;
+                        } else {
+                          // Original single line tooltip for non-split writers
+                          const dataIndex = params[0]?.dataIndex;
+                          const dailyTotalPoint = analyticsData.aggregatedViewsData?.[dataIndex];
+
+                          if (!dailyTotalPoint) {
+                            const value = params[0]?.value || 0;
+                            const formattedValue = formatNumber(value);
+                            return `
+                              <div style="min-width: 200px;">
+                                <div style="font-size: 12px; color: #ccc;">${date}</div>
+                                <div style="font-size: 18px, font-weight: 600; color: #fff;">${formattedValue} views</div>
+                              </div>
+                            `;
+                          }
+
+                          const views = formatNumber(dailyTotalPoint.views);
+
+                          // Check data source
+                          const isBigQuery = dailyTotalPoint.source === 'BigQuery_Daily_Totals' || dailyTotalPoint.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !dailyTotalPoint.source?.includes('InfluxDB');
+                          const isInfluxDB = dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation' || dailyTotalPoint.source?.includes('InfluxDB');
+
+                          const statusIndicator = isInfluxDB
+                            ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 Rough Estimate (Real-time)</div>'
+                            : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ YouTube Analytics (Confirmed)</div>';
+
+                          return `
+                            <div style="min-width: 250px; max-width: 350px;">
+                              <div style="font-size: 12px; color: #ccc; margin-bottom: 4px;">${dayjs(dailyTotalPoint.time).format('MMM D, YYYY')}</div>
+                              <div style="font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 6px;">${views} total views</div>
+                              ${statusIndicator}
                             </div>
                           `;
                         }
-
-                        const date = dailyTotalPoint.time;
-                        const views = formatNumber(dailyTotalPoint.views);
-                        const uniqueVideos = dailyTotalPoint.unique_videos || 0;
-
-                        // Check data source
-                        const isBigQuery = dailyTotalPoint.source === 'BigQuery_Daily_Totals' || dailyTotalPoint.source === 'BigQuery_Daily_Totals_Filtered_In_Query' || !dailyTotalPoint.source?.includes('InfluxDB');
-                        const isInfluxDB = dailyTotalPoint.source === 'InfluxDB_Hourly_Aggregation' || dailyTotalPoint.source?.includes('InfluxDB');
-
-                        const statusIndicator = isInfluxDB
-                          ? '<div style="font-size: 11px; color: #FF9800; margin-top: 4px;">📊 Rough Estimate (Real-time)</div>'
-                          : '<div style="font-size: 11px; color: #4fc3f7; margin-top: 4px;">✅ YouTube Analytics (Confirmed)</div>';
-
-                        return `
-                          <div style="min-width: 250px; max-width: 350px;">
-                            <div style="font-size: 12px; color: #ccc; margin-bottom: 4px;">${dayjs(date).format('MMM D, YYYY')}</div>
-                            <div style="font-size: 18px; font-weight: 600; color: #fff; margin-bottom: 6px;">${views} total views</div>
-                            ${statusIndicator}
-                          </div>
-                        `;
                       },
                       extraCssText: 'box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);',
                     },
@@ -2888,7 +2931,13 @@ const Analytics = () => {
                     xAxis: {
                       type: 'category',
                       boundaryGap: false,
-                      data: analyticsData.aggregatedViewsData?.map(item => formatDate(item.time)) || [],
+                      data: (() => {
+                        // Use split data for x-axis if available, otherwise use aggregated data
+                        if (analyticsData.hasSplitData && analyticsData.shortsData) {
+                          return analyticsData.shortsData.map(item => formatDate(item.date));
+                        }
+                        return analyticsData.aggregatedViewsData?.map(item => formatDate(item.time)) || [];
+                      })(),
                       axisLabel: {
                         // For single date, always show the label; for multiple dates, show every other
                         formatter: (value, index) => {
@@ -2930,45 +2979,124 @@ const Analytics = () => {
                         }];
                       }
 
-                      // Multiple dates - use only BigQuery data for line chart
-                      const bigQueryData = data.map(item => item.views);
-
                       const series = [];
 
-                      // Add BigQuery series (solid line) if there's data
-                      if (bigQueryData.some(val => val !== null)) {
-                        series.push({
-                          name: 'YouTube Analytics',
-                          data: bigQueryData,
-                          type: 'line',
-                          smooth: true,
-                          lineStyle: {
-                            color: '#4fc3f7',
-                            width: 3,
-                            type: 'solid'
-                          },
-                          areaStyle: {
-                            color: {
-                              type: 'linear',
-                              x: 0,
-                              y: 0,
-                              x2: 0,
-                              y2: 1,
-                              colorStops: [
-                                { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
-                                { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
-                              ],
+                      // Check if we have split data (shorts vs longs)
+                      if (analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
+                        console.log('📊 Rendering split chart with shorts and longs data');
+
+                        // Add Shorts series (blue line)
+                        const shortsData = analyticsData.shortsData.map(item => item.views);
+                        if (shortsData.some(val => val !== null)) {
+                          series.push({
+                            name: 'Shorts Videos',
+                            data: shortsData,
+                            type: 'line',
+                            smooth: true,
+                            lineStyle: {
+                              color: '#4fc3f7',
+                              width: 3,
+                              type: 'solid'
                             },
-                          },
-                          symbol: 'circle',
-                          symbolSize: 6,
-                          itemStyle: {
-                            color: '#4fc3f7',
-                            borderColor: '#fff',
-                            borderWidth: 1
-                          },
-                          connectNulls: false
-                        });
+                            areaStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                  { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                                ],
+                              },
+                            },
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            itemStyle: {
+                              color: '#4fc3f7',
+                              borderColor: '#fff',
+                              borderWidth: 1
+                            },
+                            connectNulls: false
+                          });
+                        }
+
+                        // Add Long Videos series (orange line)
+                        const longsData = analyticsData.longsData.map(item => item.views);
+                        if (longsData.some(val => val !== null)) {
+                          series.push({
+                            name: 'Long Videos',
+                            data: longsData,
+                            type: 'line',
+                            smooth: true,
+                            lineStyle: {
+                              color: '#FF9800',
+                              width: 3,
+                              type: 'solid'
+                            },
+                            areaStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: 'rgba(255, 152, 0, 0.3)' },
+                                  { offset: 1, color: 'rgba(255, 152, 0, 0.05)' },
+                                ],
+                              },
+                            },
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            itemStyle: {
+                              color: '#FF9800',
+                              borderColor: '#fff',
+                              borderWidth: 1
+                            },
+                            connectNulls: false
+                          });
+                        }
+                      } else {
+                        // Original single line chart for non-split writers
+                        const bigQueryData = data.map(item => item.views);
+
+                        // Add BigQuery series (solid line) if there's data
+                        if (bigQueryData.some(val => val !== null)) {
+                          series.push({
+                            name: 'YouTube Analytics',
+                            data: bigQueryData,
+                            type: 'line',
+                            smooth: true,
+                            lineStyle: {
+                              color: '#4fc3f7',
+                              width: 3,
+                              type: 'solid'
+                            },
+                            areaStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 0,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                  { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                                ],
+                              },
+                            },
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            itemStyle: {
+                              color: '#4fc3f7',
+                              borderColor: '#fff',
+                              borderWidth: 1
+                            },
+                            connectNulls: false
+                          });
+                        }
                       }
 
                       // COMMENTED OUT: InfluxDB series (dotted line) - now only used for real-time bar chart
