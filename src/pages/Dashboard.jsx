@@ -363,18 +363,18 @@ const Dashboard = () => {
 
     // Validate Type selection
     console.log('🎭 Type validation - prefixType:', prefixType, 'Type:', typeof prefixType);
-    if (!prefixType) {
-      console.log('❌ Type validation failed');
-      setError('Please select a Type.');
+    if (!prefixType || prefixType === '' || prefixType === '-- Select Type --') {
+      console.log('❌ Type validation failed - must select a valid type');
+      setError('Please select a Type (Original, Remix, Re-write, or STL).');
       return;
     }
     console.log('✅ Type validation passed');
 
     // Validate Structure selection
     console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure);
-    if (!selectedStructure) {
-      console.log('❌ Structure validation failed');
-      setError('Please select a Structure.');
+    if (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --') {
+      console.log('❌ Structure validation failed - must select a valid structure');
+      setError('Please select a Structure from the dropdown options.');
       return;
     }
     console.log('✅ Structure validation passed');
