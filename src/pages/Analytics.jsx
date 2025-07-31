@@ -1176,7 +1176,32 @@ const Analytics = () => {
     return num.toLocaleString();
   };
 
+  // Check if current user is an STL writer with different thresholds
+  const isSTLWriter = () => {
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    return stlWriters.includes(user?.name);
+  };
 
+  // Get category descriptions based on writer type
+  const getCategoryDescriptions = () => {
+    if (isSTLWriter()) {
+      return {
+        megaVirals: "1.5M+ Views",
+        virals: "500K-1.5M Views",
+        almostVirals: "250K-500K Views",
+        decentVideos: "50K-250K Views",
+        flops: "<50K Views"
+      };
+    } else {
+      return {
+        megaVirals: "3M+ Views",
+        virals: "1M-3M Views",
+        almostVirals: "500K-1M Views",
+        decentVideos: "100K-500K Views",
+        flops: "<100K Views"
+      };
+    }
+  };
 
   const getDateRangeLabel = () => {
     // Handle custom date ranges
@@ -2025,7 +2050,7 @@ const Analytics = () => {
                           fontSize: '0.55rem',
                           display: 'block'
                         }}>
-                          3M+ Views
+                          {getCategoryDescriptions().megaVirals}
                         </Typography>
                       </Box>
                     </Box>
@@ -2142,7 +2167,7 @@ const Analytics = () => {
                           fontSize: '0.6rem',
                           display: 'block'
                         }}>
-                          1M-3M Views
+                          {getCategoryDescriptions().virals}
                         </Typography>
                       </Box>
                     </Box>
@@ -2259,7 +2284,7 @@ const Analytics = () => {
                           fontSize: '0.55rem',
                           display: 'block'
                         }}>
-                          500K-1M Views
+                          {getCategoryDescriptions().almostVirals}
                         </Typography>
                       </Box>
                     </Box>
@@ -2392,7 +2417,7 @@ const Analytics = () => {
                           fontSize: '0.6rem',
                           display: 'block'
                         }}>
-                          100K-500K Views
+                          {getCategoryDescriptions().decentVideos}
                         </Typography>
                       </Box>
                     </Box>
@@ -2509,7 +2534,7 @@ const Analytics = () => {
                           fontSize: '0.6rem',
                           display: 'block'
                         }}>
-                          &lt;100K Views
+                          {getCategoryDescriptions().flops}
                         </Typography>
                       </Box>
                     </Box>
