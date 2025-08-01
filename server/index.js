@@ -597,6 +597,22 @@ app.post("/api/scripts", async (req, res) => {
       return res.status(500).json({ error: "Failed to create Trello card" });
     }
 
+    // Add AI Chat URL comment to Trello card if provided
+    if (aiChatUrl) {
+      try {
+        await addCommentToTrelloCard(
+          trelloCardId,
+          `AI Chat URLs: ${aiChatUrl}`,
+          apiKey,
+          token
+        );
+        console.log(`AI Chat URL comment added to Trello card ${trelloCardId}`);
+      } catch (commentError) {
+        console.error("Error adding AI Chat URL comment to Trello card:", commentError);
+        // Continue execution - don't fail the request if comment fails
+      }
+    }
+
     // Insert script into the database with trello_card_id (only if no errors occurred)
     const { rows } = await pool.query(
       `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, created_at)
@@ -4565,10 +4581,10 @@ function balancedRandomChoice(items) {
   return items[randomIndex];
 }
 
-// Function to add a comment to a Trello card
+// Generic function to add a comment to a Trello card
 async function addCommentToTrelloCard(
   trello_card_id,
-  selected_item,
+  comment_text,
   api_key,
   token
 ) {
@@ -4576,7 +4592,7 @@ async function addCommentToTrelloCard(
   const params = {
     key: api_key,
     token: token,
-    text: `Recommended Posting Account: **${selected_item}**`,
+    text: comment_text,
   };
 
   try {
@@ -4585,6 +4601,21 @@ async function addCommentToTrelloCard(
   } catch (error) {
     throw error.response ? error.response.data : error.message;
   }
+}
+
+// Function to add posting account comment to a Trello card (wrapper for backward compatibility)
+async function addPostingAccountComment(
+  trello_card_id,
+  selected_item,
+  api_key,
+  token
+) {
+  return addCommentToTrelloCard(
+    trello_card_id,
+    `Recommended Posting Account: **${selected_item}**`,
+    api_key,
+    token
+  );
 }
 
 // Function to get Trello API key and token from PostgreSQL database
@@ -5257,7 +5288,7 @@ app.post("/api/getPostingAccount", async (req, res) => {
         api_key,
         token
       );
-      await addCommentToTrelloCard(
+      await addPostingAccountComment(
         trello_card_id,
         selectedItem,
         api_key,
