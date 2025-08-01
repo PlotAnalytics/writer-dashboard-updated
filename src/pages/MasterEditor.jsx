@@ -1,25 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { 
-  Box, 
-  Typography, 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableContainer, 
-  TableHead, 
-  TableRow, 
-  Paper, 
-  Select, 
-  MenuItem, 
-  Button, 
+import {
+  Box,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Paper,
+  Select,
+  MenuItem,
+  Button,
   FormControl,
   Alert,
   CircularProgress,
   AppBar,
   Toolbar,
-  IconButton
+  IconButton,
+  Chip,
+  Stack,
+  TableSortLabel
 } from '@mui/material';
-import { LogoutOutlined } from '@mui/icons-material';
+import {
+  LogoutOutlined,
+  FilterList as FilterIcon,
+  Clear as ClearIcon
+} from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -31,6 +38,9 @@ const MasterEditor = () => {
   const [success, setSuccess] = useState(null);
   const [editingScript, setEditingScript] = useState(null);
   const [selectedTypes, setSelectedTypes] = useState({});
+  const [writerFilter, setWriterFilter] = useState('');
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
+  const [availableWriters, setAvailableWriters] = useState([]);
   
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -52,7 +62,7 @@ const MasterEditor = () => {
       setLoading(true);
       const response = await axios.get('/api/master-editor/scripts');
       setScripts(response.data.scripts);
-      
+
       // Initialize selected types based on current titles
       const initialTypes = {};
       response.data.scripts.forEach(script => {
@@ -62,7 +72,14 @@ const MasterEditor = () => {
         }
       });
       setSelectedTypes(initialTypes);
-      
+
+      // Extract unique writers for filter dropdown
+      const writers = [...new Set(response.data.scripts
+        .map(script => script.writer_name)
+        .filter(name => name && name !== 'Unknown')
+      )].sort();
+      setAvailableWriters(writers);
+
     } catch (error) {
       console.error('Error fetching scripts:', error);
       setError('Failed to fetch scripts');
@@ -76,6 +93,40 @@ const MasterEditor = () => {
       ...prev,
       [scriptId]: newType
     }));
+  };
+
+  // Filter and sort scripts
+  const getFilteredAndSortedScripts = () => {
+    let filtered = scripts;
+
+    // Apply writer filter
+    if (writerFilter) {
+      filtered = filtered.filter(script =>
+        script.writer_name === writerFilter
+      );
+    }
+
+    // Apply sorting by created_at
+    filtered = filtered.sort((a, b) => {
+      const dateA = new Date(a.created_at);
+      const dateB = new Date(b.created_at);
+
+      if (sortOrder === 'desc') {
+        return dateB - dateA; // Newest first
+      } else {
+        return dateA - dateB; // Oldest first
+      }
+    });
+
+    return filtered;
+  };
+
+  const handleSortToggle = () => {
+    setSortOrder(prev => prev === 'desc' ? 'asc' : 'desc');
+  };
+
+  const clearWriterFilter = () => {
+    setWriterFilter('');
   };
 
   const handleEdit = async (scriptId) => {
@@ -170,12 +221,92 @@ const MasterEditor = () => {
           </Alert>
         )}
 
+        {/* Filter and Sort Controls */}
+        <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+          {/* Writer Filter */}
+          <FormControl size="small" sx={{ minWidth: 200 }}>
+            <Select
+              value={writerFilter}
+              onChange={(e) => setWriterFilter(e.target.value)}
+              displayEmpty
+              sx={{
+                color: 'white',
+                '& .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#666'
+                },
+                '&:hover .MuiOutlinedInput-notchedOutline': {
+                  borderColor: '#4fc3f7'
+                }
+              }}
+              startAdornment={
+                <FilterIcon sx={{ color: '#666', mr: 1 }} />
+              }
+            >
+              <MenuItem value="">All Writers</MenuItem>
+              {availableWriters.map(writer => (
+                <MenuItem key={writer} value={writer}>
+                  {writer}
+                </MenuItem>
+              ))}
+            </Select>
+          </FormControl>
+
+          {/* Clear Filter Button */}
+          {writerFilter && (
+            <Chip
+              label={`Writer: ${writerFilter}`}
+              onDelete={clearWriterFilter}
+              deleteIcon={<ClearIcon />}
+              sx={{
+                backgroundColor: '#4fc3f7',
+                color: 'white',
+                '& .MuiChip-deleteIcon': {
+                  color: 'white'
+                }
+              }}
+            />
+          )}
+
+          {/* Sort Toggle */}
+          <Button
+            variant="outlined"
+            size="small"
+            onClick={handleSortToggle}
+            sx={{
+              color: 'white',
+              borderColor: '#666',
+              '&:hover': {
+                borderColor: '#4fc3f7',
+                backgroundColor: 'rgba(79, 195, 247, 0.1)'
+              }
+            }}
+          >
+            Sort by Date: {sortOrder === 'desc' ? 'Newest First' : 'Oldest First'}
+          </Button>
+        </Box>
+
         <TableContainer component={Paper} sx={{ backgroundColor: '#1a1a1a' }}>
           <Table>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#2a2a2a' }}>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Title</TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>
+                  <TableSortLabel
+                    active={true}
+                    direction={sortOrder}
+                    onClick={handleSortToggle}
+                    sx={{
+                      color: 'white !important',
+                      '& .MuiTableSortLabel-icon': {
+                        color: 'white !important'
+                      }
+                    }}
+                  >
+                    Created At
+                  </TableSortLabel>
+                </TableCell>
+                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Writer Name</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Current Type</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>New Type</TableCell>
                 <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Action</TableCell>
@@ -183,7 +314,7 @@ const MasterEditor = () => {
               </TableRow>
             </TableHead>
             <TableBody>
-              {scripts.map((script) => (
+              {getFilteredAndSortedScripts().map((script) => (
                 <TableRow 
                   key={script.id}
                   sx={{ 
@@ -193,12 +324,22 @@ const MasterEditor = () => {
                 >
                   <TableCell sx={{ color: 'white' }}>{script.id}</TableCell>
                   <TableCell sx={{ color: 'white', maxWidth: 400 }}>
-                    <Typography variant="body2" sx={{ 
-                      overflow: 'hidden', 
+                    <Typography variant="body2" sx={{
+                      overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
                     }}>
                       {script.title}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white' }}>
+                    <Typography variant="body2">
+                      {script.created_at ? new Date(script.created_at).toLocaleDateString() : 'N/A'}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ color: 'white' }}>
+                    <Typography variant="body2">
+                      {script.writer_name || 'Unknown'}
                     </Typography>
                   </TableCell>
                   <TableCell sx={{ color: '#4fc3f7' }}>
@@ -262,6 +403,12 @@ const MasterEditor = () => {
         {scripts.length === 0 && (
           <Typography variant="body1" sx={{ color: 'white', textAlign: 'center', mt: 4 }}>
             No scripts found with type prefixes (Original, Remix, Re-write, STL)
+          </Typography>
+        )}
+
+        {scripts.length > 0 && getFilteredAndSortedScripts().length === 0 && (
+          <Typography variant="body1" sx={{ color: 'white', textAlign: 'center', mt: 4 }}>
+            No scripts match the current filter criteria
           </Typography>
         )}
       </Box>
