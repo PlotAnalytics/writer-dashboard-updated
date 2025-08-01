@@ -29,8 +29,18 @@ export const ProtectedRoute = ({ children }) => {
     return <Navigate to="/retention-master" replace />;
   }
 
+  // If user is master_editor and not on master-editor page, redirect
+  if (user.role === 'master_editor' && location.pathname !== '/master-editor') {
+    return <Navigate to="/master-editor" replace />;
+  }
+
   // If user is NOT retention_master and trying to access retention-master page, redirect to dashboard
   if (user.role !== 'retention_master' && location.pathname === '/retention-master') {
+    return <Navigate to="/dashboard" replace />;
+  }
+
+  // If user is NOT master_editor and trying to access master-editor page, redirect to dashboard
+  if (user.role !== 'master_editor' && location.pathname === '/master-editor') {
     return <Navigate to="/dashboard" replace />;
   }
 

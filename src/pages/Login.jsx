@@ -37,7 +37,14 @@ const Login = () => {
 
   useEffect(() => {
     if (user) {
-      navigate('/dashboard');
+      // Navigate based on user role
+      if (user.role === 'retention_master') {
+        navigate('/retention-master');
+      } else if (user.role === 'master_editor') {
+        navigate('/master-editor');
+      } else {
+        navigate('/dashboard');
+      }
     }
   }, [user, navigate]);
 

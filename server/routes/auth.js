@@ -170,6 +170,20 @@ router.get('/verify', async (req, res) => {
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret');
 
+    // Special case for master_editor user
+    if (decoded.role === 'master_editor') {
+      return res.json({
+        user: {
+          id: 'master_editor',
+          username: 'master_editor',
+          role: 'master_editor',
+          name: 'Master Editor',
+          writerId: null,
+          avatar: 'M'
+        }
+      });
+    }
+
     // Get user from database
     const result = await pool.query(
       "SELECT * FROM login WHERE id = $1",
@@ -233,6 +247,21 @@ router.get('/profile', async (req, res) => {
           name: 'Retention Master',
           writerId: null,
           avatar: 'R'
+        }
+      });
+    }
+
+    // Special case for master_editor user
+    if (decoded.role === 'master_editor') {
+      return res.json({
+        success: true,
+        user: {
+          id: 'master_editor',
+          username: 'master_editor',
+          role: 'master_editor',
+          name: 'Master Editor',
+          writerId: null,
+          avatar: 'M'
         }
       });
     }

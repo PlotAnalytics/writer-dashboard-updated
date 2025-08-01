@@ -101,21 +101,23 @@ export const AuthProvider = ({ children }) => {
       setToken(newToken);
       setUser(userData);
 
-      // Get writer ID after successful login
-      try {
-        const profileResponse = await axios.get(buildApiUrl(API_CONFIG.ENDPOINTS.AUTH.PROFILE));
-        if (profileResponse.data.user.writerId) {
-          localStorage.setItem('writerId', profileResponse.data.user.writerId.toString());
-          console.log('✅ Writer ID stored after login:', profileResponse.data.user.writerId);
+      // Get writer ID after successful login (skip for special roles)
+      if (role !== 'retention_master' && role !== 'master_editor') {
+        try {
+          const profileResponse = await axios.get(buildApiUrl(API_CONFIG.ENDPOINTS.AUTH.PROFILE));
+          if (profileResponse.data.user.writerId) {
+            localStorage.setItem('writerId', profileResponse.data.user.writerId.toString());
+            console.log('✅ Writer ID stored after login:', profileResponse.data.user.writerId);
 
-          // Update user data with writer ID
-          setUser({
-            ...userData,
-            writerId: profileResponse.data.user.writerId
-          });
+            // Update user data with writer ID
+            setUser({
+              ...userData,
+              writerId: profileResponse.data.user.writerId
+            });
+          }
+        } catch (profileError) {
+          console.warn('Failed to get writer ID after login:', profileError);
         }
-      } catch (profileError) {
-        console.warn('Failed to get writer ID after login:', profileError);
       }
 
       console.log('✅ Login successful, user set:', userData);

@@ -6592,6 +6592,125 @@ app.get("/api/debug/posted-scripts", async (req, res) => {
   }
 });
 
+// Master Editor endpoints
+app.get('/api/master-editor/scripts', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    console.log('🔍 Master Editor: Getting scripts for editing...');
+
+    const query = `
+      SELECT id, title, created_at, approval_status
+      FROM script
+      WHERE title ~ '\\[(Original|Remix|Re-write|STL)\\]'
+      ORDER BY created_at DESC
+      LIMIT 1000
+    `;
+
+    const result = await pool.query(query);
+
+    console.log(`📊 Found ${result.rows.length} scripts with type prefixes`);
+
+    res.json({
+      success: true,
+      scripts: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor scripts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/master-editor/update-script-type', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    const { scriptId, newType } = req.body;
+
+    if (!scriptId || !newType) {
+      return res.status(400).json({ error: 'Script ID and new type are required' });
+    }
+
+    if (!['Original', 'Remix', 'Re-write', 'STL'].includes(newType)) {
+      return res.status(400).json({ error: 'Invalid type. Must be Original, Remix, Re-write, or STL' });
+    }
+
+    console.log(`🔄 Master Editor: Updating script ${scriptId} to type ${newType}`);
+
+    // Get current title
+    const getCurrentQuery = 'SELECT title FROM script WHERE id = $1';
+    const currentResult = await pool.query(getCurrentQuery, [scriptId]);
+
+    if (currentResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Script not found' });
+    }
+
+    const currentTitle = currentResult.rows[0].title;
+    console.log(`📝 Current title: ${currentTitle}`);
+
+    // Replace the type in the title using regex
+    const updatedTitle = currentTitle.replace(
+      /\[(Original|Remix|Re-write|STL)\]/,
+      `[${newType}]`
+    );
+
+    console.log(`📝 Updated title: ${updatedTitle}`);
+
+    // Update the title in database
+    const updateQuery = 'UPDATE script SET title = $1 WHERE id = $2 RETURNING *';
+    const updateResult = await pool.query(updateQuery, [updatedTitle, scriptId]);
+
+    console.log(`✅ Master Editor: Successfully updated script ${scriptId}`);
+
+    res.json({
+      success: true,
+      script: updateResult.rows[0],
+      oldTitle: currentTitle,
+      newTitle: updatedTitle
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor update error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Test endpoint to create master_editor user
+app.post('/api/create-master-editor', async (req, res) => {
+  try {
+    console.log('🔄 Creating master_editor user...');
+
+    const fs = require('fs');
+    const path = require('path');
+
+    const sqlPath = path.join(__dirname, 'database', 'add_master_editor.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    await pool.query(sql);
+
+    console.log('✅ Master editor user created successfully');
+
+    res.json({
+      success: true,
+      message: 'Master editor user created successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Master editor creation error:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
+    });
+  }
+});
+
 // Test endpoint for structure column migration
 app.post('/api/test-structure-migration', async (req, res) => {
   try {
