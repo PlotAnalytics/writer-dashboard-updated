@@ -536,7 +536,7 @@ const createTrelloCard = async (
 };
 
 app.post("/api/scripts", async (req, res) => {
-  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc } = req.body;
+  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure } = req.body;
   try {
     // Fetch Trello settings
     const settingsResult = await pool.query(
@@ -599,9 +599,9 @@ app.post("/api/scripts", async (req, res) => {
 
     // Insert script into the database with trello_card_id (only if no errors occurred)
     const { rows } = await pool.query(
-      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, created_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, CURRENT_TIMESTAMP) RETURNING *`,
-      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc]
+      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP) RETURNING *`,
+      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure]
     );
     const script = rows[0];
 
@@ -6588,6 +6588,35 @@ app.get("/api/debug/posted-scripts", async (req, res) => {
     res.status(500).json({
       success: false,
       error: error.message
+    });
+  }
+});
+
+// Test endpoint for structure column migration
+app.post('/api/test-structure-migration', async (req, res) => {
+  try {
+    console.log('🔄 Running structure column migration...');
+
+    const fs = require('fs');
+    const path = require('path');
+
+    const sqlPath = path.join(__dirname, 'database', 'add_structure_column.sql');
+    const sql = fs.readFileSync(sqlPath, 'utf8');
+
+    await pool.query(sql);
+
+    console.log('✅ Structure column migration completed successfully');
+
+    res.json({
+      success: true,
+      message: 'Structure column migration completed successfully'
+    });
+
+  } catch (error) {
+    console.error('❌ Structure migration error:', error);
+    res.status(500).json({
+      error: error.message,
+      stack: error.stack
     });
   }
 });

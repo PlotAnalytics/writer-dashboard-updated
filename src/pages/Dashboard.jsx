@@ -446,6 +446,7 @@ const Dashboard = () => {
         structure_explanation: selectedStructure === "No Structure" ? structureExplanation : null,
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
         core_concept_doc: prefixType === 'Remix' ? coreConceptDoc : null,
+        structure: selectedStructure || null,
       });
 
       // Refresh the scripts list to get the latest data
