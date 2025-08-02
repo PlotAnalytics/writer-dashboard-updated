@@ -30,6 +30,7 @@ import {
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
 
 const MasterEditor = () => {
   const [scripts, setScripts] = useState([]);
@@ -53,7 +54,7 @@ const MasterEditor = () => {
       navigate('/login');
       return;
     }
-    
+
     fetchScripts();
   }, [user, navigate]);
 
@@ -102,7 +103,7 @@ const MasterEditor = () => {
     // Apply writer filter
     if (writerFilter) {
       filtered = filtered.filter(script =>
-        script.writer_name === writerFilter
+        script.writer_name && script.writer_name.toLowerCase() === writerFilter.toLowerCase()
       );
     }
 
@@ -183,31 +184,66 @@ const MasterEditor = () => {
   }
 
   return (
-    <Box sx={{ minHeight: '100vh', backgroundColor: '#0a0a0a' }}>
-      {/* Top Bar with Logout */}
-      <AppBar position="static" sx={{ backgroundColor: '#1a1a1a' }}>
-        <Toolbar>
-          <Typography variant="h6" component="div" sx={{ flexGrow: 1, color: 'white' }}>
-            Master Editor - Script Type Manager
-          </Typography>
-          <IconButton 
-            color="inherit" 
-            onClick={handleLogout}
-            sx={{ color: 'white' }}
-          >
-            <LogoutOutlined />
-            <Typography variant="body2" sx={{ ml: 1 }}>
-              Logout
+    <Layout hideNavigation={true} hideSettings={true} hideFeedback={true}>
+      <Box sx={{
+        minHeight: '100vh',
+        background: 'transparent',
+        color: 'white',
+        p: 0
+      }}>
+        {/* Modern Header */}
+        <Box sx={{
+          p: 3,
+          borderBottom: '1px solid rgba(255, 255, 255, 0.1)',
+          position: 'relative',
+          '&::before': {
+            content: '""',
+            position: 'absolute',
+            bottom: -1,
+            left: 24,
+            width: '60px',
+            height: '2px',
+            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            borderRadius: '2px',
+          }
+        }}>
+          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <Typography variant="h4" sx={{
+              color: 'white',
+              fontWeight: 700,
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              backgroundClip: 'text',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}>
+              Script Type Editor
             </Typography>
-          </IconButton>
-        </Toolbar>
-      </AppBar>
+            <Button
+              variant="outlined"
+              onClick={handleLogout}
+              startIcon={<LogoutOutlined />}
+              sx={{
+                color: 'white',
+                borderColor: 'rgba(255, 255, 255, 0.3)',
+                background: 'rgba(255, 255, 255, 0.04)',
+                backdropFilter: 'blur(5px)',
+                borderRadius: '12px',
+                textTransform: 'none',
+                '&:hover': {
+                  borderColor: 'rgba(102, 126, 234, 0.5)',
+                  background: 'rgba(102, 126, 234, 0.1)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                }
+              }}
+            >
+              Logout
+            </Button>
+          </Box>
+        </Box>
 
-      {/* Main Content */}
-      <Box sx={{ p: 4 }}>
-        <Typography variant="h4" sx={{ color: 'white', mb: 3, textAlign: 'center' }}>
-          Script Type Editor
-        </Typography>
+        {/* Main Content */}
+        <Box sx={{ p: 4 }}>
 
         {error && (
           <Alert severity="error" sx={{ mb: 2 }}>
@@ -231,15 +267,29 @@ const MasterEditor = () => {
               displayEmpty
               sx={{
                 color: 'white',
+                background: 'rgba(255, 255, 255, 0.04)',
+                backdropFilter: 'blur(5px)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '12px',
+                transition: 'all 0.2s ease-in-out',
                 '& .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#666'
+                  border: 'none'
                 },
-                '&:hover .MuiOutlinedInput-notchedOutline': {
-                  borderColor: '#4fc3f7'
+                '&:hover': {
+                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.06)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                },
+                '&.Mui-focused': {
+                  border: '1px solid rgba(102, 126, 234, 0.5)',
+                  background: 'rgba(255, 255, 255, 0.08)',
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 4px 20px rgba(102, 126, 234, 0.25)',
                 }
               }}
               startAdornment={
-                <FilterIcon sx={{ color: '#666', mr: 1 }} />
+                <FilterIcon sx={{ color: '#667eea', mr: 1 }} />
               }
             >
               <MenuItem value="">All Writers</MenuItem>
@@ -285,46 +335,51 @@ const MasterEditor = () => {
           </Button>
         </Box>
 
-        <TableContainer component={Paper} sx={{ backgroundColor: '#1a1a1a' }}>
+        <TableContainer>
           <Table>
             <TableHead>
-              <TableRow sx={{ backgroundColor: '#2a2a2a' }}>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>ID</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Title</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>
+              <TableRow sx={{ borderBottom: '1px solid #333' }}>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>ID</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Title</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>
                   <TableSortLabel
                     active={true}
                     direction={sortOrder}
                     onClick={handleSortToggle}
                     sx={{
-                      color: 'white !important',
+                      color: '#888 !important',
+                      '&:hover': { color: 'white !important' },
                       '& .MuiTableSortLabel-icon': {
-                        color: 'white !important'
+                        color: '#667eea !important'
                       }
                     }}
                   >
                     Created At
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Writer Name</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Current Type</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>New Type</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Action</TableCell>
-                <TableCell sx={{ color: 'white', fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Writer Name</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Current Type</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>New Type</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Action</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
-              {getFilteredAndSortedScripts().map((script) => (
-                <TableRow 
-                  key={script.id}
-                  sx={{ 
-                    '&:nth-of-type(odd)': { backgroundColor: '#1e1e1e' },
-                    '&:nth-of-type(even)': { backgroundColor: '#1a1a1a' }
+              {getFilteredAndSortedScripts().map((script, index) => (
+                <TableRow
+                  key={`${script.id}-${index}`}
+                  sx={{
+                    borderBottom: '1px solid rgba(255, 255, 255, 0.05)',
+                    '&:hover': {
+                      backgroundColor: 'rgba(102, 126, 234, 0.05)',
+                      borderColor: 'rgba(102, 126, 234, 0.1)',
+                    }
                   }}
                 >
-                  <TableCell sx={{ color: 'white' }}>{script.id}</TableCell>
-                  <TableCell sx={{ color: 'white', maxWidth: 400 }}>
+                  <TableCell sx={{ border: 'none', py: 2, color: 'white' }}>{script.id}</TableCell>
+                  <TableCell sx={{ border: 'none', py: 2, maxWidth: 400 }}>
                     <Typography variant="body2" sx={{
+                      color: 'white',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
                       whiteSpace: 'nowrap'
@@ -332,31 +387,46 @@ const MasterEditor = () => {
                       {script.title}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ color: 'white' }}>
-                    <Typography variant="body2">
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'white' }}>
                       {script.created_at ? new Date(script.created_at).toLocaleDateString() : 'N/A'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ color: 'white' }}>
-                    <Typography variant="body2">
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'white' }}>
                       {script.writer_name || 'Unknown'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ color: '#4fc3f7' }}>
-                    {extractCurrentType(script.title)}
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{
+                      color: '#667eea',
+                      fontWeight: 500,
+                      background: 'rgba(102, 126, 234, 0.1)',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}>
+                      {extractCurrentType(script.title)}
+                    </Typography>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 120 }}>
                       <Select
                         value={selectedTypes[script.id] || ''}
                         onChange={(e) => handleTypeChange(script.id, e.target.value)}
-                        sx={{ 
+                        sx={{
                           color: 'white',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
                           '& .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#666'
+                            border: 'none'
                           },
-                          '&:hover .MuiOutlinedInput-notchedOutline': {
-                            borderColor: '#4fc3f7'
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
                           }
                         }}
                       >
@@ -368,20 +438,31 @@ const MasterEditor = () => {
                       </Select>
                     </FormControl>
                   </TableCell>
-                  <TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
                     <Button
                       variant="contained"
                       size="small"
                       onClick={() => handleEdit(script.id)}
                       disabled={
-                        editingScript === script.id || 
+                        editingScript === script.id ||
                         !selectedTypes[script.id] ||
                         selectedTypes[script.id] === extractCurrentType(script.title)
                       }
                       sx={{
-                        backgroundColor: '#4fc3f7',
-                        '&:hover': { backgroundColor: '#29b6f6' },
-                        '&:disabled': { backgroundColor: '#666' }
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        color: 'white',
+                        borderRadius: '8px',
+                        textTransform: 'none',
+                        '&:hover': {
+                          background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                          transform: 'translateY(-1px)',
+                          boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
+                        },
+                        '&:disabled': {
+                          background: '#666',
+                          transform: 'none',
+                          boxShadow: 'none'
+                        }
                       }}
                     >
                       {editingScript === script.id ? (
@@ -391,8 +472,18 @@ const MasterEditor = () => {
                       )}
                     </Button>
                   </TableCell>
-                  <TableCell sx={{ color: 'white' }}>
-                    {script.approval_status}
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{
+                      color: script.approval_status === 'Posted' ? '#4caf50' : '#888',
+                      fontWeight: 500,
+                      background: script.approval_status === 'Posted' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(136, 136, 136, 0.1)',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}>
+                      {script.approval_status}
+                    </Typography>
                   </TableCell>
                 </TableRow>
               ))}
@@ -401,18 +492,35 @@ const MasterEditor = () => {
         </TableContainer>
 
         {scripts.length === 0 && (
-          <Typography variant="body1" sx={{ color: 'white', textAlign: 'center', mt: 4 }}>
+          <Typography variant="body1" sx={{
+            color: '#888',
+            textAlign: 'center',
+            mt: 4,
+            background: 'rgba(255, 255, 255, 0.04)',
+            p: 3,
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
             No scripts found with type prefixes (Original, Remix, Re-write, STL)
           </Typography>
         )}
 
         {scripts.length > 0 && getFilteredAndSortedScripts().length === 0 && (
-          <Typography variant="body1" sx={{ color: 'white', textAlign: 'center', mt: 4 }}>
+          <Typography variant="body1" sx={{
+            color: '#888',
+            textAlign: 'center',
+            mt: 4,
+            background: 'rgba(255, 255, 255, 0.04)',
+            p: 3,
+            borderRadius: '12px',
+            border: '1px solid rgba(255, 255, 255, 0.1)'
+          }}>
             No scripts match the current filter criteria
           </Typography>
         )}
+        </Box>
       </Box>
-    </Box>
+    </Layout>
   );
 };
 

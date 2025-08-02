@@ -47,7 +47,7 @@ import MilestoneCelebration from './MilestoneCelebration.jsx';
 
 const drawerWidth = 280;
 
-const Layout = ({ children }) => {
+const Layout = ({ children, hideNavigation = false, hideSettings = false, hideFeedback = false }) => {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
@@ -67,7 +67,7 @@ const Layout = ({ children }) => {
   // Check if user is retention master
   const isRetentionMaster = user?.role === 'retention_master';
 
-  const menuItems = isRetentionMaster ? [] : [
+  const menuItems = (isRetentionMaster || hideNavigation) ? [] : [
     {
       text: 'Dashboard',
       icon: <DashboardIcon />,
@@ -92,8 +92,8 @@ const Layout = ({ children }) => {
   ];
 
   const bottomMenuItems = isRetentionMaster ? [] : [
-    { text: 'Settings', icon: <SettingsIcon />, path: '/settings', description: 'Preferences' },
-    { text: 'Send Feedback', icon: <BugReportIcon />, path: '/support', description: 'Report issues' },
+    ...(hideSettings ? [] : [{ text: 'Settings', icon: <SettingsIcon />, path: '/settings', description: 'Preferences' }]),
+    ...(hideFeedback ? [] : [{ text: 'Send Feedback', icon: <BugReportIcon />, path: '/support', description: 'Report issues' }]),
   ];
 
   const handleMenuClick = (path) => {
@@ -640,10 +640,12 @@ const Layout = ({ children }) => {
       </Box>
 
       {/* Send Feedback Modal */}
-      <SendFeedback
-        open={feedbackOpen}
-        onClose={() => setFeedbackOpen(false)}
-      />
+      {!hideFeedback && (
+        <SendFeedback
+          open={feedbackOpen}
+          onClose={() => setFeedbackOpen(false)}
+        />
+      )}
 
       {/* Notification Center */}
       <NotificationCenter

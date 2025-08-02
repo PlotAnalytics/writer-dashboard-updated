@@ -6639,13 +6639,17 @@ app.get('/api/master-editor/scripts', authenticateToken, async (req, res) => {
         s.title,
         s.created_at,
         s.approval_status,
-        w.name as writer_name
+        COALESCE(w.name, 'Unknown') as writer_name
       FROM script s
-      LEFT JOIN video v ON s.trello_card_id = v.trello_card_id
-      LEFT JOIN writer w ON v.writer_id = w.id
-      WHERE s.title ~ '\\[(Original|Remix|Re-write|STL)\\]'
+      LEFT JOIN writer w ON s.writer_id = w.id
+      WHERE (
+        s.title LIKE '%[Original]%' OR
+        s.title LIKE '%[Remix]%' OR
+        s.title LIKE '%[Re-write]%' OR
+        s.title LIKE '%[STL]%'
+      )
       ORDER BY s.created_at DESC
-      LIMIT 1000
+      LIMIT 500
     `;
 
     const result = await pool.query(query);

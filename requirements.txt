@@ -1,0 +1,4 @@
+google-cloud-bigquery==3.11.4
+google-auth==2.23.3
+google-oauth2-tool==0.0.3
+pandas==2.0.3
