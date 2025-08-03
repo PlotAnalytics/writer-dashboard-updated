@@ -155,7 +155,7 @@ const MasterEditor = () => {
       const newType = selectedTypes[scriptId];
       const newStructure = selectedStructures[scriptId];
 
-      const response = await axios.post('/api/master-editor/update-script', {
+      const response = await axios.post('/api/master-editor/update-script-type', {
         scriptId,
         newType,
         newStructure
