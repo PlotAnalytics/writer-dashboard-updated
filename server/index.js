@@ -6667,7 +6667,7 @@ app.get('/api/master-editor/scripts', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/master-editor/update-script', authenticateToken, async (req, res) => {
+app.post('/api/master-editor/update-script-type', authenticateToken, async (req, res) => {
   try {
     // Check if user is master_editor
     if (req.user.username !== 'master_editor') {
@@ -6676,25 +6676,19 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
 
     const { scriptId, newType, newStructure } = req.body;
 
-    if (!scriptId || (!newType && !newStructure)) {
-      return res.status(400).json({ error: 'Script ID and at least one of new type or new structure are required' });
+    if (!scriptId || !newType) {
+      return res.status(400).json({ error: 'Script ID and new type are required' });
     }
 
-    if (newType && !['Original', 'Remix', 'Re-write', 'STL'].includes(newType)) {
+    if (!['Original', 'Remix', 'Re-write', 'STL'].includes(newType)) {
       return res.status(400).json({ error: 'Invalid type. Must be Original, Remix, Re-write, or STL' });
     }
 
-    if (newStructure && !['Payback Revenge', 'Expectations', 'Looked Down Upon', 'Obsession', 'No Structure'].includes(newStructure)) {
-      return res.status(400).json({ error: 'Invalid structure. Must be Payback Revenge, Expectations, Looked Down Upon, Obsession, or No Structure' });
-    }
-
-    const updates = [];
-    if (newType) updates.push(`type: ${newType}`);
-    if (newStructure) updates.push(`structure: ${newStructure}`);
-    console.log(`🔄 Master Editor: Updating script ${scriptId} (${updates.join(', ')})`);
+    console.log(`🔄 Master Editor: Updating script ${scriptId} to type ${newType}`);
 
     // Get current title and trello_card_id
-    const getCurrentQuery = 'SELECT title, trello_card_id FROM vw_script_title WHERE id = $1';
+    const getCurrentQuery = 'SELECT title, trello_card_id FROM script WHERE id = $1';
+
     const currentResult = await pool.query(getCurrentQuery, [scriptId]);
 
     if (currentResult.rows.length === 0) {
@@ -6705,40 +6699,30 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
     const trelloCardId = currentResult.rows[0].trello_card_id;
     console.log(`📝 Current title: ${currentTitle}`);
 
-    // Replace the type and/or structure in the title using regex
-    let updatedTitle = currentTitle;
+    // Replace the type in the title using regex
+    let updatedTitle = currentTitle.replace(
+      /\[(Original|Remix|Re-write|STL)\]/,
+      `[${newType}]`
+    );
 
-    if (newType) {
-      updatedTitle = updatedTitle.replace(
-        /\[(Original|Remix|Re-write|STL)\]/,
-        `[${newType}]`
-      );
-    }
-
+    // Update structure if newStructure is provided
     if (newStructure) {
-      // Check if structure bracket already exists
-      const hasStructure = /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/.test(updatedTitle);
-
-      if (hasStructure) {
-        // Replace existing structure bracket
-        updatedTitle = updatedTitle.replace(
-          /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/,
-          `[${newStructure}]`
-        );
-      } else {
-        // Add structure bracket before the type bracket
-        updatedTitle = updatedTitle.replace(
-          /(\[(Original|Remix|Re-write|STL)\])/,
-          `[${newStructure}] $1`
-        );
-      }
+      // Replace the first bracket pair (structure) in the title
+      updatedTitle = updatedTitle.replace(
+        /\[([^\]]+)\]/,
+        `[${newStructure}]`
+      );
     }
 
     console.log(`📝 Updated title: ${updatedTitle}`);
 
+
     // Update the title in database
     const updateQuery = 'UPDATE script SET title = $1 WHERE id = $2 RETURNING *';
     const updateResult = await pool.query(updateQuery, [updatedTitle, scriptId]);
+
+    const getUpdatedNameQuery = 'SELECT title FROM vw_script_title WHERE id = $1';
+    const newCardName = await pool.query(getUpdatedNameQuery, [scriptId]);
 
     // Update Trello card title
     try {
@@ -6753,34 +6737,9 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
         if (settingsResult.rows.length > 0) {
           const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
 
-          // First, get the current Trello card to preserve writer name prefix
-          const currentCardResponse = await axios.get(
-            `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`
-          );
-
-          const currentTrelloTitle = currentCardResponse.data.name;
-          console.log(`📋 Current Trello title: ${currentTrelloTitle}`);
-
-          // Extract writer name prefix (everything before the first bracket)
-          const writerPrefixMatch = currentTrelloTitle.match(/^([^[]+)/);
-          const writerPrefix = writerPrefixMatch ? writerPrefixMatch[1].trim() : '';
-
-          // Construct new Trello title with preserved writer prefix
-          let newTrelloTitle = updatedTitle;
-          if (writerPrefix && !writerPrefix.includes('[')) {
-            newTrelloTitle = `${writerPrefix} - ${updatedTitle}`;
-          }
-
-          console.log(`📋 New Trello title: ${newTrelloTitle}`);
-
-          const trelloUpdateData = { name: newTrelloTitle };
-          if (newStructure) {
-            trelloUpdateData.newStructure = newStructure;
-          }
-
           const trelloUpdateResponse = await axios.put(
             `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`,
-            trelloUpdateData
+            { name: updatedTitle }
           );
 
           console.log(`✅ Master Editor: Successfully updated Trello card ${trelloCardId}`);
@@ -6800,7 +6759,7 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
       success: true,
       script: updateResult.rows[0],
       oldTitle: currentTitle,
-      newTitle: updatedTitle
+      newTitle: newCardName
     });
 
   } catch (error) {
