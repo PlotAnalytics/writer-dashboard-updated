@@ -6694,7 +6694,7 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
     console.log(`🔄 Master Editor: Updating script ${scriptId} (${updates.join(', ')})`);
 
     // Get current title and trello_card_id
-    const getCurrentQuery = 'SELECT title, trello_card_id FROM script WHERE id = $1';
+    const getCurrentQuery = 'SELECT title, trello_card_id FROM vw_script_title WHERE id = $1';
     const currentResult = await pool.query(getCurrentQuery, [scriptId]);
 
     if (currentResult.rows.length === 0) {
