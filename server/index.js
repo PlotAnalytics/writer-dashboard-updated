@@ -6722,8 +6722,7 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
     const updateResult = await pool.query(updateQuery, [updatedTitle, scriptId]);
 
     const getUpdatedNameQuery = 'SELECT title FROM vw_script_title WHERE id = $1';
-    const newCardNameResult = await pool.query(getUpdatedNameQuery, [scriptId]);
-    const newCardName = newCardNameResult.rows[0]?.title || updatedTitle;
+    const newCardName = await pool.query(getUpdatedNameQuery, [scriptId]);
 
     // Update Trello card title
     try {
@@ -6738,13 +6737,12 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
         if (settingsResult.rows.length > 0) {
           const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
 
-          // Use the view result for Trello update (this should be different from script table)
           const trelloUpdateResponse = await axios.put(
             `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`,
             { name: newCardName }
           );
 
-          console.log(`✅ Master Editor: Successfully updated Trello card ${trelloCardId} with title: ${newCardName}`);
+          console.log(`✅ Master Editor: Successfully updated Trello card ${trelloCardId}`);
         } else {
           console.warn(`⚠️ No Trello settings found, skipping card update`);
         }
