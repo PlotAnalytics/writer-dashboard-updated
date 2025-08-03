@@ -6686,8 +6686,8 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
 
     console.log(`🔄 Master Editor: Updating script ${scriptId} to type ${newType}`);
 
-    // Get current title
-    const getCurrentQuery = 'SELECT title FROM script WHERE id = $1';
+    // Get current title and trello_card_id
+    const getCurrentQuery = 'SELECT title, trello_card_id FROM script WHERE id = $1';
     const currentResult = await pool.query(getCurrentQuery, [scriptId]);
 
     if (currentResult.rows.length === 0) {
@@ -6695,6 +6695,7 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
     }
 
     const currentTitle = currentResult.rows[0].title;
+    const trelloCardId = currentResult.rows[0].trello_card_id;
     console.log(`📝 Current title: ${currentTitle}`);
 
     // Replace the type in the title using regex
@@ -6708,6 +6709,35 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
     // Update the title in database
     const updateQuery = 'UPDATE script SET title = $1 WHERE id = $2 RETURNING *';
     const updateResult = await pool.query(updateQuery, [updatedTitle, scriptId]);
+
+    // Update Trello card title
+    try {
+      const trelloCardId = currentResult.rows[0].trello_card_id;
+
+      if (trelloCardId) {
+        // Get Trello API credentials
+        const settingsResult = await pool.query(
+          "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+        );
+
+        if (settingsResult.rows.length > 0) {
+          const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
+
+          const trelloUpdateResponse = await axios.put(
+            `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`,
+            { name: updatedTitle }
+          );
+
+          console.log(`✅ Master Editor: Successfully updated Trello card ${trelloCardId}`);
+        } else {
+          console.warn(`⚠️ No Trello settings found, skipping card update`);
+        }
+      } else {
+        console.log(`ℹ️ No Trello card ID found for script ${scriptId}`);
+      }
+    } catch (trelloError) {
+      console.error('❌ Master Editor: Error updating Trello card:', trelloError);
+    }
 
     console.log(`✅ Master Editor: Successfully updated script ${scriptId}`);
 
