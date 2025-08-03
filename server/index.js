@@ -6753,7 +6753,27 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
         if (settingsResult.rows.length > 0) {
           const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
 
-          const trelloUpdateData = { name: updatedTitle };
+          // First, get the current Trello card to preserve writer name prefix
+          const currentCardResponse = await axios.get(
+            `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`
+          );
+
+          const currentTrelloTitle = currentCardResponse.data.name;
+          console.log(`📋 Current Trello title: ${currentTrelloTitle}`);
+
+          // Extract writer name prefix (everything before the first bracket)
+          const writerPrefixMatch = currentTrelloTitle.match(/^([^[]+)/);
+          const writerPrefix = writerPrefixMatch ? writerPrefixMatch[1].trim() : '';
+
+          // Construct new Trello title with preserved writer prefix
+          let newTrelloTitle = updatedTitle;
+          if (writerPrefix && !writerPrefix.includes('[')) {
+            newTrelloTitle = `${writerPrefix} - ${updatedTitle}`;
+          }
+
+          console.log(`📋 New Trello title: ${newTrelloTitle}`);
+
+          const trelloUpdateData = { name: newTrelloTitle };
           if (newStructure) {
             trelloUpdateData.newStructure = newStructure;
           }
