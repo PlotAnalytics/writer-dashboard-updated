@@ -6716,10 +6716,22 @@ app.post('/api/master-editor/update-script', authenticateToken, async (req, res)
     }
 
     if (newStructure) {
-      updatedTitle = updatedTitle.replace(
-        /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/,
-        `[${newStructure}]`
-      );
+      // Check if structure bracket already exists
+      const hasStructure = /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/.test(updatedTitle);
+
+      if (hasStructure) {
+        // Replace existing structure bracket
+        updatedTitle = updatedTitle.replace(
+          /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/,
+          `[${newStructure}]`
+        );
+      } else {
+        // Add structure bracket before the type bracket
+        updatedTitle = updatedTitle.replace(
+          /(\[(Original|Remix|Re-write|STL)\])/,
+          `[${newStructure}] $1`
+        );
+      }
     }
 
     console.log(`📝 Updated title: ${updatedTitle}`);
