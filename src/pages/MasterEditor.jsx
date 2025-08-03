@@ -70,14 +70,17 @@ const MasterEditor = () => {
       const initialTypes = {};
       const initialStructures = {};
       response.data.scripts.forEach(script => {
-        const typeMatch = script.title.match(/\[(Original|Remix|Re-write|STL)\]/);
-        if (typeMatch) {
-          initialTypes[script.id] = typeMatch[1];
-        }
+        // Add null check for script.title
+        if (script.title && typeof script.title === 'string') {
+          const typeMatch = script.title.match(/\[(Original|Remix|Re-write|STL)\]/);
+          if (typeMatch) {
+            initialTypes[script.id] = typeMatch[1];
+          }
 
-        const structureMatch = script.title.match(/\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/);
-        if (structureMatch) {
-          initialStructures[script.id] = structureMatch[1];
+          const structureMatch = script.title.match(/\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/);
+          if (structureMatch) {
+            initialStructures[script.id] = structureMatch[1];
+          }
         }
       });
       setSelectedTypes(initialTypes);
@@ -193,11 +196,13 @@ const MasterEditor = () => {
   };
 
   const extractCurrentType = (title) => {
+    if (!title || typeof title !== 'string') return 'Unknown';
     const match = title.match(/\[(Original|Remix|Re-write|STL)\]/);
     return match ? match[1] : 'Unknown';
   };
 
   const extractCurrentStructure = (title) => {
+    if (!title || typeof title !== 'string') return 'Unknown';
     const match = title.match(/\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/);
     return match ? match[1] : 'Unknown';
   };
