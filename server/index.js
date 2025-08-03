@@ -6667,24 +6667,31 @@ app.get('/api/master-editor/scripts', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/master-editor/update-script-type', authenticateToken, async (req, res) => {
+app.post('/api/master-editor/update-script', authenticateToken, async (req, res) => {
   try {
     // Check if user is master_editor
     if (req.user.username !== 'master_editor') {
       return res.status(403).json({ error: 'Access denied. Master editor only.' });
     }
 
-    const { scriptId, newType } = req.body;
+    const { scriptId, newType, newStructure } = req.body;
 
-    if (!scriptId || !newType) {
-      return res.status(400).json({ error: 'Script ID and new type are required' });
+    if (!scriptId || (!newType && !newStructure)) {
+      return res.status(400).json({ error: 'Script ID and at least one of new type or new structure are required' });
     }
 
-    if (!['Original', 'Remix', 'Re-write', 'STL'].includes(newType)) {
+    if (newType && !['Original', 'Remix', 'Re-write', 'STL'].includes(newType)) {
       return res.status(400).json({ error: 'Invalid type. Must be Original, Remix, Re-write, or STL' });
     }
 
-    console.log(`🔄 Master Editor: Updating script ${scriptId} to type ${newType}`);
+    if (newStructure && !['Payback Revenge', 'Expectations', 'Looked Down Upon', 'Obsession', 'No Structure'].includes(newStructure)) {
+      return res.status(400).json({ error: 'Invalid structure. Must be Payback Revenge, Expectations, Looked Down Upon, Obsession, or No Structure' });
+    }
+
+    const updates = [];
+    if (newType) updates.push(`type: ${newType}`);
+    if (newStructure) updates.push(`structure: ${newStructure}`);
+    console.log(`🔄 Master Editor: Updating script ${scriptId} (${updates.join(', ')})`);
 
     // Get current title and trello_card_id
     const getCurrentQuery = 'SELECT title, trello_card_id FROM script WHERE id = $1';
@@ -6698,11 +6705,22 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
     const trelloCardId = currentResult.rows[0].trello_card_id;
     console.log(`📝 Current title: ${currentTitle}`);
 
-    // Replace the type in the title using regex
-    const updatedTitle = currentTitle.replace(
-      /\[(Original|Remix|Re-write|STL)\]/,
-      `[${newType}]`
-    );
+    // Replace the type and/or structure in the title using regex
+    let updatedTitle = currentTitle;
+
+    if (newType) {
+      updatedTitle = updatedTitle.replace(
+        /\[(Original|Remix|Re-write|STL)\]/,
+        `[${newType}]`
+      );
+    }
+
+    if (newStructure) {
+      updatedTitle = updatedTitle.replace(
+        /\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/,
+        `[${newStructure}]`
+      );
+    }
 
     console.log(`📝 Updated title: ${updatedTitle}`);
 
@@ -6723,9 +6741,14 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
         if (settingsResult.rows.length > 0) {
           const { api_key: trelloApiKey, token: trelloToken } = settingsResult.rows[0];
 
+          const trelloUpdateData = { name: updatedTitle };
+          if (newStructure) {
+            trelloUpdateData.newStructure = newStructure;
+          }
+
           const trelloUpdateResponse = await axios.put(
             `https://api.trello.com/1/cards/${trelloCardId}?key=${trelloApiKey}&token=${trelloToken}`,
-            { name: updatedTitle }
+            trelloUpdateData
           );
 
           console.log(`✅ Master Editor: Successfully updated Trello card ${trelloCardId}`);

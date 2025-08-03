@@ -39,14 +39,16 @@ const MasterEditor = () => {
   const [success, setSuccess] = useState(null);
   const [editingScript, setEditingScript] = useState(null);
   const [selectedTypes, setSelectedTypes] = useState({});
+  const [selectedStructures, setSelectedStructures] = useState({});
   const [writerFilter, setWriterFilter] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
   const [availableWriters, setAvailableWriters] = useState([]);
-  
+
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
   const typeOptions = ['Original', 'Remix', 'Re-write', 'STL'];
+  const structureOptions = ['Payback Revenge', 'Expectations', 'Looked Down Upon', 'Obsession', 'No Structure'];
 
   useEffect(() => {
     // Check if user is master_editor
@@ -66,13 +68,20 @@ const MasterEditor = () => {
 
       // Initialize selected types based on current titles
       const initialTypes = {};
+      const initialStructures = {};
       response.data.scripts.forEach(script => {
-        const match = script.title.match(/\[(Original|Remix|Re-write|STL)\]/);
-        if (match) {
-          initialTypes[script.id] = match[1];
+        const typeMatch = script.title.match(/\[(Original|Remix|Re-write|STL)\]/);
+        if (typeMatch) {
+          initialTypes[script.id] = typeMatch[1];
+        }
+
+        const structureMatch = script.title.match(/\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/);
+        if (structureMatch) {
+          initialStructures[script.id] = structureMatch[1];
         }
       });
       setSelectedTypes(initialTypes);
+      setSelectedStructures(initialStructures);
 
       // Extract unique writers for filter dropdown
       const writers = [...new Set(response.data.scripts
@@ -93,6 +102,13 @@ const MasterEditor = () => {
     setSelectedTypes(prev => ({
       ...prev,
       [scriptId]: newType
+    }));
+  };
+
+  const handleStructureChange = (scriptId, newStructure) => {
+    setSelectedStructures(prev => ({
+      ...prev,
+      [scriptId]: newStructure
     }));
   };
 
@@ -137,22 +153,28 @@ const MasterEditor = () => {
       setSuccess(null);
 
       const newType = selectedTypes[scriptId];
-      
-      const response = await axios.post('/api/master-editor/update-script-type', {
+      const newStructure = selectedStructures[scriptId];
+
+      const response = await axios.post('/api/master-editor/update-script', {
         scriptId,
-        newType
+        newType,
+        newStructure
       });
 
       if (response.data.success) {
-        setSuccess(`Successfully updated script to ${newType}`);
-        
+        const updates = [];
+        if (newType) updates.push(`type: ${newType}`);
+        if (newStructure) updates.push(`structure: ${newStructure}`);
+
+        setSuccess(`Successfully updated script (${updates.join(', ')})`);
+
         // Update the script in the local state
-        setScripts(prev => prev.map(script => 
-          script.id === scriptId 
+        setScripts(prev => prev.map(script =>
+          script.id === scriptId
             ? { ...script, title: response.data.newTitle }
             : script
         ));
-        
+
         // Clear success message after 3 seconds
         setTimeout(() => setSuccess(null), 3000);
       }
@@ -172,6 +194,11 @@ const MasterEditor = () => {
 
   const extractCurrentType = (title) => {
     const match = title.match(/\[(Original|Remix|Re-write|STL)\]/);
+    return match ? match[1] : 'Unknown';
+  };
+
+  const extractCurrentStructure = (title) => {
+    const match = title.match(/\[(Payback Revenge|Expectations|Looked Down Upon|Obsession|No Structure)\]/);
     return match ? match[1] : 'Unknown';
   };
 
@@ -360,6 +387,8 @@ const MasterEditor = () => {
                 <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Writer Name</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Current Type</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>New Type</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Current Structure</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>New Structure</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Action</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Status</TableCell>
               </TableRow>
@@ -439,14 +468,57 @@ const MasterEditor = () => {
                     </FormControl>
                   </TableCell>
                   <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{
+                      color: '#764ba2',
+                      fontWeight: 500,
+                      background: 'rgba(118, 75, 162, 0.1)',
+                      px: 1,
+                      py: 0.5,
+                      borderRadius: '6px',
+                      display: 'inline-block'
+                    }}>
+                      {extractCurrentStructure(script.title)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                      <Select
+                        value={selectedStructures[script.id] || ''}
+                        onChange={(e) => handleStructureChange(script.id, e.target.value)}
+                        sx={{
+                          color: 'white',
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          '& .MuiOutlinedInput-notchedOutline': {
+                            border: 'none'
+                          },
+                          '&:hover': {
+                            border: '1px solid rgba(118, 75, 162, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                          }
+                        }}
+                      >
+                        {structureOptions.map(structure => (
+                          <MenuItem key={structure} value={structure}>
+                            {structure}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
                     <Button
                       variant="contained"
                       size="small"
                       onClick={() => handleEdit(script.id)}
                       disabled={
                         editingScript === script.id ||
-                        !selectedTypes[script.id] ||
-                        selectedTypes[script.id] === extractCurrentType(script.title)
+                        (
+                          (!selectedTypes[script.id] || selectedTypes[script.id] === extractCurrentType(script.title)) &&
+                          (!selectedStructures[script.id] || selectedStructures[script.id] === extractCurrentStructure(script.title))
+                        )
                       }
                       sx={{
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
