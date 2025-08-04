@@ -1688,7 +1688,7 @@ async function getBigQueryAnalyticsOverview(
 
     try {
       // Check if this is an STL writer with different thresholds
-      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
       const isSTLWriter = stlWriters.includes(writerName);
 
       console.log(`🔍 Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
@@ -1708,6 +1708,20 @@ async function getBigQueryAnalyticsOverview(
             AND snippet_published_at IS NOT NULL
             AND DATE(snippet_published_at) >= @start_date
             AND DATE(snippet_published_at) <= @end_date
+            ${isSTLWriter ? `
+            AND (
+              CASE
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)M(\\d+)S') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)M') AS INT64) * 60 +
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'M(\\d+)S') AS INT64)
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)S') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)S') AS INT64)
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)M') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)M') AS INT64) * 60
+                ELSE 0
+              END
+            ) < 190
+            ` : ''}
         ),
         latest_views AS (
           SELECT
@@ -1797,7 +1811,7 @@ async function getBigQueryAnalyticsOverview(
       console.log(`🎬 Getting video details for each category for writer ${writerName}`);
 
       // Check if this is an STL writer with different thresholds
-      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
       const isSTLWriter = stlWriters.includes(writerName);
 
       const videoDetailsQuery = `
@@ -1815,6 +1829,20 @@ async function getBigQueryAnalyticsOverview(
             AND snippet_published_at IS NOT NULL
             AND DATE(snippet_published_at) >= @start_date
             AND DATE(snippet_published_at) <= @end_date
+            ${isSTLWriter ? `
+            AND (
+              CASE
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)M(\\d+)S') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)M') AS INT64) * 60 +
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'M(\\d+)S') AS INT64)
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)S') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)S') AS INT64)
+                WHEN REGEXP_CONTAINS(content_details_duration, r'PT(\\d+)M') THEN
+                  CAST(REGEXP_EXTRACT(content_details_duration, r'PT(\\d+)M') AS INT64) * 60
+                ELSE 0
+              END
+            ) < 190
+            ` : ''}
         ),
         latest_views AS (
           SELECT
@@ -2629,7 +2657,7 @@ async function handleVideoDetailsRequest(req, res) {
     const writerName = writerRows[0].name;
 
     // Check if this is an STL writer with different thresholds
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     console.log(`🔍 Video Details - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
@@ -6676,7 +6704,7 @@ router.get('/video-details', authenticateToken, async (req, res) => {
     const writerName = writerRows[0].name;
 
     // Check if this is an STL writer with different thresholds
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     console.log(`🔍 Video Details v2 - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);

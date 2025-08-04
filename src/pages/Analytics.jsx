@@ -1178,7 +1178,7 @@ const Analytics = () => {
 
   // Check if current user is an STL writer with different thresholds
   const isSTLWriter = () => {
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
     return stlWriters.includes(user?.name);
   };
 
