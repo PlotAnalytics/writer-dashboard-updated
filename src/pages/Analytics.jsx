@@ -500,6 +500,17 @@ const Analytics = () => {
         }
       };
 
+      // For STL writers with split data, override totalViews to show only shorts views
+      if (combinedData.hasSplitData && combinedData.shortsData && isSTLWriter()) {
+        const shortsOnlyViews = combinedData.shortsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        console.log(`📊 STL Writer detected with split data - overriding totalViews from ${combinedData.totalViews.toLocaleString()} to shorts only: ${shortsOnlyViews.toLocaleString()}`);
+
+        combinedData.totalViews = shortsOnlyViews;
+        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(shortsOnlyViews / combinedData.shortsData.length) : 0;
+        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(shortsOnlyViews / overviewData.totalSubmissions) : 0;
+        combinedData.summary.progressToTarget = (shortsOnlyViews / 100000000) * 100;
+      }
+
       console.log('📊 Final analytics data:', {
         totalViews: combinedData.totalViews,
         chartDataPoints: combinedData.chartData?.length || 0,
@@ -730,6 +741,17 @@ const Analytics = () => {
           bigQueryIntegrated: true
         }
       };
+
+      // For STL writers with split data, override totalViews to show only shorts views
+      if (combinedData.hasSplitData && combinedData.shortsData && isSTLWriter()) {
+        const shortsOnlyViews = combinedData.shortsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        console.log(`📊 STL Writer detected with split data - overriding totalViews from ${combinedData.totalViews.toLocaleString()} to shorts only: ${shortsOnlyViews.toLocaleString()}`);
+
+        combinedData.totalViews = shortsOnlyViews;
+        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(shortsOnlyViews / combinedData.shortsData.length) : 0;
+        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(shortsOnlyViews / overviewData.totalSubmissions) : 0;
+        combinedData.summary.progressToTarget = (shortsOnlyViews / 100000000) * 100;
+      }
 
       console.log('📊 Final analytics data for custom range:', {
         totalViews: combinedData.totalViews,
