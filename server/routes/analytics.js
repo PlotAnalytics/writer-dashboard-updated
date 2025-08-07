@@ -1364,18 +1364,64 @@ async function getBigQueryAnalyticsOverview(
           extendedStartDate.setDate(extendedStartDate.getDate() - 7); // Get 7 days before for proper calculations
           const extendedStartDateStr = extendedStartDate.toISOString().slice(0, 10);
 
-          const viewCountsQuery = `
-            SELECT
-              video_id,
-              DATE(snapshot_date) as date_day,
-              statistics_view_count,
-              DATE(snippet_published_at) as published_date
-            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-            WHERE video_id IN UNNEST(@video_ids)
-              AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
-              ${useBigQuery && useInfluxDB ? `AND DATE(snapshot_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
-            ORDER BY video_id, snapshot_date
-          `;
+          // Check if this is an STL writer that needs duration filtering
+          const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+          const isSTLWriter = stlWriters.includes(writerName);
+
+          let viewCountsQuery;
+          if (isSTLWriter) {
+            console.log(`🎬 STL Writer detected: ${writerName} - applying duration filter (>189 seconds)`);
+            viewCountsQuery = `
+              SELECT
+                video_id,
+                DATE(snapshot_date) as date_day,
+                statistics_view_count,
+                DATE(snippet_published_at) as published_date,
+                content_details_duration
+              FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+              WHERE video_id IN UNNEST(@video_ids)
+                AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
+                ${useBigQuery && useInfluxDB ? `AND DATE(snapshot_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
+                AND content_details_duration IS NOT NULL
+                AND (
+                  -- Parse PT format duration to seconds and filter >189 seconds
+                  CASE
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)H(\\d+)M(\\d+)S$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)H') AS INT64) * 3600 +
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'H(\\d+)M') AS INT64) * 60 +
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'M(\\d+)S$') AS INT64)
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)M(\\d+)S$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)M') AS INT64) * 60 +
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'M(\\d+)S$') AS INT64)
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)S$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)S$') AS INT64)
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)H(\\d+)S$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)H') AS INT64) * 3600 +
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'H(\\d+)S$') AS INT64)
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)H$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)H$') AS INT64) * 3600
+                    WHEN REGEXP_CONTAINS(content_details_duration, r'^PT(\\d+)M$') THEN
+                      CAST(REGEXP_EXTRACT(content_details_duration, r'^PT(\\d+)M$') AS INT64) * 60
+                    ELSE 0
+                  END > 189
+                )
+              ORDER BY video_id, snapshot_date
+            `;
+          } else {
+            console.log(`📊 Regular writer: ${writerName} - no duration filtering`);
+            viewCountsQuery = `
+              SELECT
+                video_id,
+                DATE(snapshot_date) as date_day,
+                statistics_view_count,
+                DATE(snippet_published_at) as published_date
+              FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+              WHERE video_id IN UNNEST(@video_ids)
+                AND DATE(snapshot_date) BETWEEN @extended_start_date AND @end_date
+                ${useBigQuery && useInfluxDB ? `AND DATE(snapshot_date) <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)` : ''}
+              ORDER BY video_id, snapshot_date
+            `;
+          }
 
           console.log('🔍 Step 4: Getting daily view counts from youtube_metadata_historical');
           console.log(`🔍 Using extended date range: ${extendedStartDateStr} to ${finalBigQueryEndDate} (extended by 7 days for daily increase calculations)`);
@@ -2875,7 +2921,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v7:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v9:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -2985,7 +3031,7 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v7:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v9:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
           await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
           console.log('✅ Cached analytics overview data with video performance breakdown:', {
             megaVirals: analyticsData.megaViralsCount,
