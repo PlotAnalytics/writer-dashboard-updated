@@ -6770,6 +6770,81 @@ app.post('/api/master-editor/update-script-type', authenticateToken, async (req,
   }
 });
 
+// Master Editor - Writer Settings endpoints
+app.get('/api/master-editor/writer-settings', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    console.log('🔍 Master Editor: Getting writer settings...');
+
+    const query = `
+      SELECT
+        id,
+        writer_name,
+        skip_qa
+      FROM writer_settings
+      ORDER BY writer_name ASC
+    `;
+
+    const result = await pool.query(query);
+
+    console.log(`✅ Master Editor: Found ${result.rows.length} writer settings`);
+
+    res.json({
+      success: true,
+      writerSettings: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor writer settings error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/master-editor/update-writer-setting', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    const { id, skipQA } = req.body;
+
+    if (!id || typeof skipQA !== 'boolean') {
+      return res.status(400).json({ error: 'Writer setting ID and skip_qa boolean value are required' });
+    }
+
+    console.log(`🔄 Master Editor: Updating writer setting ${id} skip_qa to ${skipQA}`);
+
+    const updateQuery = `
+      UPDATE writer_settings
+      SET skip_qa = $1
+      WHERE id = $2
+      RETURNING id, writer_name, skip_qa
+    `;
+
+    const result = await pool.query(updateQuery, [skipQA, id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Writer setting not found' });
+    }
+
+    console.log(`✅ Master Editor: Successfully updated writer setting ${id}`);
+
+    res.json({
+      success: true,
+      writerSetting: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor update writer setting error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test endpoint to create master_editor user
 app.post('/api/create-master-editor', async (req, res) => {
   try {

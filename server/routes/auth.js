@@ -59,6 +59,34 @@ router.post('/login', async (req, res) => {
       });
     }
 
+    // Special case for master_editor user
+    if (username === 'master_editor' && password === 'Plotpointe!@3456') {
+      console.log('✅ Master editor authenticated');
+
+      // Generate JWT token for master editor
+      const token = jwt.sign(
+        {
+          id: 'master_editor',
+          username: 'master_editor',
+          role: 'master_editor'
+        },
+        process.env.JWT_SECRET || 'fallback_secret',
+        { expiresIn: "24h" }
+      );
+
+      return res.json({
+        success: true,
+        token,
+        role: 'master_editor',
+        username: 'master_editor',
+        user: {
+          id: 'master_editor',
+          username: 'master_editor',
+          role: 'master_editor'
+        }
+      });
+    }
+
     // First check if user exists
     const userCheckResult = await pool.query(
       "SELECT * FROM login WHERE username = $1",

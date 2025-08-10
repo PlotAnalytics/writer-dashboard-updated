@@ -64,34 +64,46 @@ const Layout = ({ children, hideNavigation = false, hideSettings = false, hideFe
   console.log('🔍 Layout - Current user:', user);
   console.log('🔍 Layout - WriterId from localStorage:', localStorage.getItem('writerId'));
 
-  // Check if user is retention master
+  // Check if user is retention master or master editor
   const isRetentionMaster = user?.role === 'retention_master';
+  const isMasterEditor = user?.role === 'master_editor';
 
-  const menuItems = (isRetentionMaster || hideNavigation) ? [] : [
-    {
-      text: 'Dashboard',
-      icon: <DashboardIcon />,
-      path: '/dashboard',
-      description: 'Overview & stats',
-      badge: null
-    },
-    {
-      text: 'Analytics',
-      icon: <InsightsIcon />,
-      path: '/analytics',
-      description: 'Performance insights',
-      badge: 'New'
-    },
-    {
-      text: 'Content',
-      icon: <VideoLibraryIcon />,
-      path: '/content',
-      description: 'Manage videos',
-      badge: null
-    },
-  ];
+  const menuItems = (isRetentionMaster || hideNavigation) ? [] :
+    isMasterEditor ? [
+      // Only show Trello for master_editor
+      {
+        text: 'Trello',
+        icon: <SettingsIcon />,
+        path: '/writer-settings',
+        description: 'Writer settings',
+        badge: null
+      }
+    ] : [
+      // Regular menu items for normal users
+      {
+        text: 'Dashboard',
+        icon: <DashboardIcon />,
+        path: '/dashboard',
+        description: 'Overview & stats',
+        badge: null
+      },
+      {
+        text: 'Analytics',
+        icon: <InsightsIcon />,
+        path: '/analytics',
+        description: 'Performance insights',
+        badge: 'New'
+      },
+      {
+        text: 'Content',
+        icon: <VideoLibraryIcon />,
+        path: '/content',
+        description: 'Manage videos',
+        badge: null
+      },
+    ];
 
-  const bottomMenuItems = isRetentionMaster ? [] : [
+  const bottomMenuItems = (isRetentionMaster || isMasterEditor) ? [] : [
     ...(hideSettings ? [] : [{ text: 'Settings', icon: <SettingsIcon />, path: '/settings', description: 'Preferences' }]),
     ...(hideFeedback ? [] : [{ text: 'Send Feedback', icon: <BugReportIcon />, path: '/support', description: 'Report issues' }]),
   ];
@@ -392,7 +404,7 @@ const Layout = ({ children, hideNavigation = false, hideSettings = false, hideFe
 
       {/* Modern Bottom Navigation */}
       <Box sx={{ flexGrow: 1 }} />
-      {!isRetentionMaster && (
+      {!isRetentionMaster && !isMasterEditor && (
         <Box sx={{ px: isMobile ? 1.5 : 2, pb: isMobile ? 2 : 3 }}>
           <Typography variant="caption" sx={{
             color: 'rgba(255, 255, 255, 0.5)',

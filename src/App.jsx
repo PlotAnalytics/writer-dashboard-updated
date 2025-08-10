@@ -13,6 +13,7 @@ import VideoAnalytics from './pages/VideoAnalytics.jsx';
 import Settings from './pages/Settings.jsx';
 import RetentionMaster from './pages/RetentionMaster.jsx';
 import MasterEditor from './pages/MasterEditor.jsx';
+import WriterSettings from './pages/WriterSettings.jsx';
 
 import './styles/mobile-responsive.css';
 import './styles/mobile-fixes.css';
@@ -191,6 +192,14 @@ function App() {
               element={
                 <ProtectedRoute>
                   <MasterEditor />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="/writer-settings"
+              element={
+                <ProtectedRoute>
+                  <WriterSettings />
                 </ProtectedRoute>
               }
             />
