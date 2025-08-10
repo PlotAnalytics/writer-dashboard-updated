@@ -68,6 +68,8 @@ const Layout = ({ children, hideNavigation = false, hideSettings = false, hideFe
   const isRetentionMaster = user?.role === 'retention_master';
   const isMasterEditor = user?.role === 'master_editor';
 
+
+
   const menuItems = (isRetentionMaster || hideNavigation) ? [] :
     isMasterEditor ? [
       // Only show Trello for master_editor
@@ -102,6 +104,8 @@ const Layout = ({ children, hideNavigation = false, hideSettings = false, hideFe
         badge: null
       },
     ];
+
+
 
   const bottomMenuItems = (isRetentionMaster || isMasterEditor) ? [] : [
     ...(hideSettings ? [] : [{ text: 'Settings', icon: <SettingsIcon />, path: '/settings', description: 'Preferences' }]),

@@ -216,7 +216,7 @@ const MasterEditor = () => {
   }
 
   return (
-    <Layout hideNavigation={true} hideSettings={true} hideFeedback={true}>
+    <Layout hideSettings={true} hideFeedback={true}>
       <Box sx={{
         minHeight: '100vh',
         background: 'transparent',

@@ -54,7 +54,7 @@ const WriterSettings = () => {
       // Initialize selected values based on current skip_qa values
       const initialValues = {};
       response.data.writerSettings.forEach(setting => {
-        initialValues[setting.id] = setting.skip_qa;
+        initialValues[setting.writer_name] = setting.skip_qa;
       });
       setSelectedValues(initialValues);
 
@@ -66,32 +66,32 @@ const WriterSettings = () => {
     }
   };
 
-  const handleSkipQAChange = (settingId, newValue) => {
+  const handleSkipQAChange = (writerName, newValue) => {
     setSelectedValues(prev => ({
       ...prev,
-      [settingId]: newValue
+      [writerName]: newValue
     }));
   };
 
-  const handleEdit = async (settingId) => {
+  const handleEdit = async (writerName) => {
     try {
-      setEditingId(settingId);
+      setEditingId(writerName);
       setError(null);
       setSuccess(null);
 
-      const newSkipQA = selectedValues[settingId];
+      const newSkipQA = selectedValues[writerName];
 
       const response = await axios.post('/api/master-editor/update-writer-setting', {
-        id: settingId,
+        writerName: writerName,
         skipQA: newSkipQA
       });
 
       if (response.data.success) {
-        setSuccess(`Successfully updated skip QA setting`);
+        setSuccess(`Successfully updated skip QA setting for ${writerName}`);
 
         // Update the writer setting in the local state
         setWriterSettings(prev => prev.map(setting =>
-          setting.id === settingId
+          setting.writer_name === writerName
             ? { ...setting, skip_qa: newSkipQA }
             : setting
         ));
@@ -207,7 +207,7 @@ const WriterSettings = () => {
             </TableHead>
             <TableBody>
               {writerSettings.map((setting) => (
-                <TableRow key={setting.id} sx={{
+                <TableRow key={setting.writer_name} sx={{
                   '&:hover': {
                     background: 'rgba(255, 255, 255, 0.05)'
                   }
@@ -233,8 +233,8 @@ const WriterSettings = () => {
                   <TableCell sx={{ border: 'none', py: 2 }}>
                     <FormControl size="small" sx={{ minWidth: 120 }}>
                       <Select
-                        value={selectedValues[setting.id] !== undefined ? selectedValues[setting.id] : setting.skip_qa}
-                        onChange={(e) => handleSkipQAChange(setting.id, e.target.value)}
+                        value={selectedValues[setting.writer_name] !== undefined ? selectedValues[setting.writer_name] : setting.skip_qa}
+                        onChange={(e) => handleSkipQAChange(setting.writer_name, e.target.value)}
                         sx={{
                           color: 'white',
                           background: 'rgba(255, 255, 255, 0.04)',
@@ -259,10 +259,10 @@ const WriterSettings = () => {
                     <Button
                       variant="contained"
                       size="small"
-                      onClick={() => handleEdit(setting.id)}
+                      onClick={() => handleEdit(setting.writer_name)}
                       disabled={
-                        editingId === setting.id ||
-                        selectedValues[setting.id] === setting.skip_qa
+                        editingId === setting.writer_name ||
+                        selectedValues[setting.writer_name] === setting.skip_qa
                       }
                       sx={{
                         background: 'linear-gradient(45deg, #667eea, #764ba2)',
@@ -280,7 +280,7 @@ const WriterSettings = () => {
                         }
                       }}
                     >
-                      {editingId === setting.id ? (
+                      {editingId === setting.writer_name ? (
                         <CircularProgress size={16} sx={{ color: 'white' }} />
                       ) : (
                         'Edit'
