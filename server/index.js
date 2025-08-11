@@ -562,9 +562,13 @@ app.post("/api/scripts", async (req, res) => {
       return res.status(404).json({ error: "Writer not found" });
     }
 
-    const storyContinuationID = "6801db782202edad6322e7f5";
     // Determine Trello list ID and status
-    const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
+    // const storyContinuationID = "6801db782202edad6322e7f5";
+    // const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
+
+    // Hotwire fix to route all submission to Writer Submissions (QA) list in trello.
+    const storyContinuationID = listId;
+    const autoApprovedListID = listId;
 
     // Check if title contains "STL" keyword
     const isStoryLine = title.includes("STL");
