@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
+import MotivationalPopup from '../components/MotivationalPopup.jsx';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
@@ -370,9 +371,10 @@ const Dashboard = () => {
     }
     console.log('✅ Type validation passed');
 
-    // Validate Structure selection
-    console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure);
-    if (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --') {
+    // Validate Structure selection (skip for intern writers)
+    const isIntern = ['quinn', 'kayla', 'gianmarco'].includes(user?.username?.toLowerCase());
+    console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure, 'isIntern:', isIntern);
+    if (!isIntern && (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --')) {
       console.log('❌ Structure validation failed - must select a valid structure');
       setError('Please select a Structure from the dropdown options.');
       return;
@@ -397,8 +399,8 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate Structure Explanation when "No Structure" is selected
-    if (selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
+    // Validate Structure Explanation when "No Structure" is selected (skip for intern writers)
+    if (!isIntern && selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
       setError("Structure explanation must be at least 50 characters when 'No Structure' is selected.");
       return;
     }
@@ -429,10 +431,9 @@ const Dashboard = () => {
     setIsSubmitting(true);
 
     try {
-      // Build full title with structure and type prefix
-      const fullTitle =
-        (selectedStructure ? `[${selectedStructure}] ` : '') +
-        `[${prefixType}] ${title}`;
+      // Build full title with structure and type prefix (no structure for intern writers)
+      const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : '';
+      const fullTitle = structurePrefix + `[${prefixType}] ${title}`;
 
       // Filter out empty URLs and join multiple URLs with forward slashes
       const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
@@ -443,10 +444,10 @@ const Dashboard = () => {
         title: fullTitle,
         googleDocLink: googleDocLink,
         aiChatUrl: aiChatUrlsString,
-        structure_explanation: selectedStructure === "No Structure" ? structureExplanation : null,
+        structure_explanation: (!isIntern && selectedStructure === "No Structure") ? structureExplanation : null,
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
         core_concept_doc: prefixType === 'Remix' ? coreConceptDoc : null,
-        structure: selectedStructure || null,
+        structure: (!isIntern && selectedStructure) ? selectedStructure : null,
       });
 
       // Refresh the scripts list to get the latest data
@@ -530,6 +531,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
+      <MotivationalPopup />
       <Box sx={{
         minHeight: '100vh',
         background: 'transparent',
@@ -871,25 +873,27 @@ const Dashboard = () => {
                   </Box>
                 </Box>
 
-                {/* Structure Selection */}
-                <Box sx={{ mb: 2.5 }}>
-                  <Typography variant="body2" sx={{
-                    color: 'rgba(255, 255, 255, 0.8)',
-                    mb: 1.2,
-                    fontWeight: '700',
-                    fontSize: '13px'
-                  }}>
-                    Structure <span style={{ color: '#ff4444' }}>*</span>
-                  </Typography>
-                  <FormControl size="medium" fullWidth>
-                    <Select
-                      value={selectedStructure}
-                      onChange={(e) => {
-                        setSelectedStructure(e.target.value);
-                        if (e.target.value !== "No Structure") {
-                          setStructureExplanation("");
-                        }
-                      }}
+                {/* Structure Selection - Hidden for intern writers */}
+                {!['quinn', 'kayla', 'gianmarco'].includes(user?.username?.toLowerCase()) && (
+                  <>
+                    <Box sx={{ mb: 2.5 }}>
+                      <Typography variant="body2" sx={{
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        mb: 1.2,
+                        fontWeight: '700',
+                        fontSize: '13px'
+                      }}>
+                        Structure <span style={{ color: '#ff4444' }}>*</span>
+                      </Typography>
+                      <FormControl size="medium" fullWidth>
+                        <Select
+                          value={selectedStructure}
+                          onChange={(e) => {
+                            setSelectedStructure(e.target.value);
+                            if (e.target.value !== "No Structure") {
+                              setStructureExplanation("");
+                            }
+                          }}
                       displayEmpty
                       MenuProps={{
                         PaperProps: {
@@ -1000,6 +1004,8 @@ const Dashboard = () => {
                       </Typography>
                     </Box>
                   </Box>
+                )}
+                  </>
                 )}
 
                 {/* Modern Type Section */}

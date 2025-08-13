@@ -566,9 +566,9 @@ app.post("/api/scripts", async (req, res) => {
       return res.status(404).json({ error: "Writer not found" });
     }
 
-    const storyContinuationID = "6801db782202edad6322e7f5";
     // Determine Trello list ID and status
-    const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
+    const storyContinuationID = "6898270f55dc602c1b578c98";
+    const autoApprovedListID = listId;
 
     // Check if title contains "STL" keyword
     const isStoryLine = title.includes("STL");
@@ -579,7 +579,7 @@ app.post("/api/scripts", async (req, res) => {
     if (isStoryLine) {
       // If it's a story line (contains STL), use story continuation list and status
       targetListId = storyContinuationID;
-      trelloStatus = "Story Continuation";
+      trelloStatus = "STL Writer Submissions (QA)";
     } else {
       // If it's not a story line, apply the skipQA logic
       targetListId = skipQA ? autoApprovedListID : listId;
@@ -6781,7 +6781,6 @@ app.get('/api/master-editor/writer-settings', authenticateToken, async (req, res
 
     const query = `
       SELECT
-        id,
         writer_name,
         skip_qa
       FROM writer_settings
@@ -6810,28 +6809,28 @@ app.post('/api/master-editor/update-writer-setting', authenticateToken, async (r
       return res.status(403).json({ error: 'Access denied. Master editor only.' });
     }
 
-    const { id, skipQA } = req.body;
+    const { writerName, skipQA } = req.body;
 
-    if (!id || typeof skipQA !== 'boolean') {
-      return res.status(400).json({ error: 'Writer setting ID and skip_qa boolean value are required' });
+    if (!writerName || typeof skipQA !== 'boolean') {
+      return res.status(400).json({ error: 'Writer name and skip_qa boolean value are required' });
     }
 
-    console.log(`🔄 Master Editor: Updating writer setting ${id} skip_qa to ${skipQA}`);
+    console.log(`🔄 Master Editor: Updating writer setting ${writerName} skip_qa to ${skipQA}`);
 
     const updateQuery = `
       UPDATE writer_settings
       SET skip_qa = $1
-      WHERE id = $2
-      RETURNING id, writer_name, skip_qa
+      WHERE writer_name = $2
+      RETURNING writer_name, skip_qa
     `;
 
-    const result = await pool.query(updateQuery, [skipQA, id]);
+    const result = await pool.query(updateQuery, [skipQA, writerName]);
 
     if (result.rows.length === 0) {
       return res.status(404).json({ error: 'Writer setting not found' });
     }
 
-    console.log(`✅ Master Editor: Successfully updated writer setting ${id}`);
+    console.log(`✅ Master Editor: Successfully updated writer setting ${writerName}`);
 
     res.json({
       success: true,
@@ -6841,6 +6840,34 @@ app.post('/api/master-editor/update-writer-setting', authenticateToken, async (r
   } catch (error) {
     console.error('❌ Master Editor update writer setting error:', error);
     res.status(500).json({ error: error.message });
+  }
+});
+
+// Clear Redis cache endpoint
+app.post('/api/clear-cache', async (req, res) => {
+  try {
+    console.log('🗑️ Clearing Redis cache...');
+
+    // Clear all Redis cache using the Redis client directly
+    if (redisService.client && redisService.isConnected) {
+      await redisService.client.flushAll();
+      console.log('✅ Redis cache cleared successfully!');
+
+      res.json({
+        success: true,
+        message: 'Redis cache cleared successfully'
+      });
+    } else {
+      throw new Error('Redis client not available or not connected');
+    }
+
+  } catch (error) {
+    console.error('❌ Error clearing Redis cache:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear Redis cache',
+      details: error.message
+    });
   }
 });
 

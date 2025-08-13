@@ -22,6 +22,7 @@ import {
   faSort,
   faPlayCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import MotivationalPopup from "../components/MotivationalPopup";
 
 
 const WriterDashboard = () => {
@@ -151,8 +152,12 @@ const WriterDashboard = () => {
     setIsSubmitting(true);
 
     try {
+      // Check if user is an intern (no structure prefix for interns)
+      const isIntern = ['quinn', 'kayla', 'gianmarco'].includes(username?.toLowerCase());
+      const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : "";
+
       const fullTitle =
-        (selectedStructure ? `[${selectedStructure}] ` : "") +
+        structurePrefix +
         (prefixType === "Original" ||
         prefixType === "Re-write" ||
         prefixType === "STL"
@@ -299,6 +304,7 @@ const WriterDashboard = () => {
 
   return (
     <div className="dashboard">
+      <MotivationalPopup />
       <div style={{ marginTop: "30px" }}>
         <Container>
           {writer && (
@@ -396,21 +402,24 @@ const WriterDashboard = () => {
                       </Form.Group>
                     )}
                   </div>
-                  <Form.Group style={{ marginBottom: "25px" }}>
-                    <Form.Label>Structure</Form.Label>
-                    <Form.Control
-                      as="select"
-                      value={selectedStructure || ""}
-                      onChange={(e) => setSelectedStructure(e.target.value)}
-                    >
-                      <option value="">-- No structure selected --</option>
-                      {structureList.map((structure) => (
-                        <option key={structure.structure_id || structure.id} value={structure.name}>
-                          {structure.name}
-                        </option>
-                      ))}
-                    </Form.Control>
-                  </Form.Group>
+                  {/* Hide structure dropdown for intern writers */}
+                  {!['quinn', 'kayla', 'gianmarco'].includes(username?.toLowerCase()) && (
+                    <Form.Group style={{ marginBottom: "25px" }}>
+                      <Form.Label>Structure</Form.Label>
+                      <Form.Control
+                        as="select"
+                        value={selectedStructure || ""}
+                        onChange={(e) => setSelectedStructure(e.target.value)}
+                      >
+                        <option value="">-- No structure selected --</option>
+                        {structureList.map((structure) => (
+                          <option key={structure.structure_id || structure.id} value={structure.name}>
+                            {structure.name}
+                          </option>
+                        ))}
+                      </Form.Control>
+                    </Form.Group>
+                  )}
 
                   <Form.Group>
                     <Form.Label>Google Doc Link</Form.Label>
