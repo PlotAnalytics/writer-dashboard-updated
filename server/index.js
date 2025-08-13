@@ -6848,6 +6848,34 @@ app.post('/api/master-editor/update-writer-setting', authenticateToken, async (r
   }
 });
 
+// Clear Redis cache endpoint
+app.post('/api/clear-cache', async (req, res) => {
+  try {
+    console.log('🗑️ Clearing Redis cache...');
+
+    // Clear all Redis cache using the Redis client directly
+    if (redisService.client && redisService.isConnected) {
+      await redisService.client.flushAll();
+      console.log('✅ Redis cache cleared successfully!');
+
+      res.json({
+        success: true,
+        message: 'Redis cache cleared successfully'
+      });
+    } else {
+      throw new Error('Redis client not available or not connected');
+    }
+
+  } catch (error) {
+    console.error('❌ Error clearing Redis cache:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to clear Redis cache',
+      details: error.message
+    });
+  }
+});
+
 // Test endpoint to create master_editor user
 app.post('/api/create-master-editor', async (req, res) => {
   try {
