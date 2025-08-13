@@ -1,33 +1,39 @@
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
-import CssBaseline from '@mui/material/CssBaseline';
-import { AuthProvider } from './contexts/AuthContext.jsx';
-import { NotificationProvider } from './contexts/NotificationContext.jsx';
-import { ProtectedRoute } from './components/ProtectedRoute.jsx';
-import Login from './pages/Login.jsx';
-import Dashboard from './pages/Dashboard.jsx';
-import WriterDashboard from './pages/WriterDashboard.jsx';
-import Analytics from './pages/Analytics.jsx';
-import Content from './pages/Content.jsx';
-import VideoAnalytics from './pages/VideoAnalytics.jsx';
-import Settings from './pages/Settings.jsx';
-import RetentionMaster from './pages/RetentionMaster.jsx';
-import MasterEditor from './pages/MasterEditor.jsx';
-import WriterSettings from './pages/WriterSettings.jsx';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
+import { ThemeProvider, createTheme } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+import { AuthProvider } from "./contexts/AuthContext.jsx";
+import { NotificationProvider } from "./contexts/NotificationContext.jsx";
+import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
+import Login from "./pages/Login.jsx";
+import Dashboard from "./pages/Dashboard.jsx";
+import WriterDashboard from "./pages/WriterDashboard.jsx";
+import Analytics from "./pages/Analytics.jsx";
+import Content from "./pages/Content.jsx";
+import VideoAnalytics from "./pages/VideoAnalytics.jsx";
+import Settings from "./pages/Settings.jsx";
+import RetentionMaster from "./pages/RetentionMaster.jsx";
+import MasterEditor from "./pages/MasterEditor.jsx";
+import WriterSettings from "./pages/WriterSettings.jsx";
+import AdminSettings from "./pages/AdminSettings.jsx";
 
-import './styles/mobile-responsive.css';
-import './styles/mobile-fixes.css';
-import { useAuth } from './contexts/AuthContext.jsx';
+import "./styles/mobile-responsive.css";
+import "./styles/mobile-fixes.css";
+import { useAuth } from "./contexts/AuthContext.jsx";
 
 // Component to handle root redirect based on user role
 const RootRedirect = () => {
   const { user } = useAuth();
 
-  if (user?.role === 'retention_master') {
+  if (user?.role === "retention_master") {
     return <Navigate to="/retention-master" replace />;
   }
 
-  if (user?.role === 'master_editor') {
+  if (user?.role === "master_editor") {
     return <Navigate to="/master-editor" replace />;
   }
 
@@ -36,38 +42,38 @@ const RootRedirect = () => {
 
 const darkTheme = createTheme({
   palette: {
-    mode: 'dark',
+    mode: "dark",
     primary: {
-      main: '#f4c430', // Golden yellow for buttons
+      main: "#f4c430", // Golden yellow for buttons
     },
     secondary: {
-      main: '#4fc3f7', // Light blue for accents
+      main: "#4fc3f7", // Light blue for accents
     },
     background: {
-      default: '#1a1a1a',
-      paper: '#2d2d2d',
+      default: "#1a1a1a",
+      paper: "#2d2d2d",
     },
     text: {
-      primary: '#ffffff',
-      secondary: '#b0b0b0',
+      primary: "#ffffff",
+      secondary: "#b0b0b0",
     },
   },
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
     // Mobile-friendly typography scaling
     h4: {
-      '@media (max-width:768px)': {
-        fontSize: '1.5rem',
+      "@media (max-width:768px)": {
+        fontSize: "1.5rem",
       },
     },
     h5: {
-      '@media (max-width:768px)': {
-        fontSize: '1.25rem',
+      "@media (max-width:768px)": {
+        fontSize: "1.25rem",
       },
     },
     h6: {
-      '@media (max-width:768px)': {
-        fontSize: '1.1rem',
+      "@media (max-width:768px)": {
+        fontSize: "1.1rem",
       },
     },
   },
@@ -84,12 +90,12 @@ const darkTheme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          textTransform: 'none',
+          textTransform: "none",
           borderRadius: 8,
-          '@media (max-width:768px)': {
-            padding: '8px 16px',
-            fontSize: '14px',
-            minWidth: 'auto',
+          "@media (max-width:768px)": {
+            padding: "8px 16px",
+            fontSize: "14px",
+            minWidth: "auto",
           },
         },
       },
@@ -98,8 +104,8 @@ const darkTheme = createTheme({
       styleOverrides: {
         root: {
           borderRadius: 12,
-          '@media (max-width:768px)': {
-            marginBottom: '16px',
+          "@media (max-width:768px)": {
+            marginBottom: "16px",
           },
         },
       },
@@ -107,10 +113,10 @@ const darkTheme = createTheme({
     MuiCardContent: {
       styleOverrides: {
         root: {
-          '@media (max-width:768px)': {
-            padding: '16px',
-            '&:last-child': {
-              paddingBottom: '16px',
+          "@media (max-width:768px)": {
+            padding: "16px",
+            "&:last-child": {
+              paddingBottom: "16px",
             },
           },
         },
@@ -119,8 +125,8 @@ const darkTheme = createTheme({
     MuiIconButton: {
       styleOverrides: {
         root: {
-          '@media (max-width:768px)': {
-            padding: '8px',
+          "@media (max-width:768px)": {
+            padding: "8px",
           },
         },
       },
@@ -128,11 +134,11 @@ const darkTheme = createTheme({
     MuiTab: {
       styleOverrides: {
         root: {
-          '@media (max-width:768px)': {
-            minHeight: '40px',
-            padding: '6px 12px',
-            fontSize: '14px',
-            minWidth: 'auto',
+          "@media (max-width:768px)": {
+            minHeight: "40px",
+            padding: "6px 12px",
+            fontSize: "14px",
+            minWidth: "auto",
           },
         },
       },
@@ -140,9 +146,9 @@ const darkTheme = createTheme({
     MuiFormControl: {
       styleOverrides: {
         root: {
-          '@media (max-width:768px)': {
-            marginBottom: '16px',
-            width: '100%',
+          "@media (max-width:768px)": {
+            marginBottom: "16px",
+            width: "100%",
           },
         },
       },
@@ -150,10 +156,10 @@ const darkTheme = createTheme({
     MuiDialog: {
       styleOverrides: {
         paper: {
-          '@media (max-width:768px)': {
-            margin: '16px',
-            width: 'calc(100vw - 32px)',
-            maxWidth: 'none',
+          "@media (max-width:768px)": {
+            margin: "16px",
+            width: "calc(100vw - 32px)",
+            maxWidth: "none",
           },
         },
       },
@@ -161,8 +167,8 @@ const darkTheme = createTheme({
     MuiAppBar: {
       styleOverrides: {
         root: {
-          '@media (max-width:768px)': {
-            boxShadow: '0 2px 10px rgba(0, 0, 0, 0.3)',
+          "@media (max-width:768px)": {
+            boxShadow: "0 2px 10px rgba(0, 0, 0, 0.3)",
           },
         },
       },
@@ -177,99 +183,107 @@ function App() {
       <AuthProvider>
         <NotificationProvider>
           <Router>
-          <Routes>
-            <Route path="/login" element={<Login />} />
-            <Route
-              path="/retention-master"
-              element={
-                <ProtectedRoute>
-                  <RetentionMaster />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/master-editor"
-              element={
-                <ProtectedRoute>
-                  <MasterEditor />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/writer-settings"
-              element={
-                <ProtectedRoute>
-                  <WriterSettings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/dashboard"
-              element={
-                <ProtectedRoute>
-                  <Dashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/analytics"
-              element={
-                <ProtectedRoute>
-                  <Analytics />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/content"
-              element={
-                <ProtectedRoute>
-                  <Content />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/content/video/:id"
-              element={
-                <ProtectedRoute>
-                  <VideoAnalytics />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/settings"
-              element={
-                <ProtectedRoute>
-                  <Settings />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/support"
-              element={
-                <ProtectedRoute>
-                  <WriterDashboard />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="/"
-              element={
-                <ProtectedRoute>
-                  <RootRedirect />
-                </ProtectedRoute>
-              }
-            />
+            <Routes>
+              <Route path="/login" element={<Login />} />
+              <Route
+                path="/retention-master"
+                element={
+                  <ProtectedRoute>
+                    <RetentionMaster />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/master-editor"
+                element={
+                  <ProtectedRoute>
+                    <MasterEditor />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/writer-settings"
+                element={
+                  <ProtectedRoute>
+                    <WriterSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/admin-settings"
+                element={
+                  <ProtectedRoute>
+                    <AdminSettings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/dashboard"
+                element={
+                  <ProtectedRoute>
+                    <Dashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/analytics"
+                element={
+                  <ProtectedRoute>
+                    <Analytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/content"
+                element={
+                  <ProtectedRoute>
+                    <Content />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/content/video/:id"
+                element={
+                  <ProtectedRoute>
+                    <VideoAnalytics />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <Settings />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/support"
+                element={
+                  <ProtectedRoute>
+                    <WriterDashboard />
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/"
+                element={
+                  <ProtectedRoute>
+                    <RootRedirect />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Catch-all route for any unmatched paths */}
-            <Route
-              path="*"
-              element={
-                <ProtectedRoute>
-                  <RootRedirect />
-                </ProtectedRoute>
-              }
-            />
-          </Routes>
+              {/* Catch-all route for any unmatched paths */}
+              <Route
+                path="*"
+                element={
+                  <ProtectedRoute>
+                    <RootRedirect />
+                  </ProtectedRoute>
+                }
+              />
+            </Routes>
           </Router>
         </NotificationProvider>
       </AuthProvider>

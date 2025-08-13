@@ -14,48 +14,49 @@ const notificationService = new NotificationService();
 router.get('/', authenticateToken, async (req, res) => {
   try {
     const { limit = 20, offset = 0, unread_only = 'false' } = req.query;
-    
+
+    // Master editor has no writer row; return empty gracefully
+    if (req.user?.role === 'master_editor') {
+      return res.json({ success: true, notifications: [], total: 0, hasMore: false });
+    }
+
     // Get writer ID from authenticated user
     const writerQuery = `
-      SELECT w.id as writer_id 
-      FROM writer w 
+      SELECT w.id as writer_id
+      FROM writer w
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
-    
+
     let notifications;
     if (unread_only === 'true') {
       notifications = {
         notifications: await notificationService.getUnreadNotifications(writerId),
         total: 0,
-        hasMore: false
+        hasMore: false,
       };
       notifications.total = notifications.notifications.length;
     } else {
       notifications = await notificationService.getNotifications(
-        writerId, 
-        parseInt(limit), 
+        writerId,
+        parseInt(limit),
         parseInt(offset)
       );
     }
-    
+
     res.json({
       success: true,
-      ...notifications
+      ...notifications,
     });
-    
   } catch (error) {
     console.error('❌ Error fetching notifications:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch notifications' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch notifications' });
   }
 });
 
@@ -65,34 +66,35 @@ router.get('/', authenticateToken, async (req, res) => {
  */
 router.get('/count', authenticateToken, async (req, res) => {
   try {
+    // Master editor has no writer notifications; return zeros
+    if (req.user?.role === 'master_editor') {
+      return res.json({ success: true, total: 0, unread: 0, uncelebrated: 0 });
+    }
+
     // Get writer ID from authenticated user
     const writerQuery = `
-      SELECT w.id as writer_id 
-      FROM writer w 
+      SELECT w.id as writer_id
+      FROM writer w
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
     const counts = await notificationService.getNotificationCount(writerId);
-    
+
     res.json({
       success: true,
       total: parseInt(counts.total),
       unread: parseInt(counts.unread),
       uncelebrated: parseInt(counts.uncelebrated)
     });
-    
   } catch (error) {
     console.error('❌ Error fetching notification counts:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch notification counts' 
-    });
+    res.status(500).json({ success: false, error: 'Failed to fetch notification counts' });
   }
 });
 
@@ -109,24 +111,24 @@ router.get('/uncelebrated', authenticateToken, async (req, res) => {
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
     const notifications = await notificationService.getUncebratedNotifications(writerId);
-    
+
     res.json({
       success: true,
       notifications
     });
-    
+
   } catch (error) {
     console.error('❌ Error fetching uncelebrated notifications:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to fetch uncelebrated notifications' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch uncelebrated notifications'
     });
   }
 });
@@ -138,7 +140,7 @@ router.get('/uncelebrated', authenticateToken, async (req, res) => {
 router.put('/:id/read', authenticateToken, async (req, res) => {
   try {
     const notificationId = parseInt(req.params.id);
-    
+
     // Get writer ID from authenticated user
     const writerQuery = `
       SELECT w.id as writer_id 
@@ -146,31 +148,31 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
     const notification = await notificationService.markAsRead(notificationId, writerId);
-    
+
     if (!notification) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Notification not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
       });
     }
-    
+
     res.json({
       success: true,
       notification
     });
-    
+
   } catch (error) {
     console.error('❌ Error marking notification as read:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to mark notification as read' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark notification as read'
     });
   }
 });
@@ -182,7 +184,7 @@ router.put('/:id/read', authenticateToken, async (req, res) => {
 router.put('/:id/celebrated', authenticateToken, async (req, res) => {
   try {
     const notificationId = parseInt(req.params.id);
-    
+
     // Get writer ID from authenticated user
     const writerQuery = `
       SELECT w.id as writer_id 
@@ -190,31 +192,31 @@ router.put('/:id/celebrated', authenticateToken, async (req, res) => {
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
     const notification = await notificationService.markAsCelebrated(notificationId, writerId);
-    
+
     if (!notification) {
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Notification not found' 
+      return res.status(404).json({
+        success: false,
+        error: 'Notification not found'
       });
     }
-    
+
     res.json({
       success: true,
       notification
     });
-    
+
   } catch (error) {
     console.error('❌ Error marking notification as celebrated:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to mark notification as celebrated' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark notification as celebrated'
     });
   }
 });
@@ -232,32 +234,32 @@ router.put('/read-all', authenticateToken, async (req, res) => {
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
-    
+
     const updateQuery = `
       UPDATE milestone_notifications 
       SET is_read = TRUE 
       WHERE writer_id = $1 AND is_read = FALSE
       RETURNING id
     `;
-    
+
     const result = await pool.query(updateQuery, [writerId]);
-    
+
     res.json({
       success: true,
       updated_count: result.rows.length
     });
-    
+
   } catch (error) {
     console.error('❌ Error marking all notifications as read:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to mark all notifications as read' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to mark all notifications as read'
     });
   }
 });
@@ -275,14 +277,14 @@ router.post('/check-milestones', authenticateToken, async (req, res) => {
       WHERE w.login_id = $1
     `;
     const writerResult = await pool.query(writerQuery, [req.user.id]);
-    
+
     if (writerResult.rows.length === 0) {
       return res.status(404).json({ error: 'Writer not found' });
     }
-    
+
     const writerId = writerResult.rows[0].writer_id;
     const writerName = writerResult.rows[0].writer_name;
-    
+
     // Get videos from PostgreSQL statistics_youtube_api table
     const videosQuery = `
       SELECT 
@@ -298,15 +300,15 @@ router.post('/check-milestones', authenticateToken, async (req, res) => {
         AND s.views_total IS NOT NULL
       ORDER BY s.views_total DESC
     `;
-    
+
     const videosResult = await pool.query(videosQuery, [writerId]);
     const videos = videosResult.rows;
-    
+
     console.log(`🔍 Checking milestones for ${writerName} (${writerId}) with ${videos.length} videos`);
-    
+
     // Check for milestones
     const newNotifications = await notificationService.checkMilestonesForWriter(writerId, videos);
-    
+
     res.json({
       success: true,
       writer_id: writerId,
@@ -315,12 +317,12 @@ router.post('/check-milestones', authenticateToken, async (req, res) => {
       new_notifications: newNotifications.length,
       notifications: newNotifications
     });
-    
+
   } catch (error) {
     console.error('❌ Error checking milestones:', error);
-    res.status(500).json({ 
-      success: false, 
-      error: 'Failed to check milestones' 
+    res.status(500).json({
+      success: false,
+      error: 'Failed to check milestones'
     });
   }
 });

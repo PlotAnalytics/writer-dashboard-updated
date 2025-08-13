@@ -140,6 +140,10 @@ app.use("/api/data-explorer", dataExplorerRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api", searchScriptRoutes);
 
+// Admin routes
+const adminRoutes = require('./routes/admin');
+app.use('/api/admin', authenticateToken, adminRoutes);
+
 // Feedback endpoint for Slack integration
 app.post('/api/feedback', async (req, res) => {
   try {
@@ -628,10 +632,9 @@ app.post("/api/scripts", async (req, res) => {
       const serverUrl =
         process.env.SERVER_URL ||
         (process.env.NODE_ENV === "production"
-          ? `https://${
-              process.env.VERCEL_URL ||
-              "https://writer-dashboard-updated.vercel.app"
-            }`
+          ? `https://${process.env.VERCEL_URL ||
+          "https://writer-dashboard-updated.vercel.app"
+          }`
           : `http://localhost:${PORT}`);
 
       console.log(
@@ -686,10 +689,10 @@ app.post("/api/scripts", async (req, res) => {
         port: postingAccountError.port,
         config: postingAccountError.config
           ? {
-              url: postingAccountError.config.url,
-              method: postingAccountError.config.method,
-              baseURL: postingAccountError.config.baseURL,
-            }
+            url: postingAccountError.config.url,
+            method: postingAccountError.config.method,
+            baseURL: postingAccountError.config.baseURL,
+          }
           : "No config available",
       });
       // Continue execution - don't fail the request if posting account assignment fails
@@ -869,7 +872,7 @@ app.post("/api/updateStatus", async (req, res) => {
             const customFieldsResponse = await axios.get(
               `https://api.trello.com/1/boards/${boardId}/customFields?key=${api_key}&token=${token}`
             );
-            console.log(`🔧 Available custom fields on board:`, customFieldsResponse.data.map(f => ({name: f.name, id: f.id, type: f.type})));
+            console.log(`🔧 Available custom fields on board:`, customFieldsResponse.data.map(f => ({ name: f.name, id: f.id, type: f.type })));
 
             // Find "Posting Account" field
             const postingAccountFieldDef = customFieldsResponse.data.find(
@@ -881,7 +884,7 @@ app.post("/api/updateStatus", async (req, res) => {
                 id: postingAccountFieldDef.id,
                 name: postingAccountFieldDef.name,
                 type: postingAccountFieldDef.type,
-                options: postingAccountFieldDef.options?.map(opt => ({id: opt.id, text: opt.value.text}))
+                options: postingAccountFieldDef.options?.map(opt => ({ id: opt.id, text: opt.value.text }))
               });
 
               // Find value for this field on the card
@@ -2171,8 +2174,8 @@ app.get("/api/writer/analytics", async (req, res) => {
               video.preview ||
               (video.url
                 ? `https://img.youtube.com/vi/${extractVideoId(
-                    video.url
-                  )}/maxresdefault.jpg`
+                  video.url
+                )}/maxresdefault.jpg`
                 : ""),
             views: video.views_total || 0,
             likes: video.likes_total || 0,
@@ -2572,7 +2575,7 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
         0
       ) /
         retentionRows.length) *
-        100
+      100
     );
     const avgRelRetentionPerf = Math.round(
       (retentionRows.reduce(
@@ -2580,7 +2583,7 @@ async function getBigQueryAudienceRetention(videoId, writerId) {
         0
       ) /
         retentionRows.length) *
-        100
+      100
     );
 
     // 1d) find drop-off points (local minima) & key-moments (your existing isKeyMoment marker)
@@ -3324,8 +3327,8 @@ app.get("/api/video/:id", async (req, res) => {
             influxVideo.preview ||
             (influxVideo.url
               ? `https://img.youtube.com/vi/${extractVideoId(
-                  influxVideo.url
-                )}/maxresdefault.jpg`
+                influxVideo.url
+              )}/maxresdefault.jpg`
               : ""),
           highThumbnail: bigQueryData?.highThumbnail,
           mediumThumbnail: bigQueryData?.mediumThumbnail,
@@ -3341,10 +3344,10 @@ app.get("/api/video/:id", async (req, res) => {
             bigQueryData?.publishDate ||
             (influxVideo.posted_date
               ? new Date(influxVideo.posted_date).toLocaleDateString("en-US", {
-                  year: "numeric",
-                  month: "long",
-                  day: "numeric",
-                })
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })
               : "Unknown Date"),
           posted_date: bigQueryData?.posted_date || influxVideo.posted_date,
           influxData: totalData, // Keep this for reference
@@ -3725,8 +3728,8 @@ app.get("/api/video/:id", async (req, res) => {
           video.preview ||
           (video.url
             ? `https://img.youtube.com/vi/${extractVideoId(
-                video.url
-              )}/maxresdefault.jpg`
+              video.url
+            )}/maxresdefault.jpg`
             : ""),
         highThumbnail: bigQueryData?.highThumbnail,
         mediumThumbnail: bigQueryData?.mediumThumbnail,
@@ -3878,17 +3881,17 @@ async function getVideoLineChartData(
         totalPoints: result.length,
         firstPoint: result[0]
           ? {
-              time: result[0]._time,
-              value: result[0]._value,
-              url: result[0].url,
-            }
+            time: result[0]._time,
+            value: result[0]._value,
+            url: result[0].url,
+          }
           : null,
         lastPoint: result[result.length - 1]
           ? {
-              time: result[result.length - 1]._time,
-              value: result[result.length - 1]._value,
-              url: result[result.length - 1].url,
-            }
+            time: result[result.length - 1]._time,
+            value: result[result.length - 1]._value,
+            url: result[result.length - 1].url,
+          }
           : null,
       });
 
@@ -3935,8 +3938,7 @@ async function getVideoLineChartData(
         `✅ InfluxDB line chart data processed: ${chartData.length} points (sorted chronologically)`
       );
       console.log(
-        `📊 Chart date range: ${chartData[0]?.date} to ${
-          chartData[chartData.length - 1]?.date
+        `📊 Chart date range: ${chartData[0]?.date} to ${chartData[chartData.length - 1]?.date
         }`
       );
       return chartData;
@@ -4007,8 +4009,7 @@ async function getVideoTotalData(url) {
           const value = result[0][field] || result[0]._value || 0;
           totalData[field] = value;
           console.log(
-            `📊 InfluxDB ${field} for ${url}: ${value} (from ${
-              result[0]._value ? "_value" : field
+            `📊 InfluxDB ${field} for ${url}: ${value} (from ${result[0]._value ? "_value" : field
             } field)`
           );
           console.log(`🔍 Full result object:`, result[0]);
@@ -4445,8 +4446,8 @@ app.post("/api/influx/scorecard-data", async (req, res) => {
     const delta =
       previous24hTotal > 0
         ? Math.round(
-            ((latest24hTotal - previous24hTotal) / previous24hTotal) * 100
-          )
+          ((latest24hTotal - previous24hTotal) / previous24hTotal) * 100
+        )
         : null;
 
     // Return data in the required format
@@ -4812,8 +4813,7 @@ async function checkAndResetCounters() {
 
       if (!isSameDay) {
         console.log(
-          `New day detected since last activity. Current: ${currentDateStr}, Last: ${
-            lastActivityEst.toISOString().split("T")[0]
+          `New day detected since last activity. Current: ${currentDateStr}, Last: ${lastActivityEst.toISOString().split("T")[0]
           }`
         );
         shouldReset = true;
@@ -4989,8 +4989,7 @@ async function checkAndResetCounters() {
 
       if (!isSameDay) {
         console.log(
-          `New day detected since last activity. Current: ${currentDateStr}, Last: ${
-            lastActivityEst.toISOString().split("T")[0]
+          `New day detected since last activity. Current: ${currentDateStr}, Last: ${lastActivityEst.toISOString().split("T")[0]
           }`
         );
         shouldReset = true;
