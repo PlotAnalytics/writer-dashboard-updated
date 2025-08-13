@@ -8,28 +8,28 @@ const MotivationalPopup = () => {
   const [open, setOpen] = useState(false);
   const [todaysAffirmation, setTodaysAffirmation] = useState('');
 
-  // Viral-focused motivational affirmations with placeholders for names
+  // Professional viral-focused motivational affirmations
   const affirmations = [
-    "🔥 {name}, today is the day you create the next MEGA VIRAL! Your creativity knows no bounds!",
-    "⚡ {name}, you have the power to captivate millions! Every script you write has viral potential!",
-    "🚀 {name}, your unique voice is exactly what the world needs to see! Let's break the internet today!",
-    "💎 {name}, you're not just a writer - you're a viral content creator! Today's script could change everything!",
-    "🌟 {name}, millions of viewers are waiting for YOUR story! Make today the day they remember forever!",
-    "🎯 {name}, you have the magic touch! Every word you write brings you closer to your next viral hit!",
-    "🔥 {name}, your creativity is unstoppable! Today's the perfect day to create something LEGENDARY!",
-    "⭐ {name}, you're building an empire one viral video at a time! Keep pushing those boundaries!",
-    "🚀 {name}, your scripts don't just tell stories - they create movements! What will you inspire today?",
-    "💫 {name}, you have the Midas touch for viral content! Turn today's ideas into tomorrow's sensations!",
-    "🎬 {name}, you're not just writing scripts - you're crafting the next big cultural moment!",
-    "🔥 {name}, your passion for storytelling is infectious! Channel that energy into today's masterpiece!",
-    "⚡ {name}, every great viral video started with someone like you believing in their vision! Today is YOUR day!",
-    "🌟 {name}, you have the power to make people laugh, cry, and share! Use that superpower today!",
-    "🚀 {name}, your creativity is the secret ingredient to viral success! Mix it up and watch the magic happen!",
-    "💎 {name}, you're not just creating content - you're creating connections with millions! Make them count!",
-    "🔥 {name}, your next script could be the one that breaks all records! Write like the world is watching!",
-    "⭐ {name}, you have the storytelling DNA of viral legends! Let that genius flow through your fingers today!",
-    "🎯 {name}, every viral video needs a visionary writer behind it - that's YOU! Make today extraordinary!",
-    "🚀 {name}, your words have the power to trend worldwide! Write with the confidence of a viral superstar!"
+    "{name}, today is the day you create the next viral sensation. Your creativity knows no bounds.",
+    "{name}, you have the power to captivate millions. Every script you write has viral potential.",
+    "{name}, your unique voice is exactly what the world needs to see. Today you break new ground.",
+    "{name}, you're not just a writer - you're a viral content creator. Today's script could change everything.",
+    "{name}, millions of viewers are waiting for your story. Make today the day they remember forever.",
+    "{name}, you have the magic touch. Every word you write brings you closer to your next viral hit.",
+    "{name}, your creativity is unstoppable. Today is the perfect day to create something legendary.",
+    "{name}, you're building an empire one viral video at a time. Keep pushing those boundaries.",
+    "{name}, your scripts don't just tell stories - they create movements. What will you inspire today?",
+    "{name}, you have the Midas touch for viral content. Turn today's ideas into tomorrow's sensations.",
+    "{name}, you're not just writing scripts - you're crafting the next big cultural moment.",
+    "{name}, your passion for storytelling is infectious. Channel that energy into today's masterpiece.",
+    "{name}, every great viral video started with someone believing in their vision. Today is your day.",
+    "{name}, you have the power to make people laugh, cry, and share. Use that superpower today.",
+    "{name}, your creativity is the secret ingredient to viral success. Mix it up and watch the magic happen.",
+    "{name}, you're not just creating content - you're creating connections with millions. Make them count.",
+    "{name}, your next script could be the one that breaks all records. Write like the world is watching.",
+    "{name}, you have the storytelling DNA of viral legends. Let that genius flow through your fingers today.",
+    "{name}, every viral video needs a visionary writer behind it - that's you. Make today extraordinary.",
+    "{name}, your words have the power to trend worldwide. Write with the confidence of a viral superstar."
   ];
 
   // Check if popup should be shown today
@@ -81,129 +81,138 @@ const MotivationalPopup = () => {
         top: '50%',
         left: '50%',
         transform: 'translate(-50%, -50%)',
-        width: { xs: '90%', sm: 450 },
-        bgcolor: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-        border: '2px solid #fff',
-        borderRadius: '16px',
-        boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
-        p: 4,
+        width: { xs: '90%', sm: 420 },
+        bgcolor: 'white',
+        borderRadius: '24px',
+        boxShadow: '0 25px 50px rgba(0,0,0,0.15)',
+        p: 0,
         outline: 'none',
         overflow: 'hidden'
       }}>
-        {/* Background decoration */}
-        <Box sx={{
-          position: 'absolute',
-          top: -50,
-          right: -50,
-          width: 100,
-          height: 100,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.1)',
-          zIndex: 0
-        }} />
-        
-        <Box sx={{
-          position: 'absolute',
-          bottom: -30,
-          left: -30,
-          width: 80,
-          height: 80,
-          borderRadius: '50%',
-          background: 'rgba(255,255,255,0.1)',
-          zIndex: 0
-        }} />
-
         {/* Close button */}
         <IconButton
           onClick={handleClose}
           sx={{
             position: 'absolute',
-            top: 8,
-            right: 8,
+            top: 16,
+            right: 16,
             color: 'white',
-            zIndex: 2
+            zIndex: 2,
+            bgcolor: 'rgba(255, 255, 255, 0.2)',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            backdropFilter: 'blur(10px)',
+            '&:hover': {
+              bgcolor: 'rgba(255, 255, 255, 0.3)',
+              transform: 'scale(1.1)'
+            },
+            transition: 'all 0.3s ease'
           }}
         >
           <CloseIcon />
         </IconButton>
 
         {/* Content */}
-        <Box sx={{ position: 'relative', zIndex: 1, textAlign: 'center' }}>
-          {/* Icon */}
-          <Box sx={{ mb: 2 }}>
-            <Whatshot sx={{ fontSize: 48, color: '#FFD700', mb: 1 }} />
-            <TrendingUp sx={{ fontSize: 32, color: '#FF6B6B', ml: 1 }} />
-            <Star sx={{ fontSize: 40, color: '#4ECDC4', ml: 1 }} />
-          </Box>
-
-          {/* Title */}
-          <Typography variant="h5" sx={{
-            color: 'white',
-            fontWeight: 'bold',
+        <Box sx={{
+          textAlign: 'center',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          p: 5,
+          position: 'relative'
+        }}>
+          {/* Opening quote */}
+          <Typography sx={{
+            fontSize: '60px',
+            color: 'rgba(255, 255, 255, 0.3)',
+            fontFamily: 'Georgia, serif',
+            lineHeight: 0.5,
             mb: 2,
-            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
+            fontWeight: 'normal'
           }}>
-            Daily Viral Motivation! 🚀
+            "
           </Typography>
 
           {/* Affirmation */}
           <Typography variant="body1" sx={{
             color: 'white',
-            fontSize: '18px',
-            lineHeight: 1.6,
+            fontSize: '20px',
+            lineHeight: 1.5,
             mb: 3,
-            textShadow: '0 1px 2px rgba(0,0,0,0.3)',
-            fontWeight: 500
+            fontWeight: 'bold',
+            maxWidth: '300px',
+            mx: 'auto',
+            textShadow: '0 2px 4px rgba(0,0,0,0.3)'
           }}>
-            {todaysAffirmation}
+            {todaysAffirmation.replace(/🔥|⚡|🚀|💎|🌟|🎯|⭐|💫|🎬|💪/g, '').trim().split('{name}').map((part, index, array) => (
+              index < array.length - 1 ? (
+                <span key={index}>
+                  {part}
+                  <strong>{userName}</strong>
+                </span>
+              ) : part
+            ))}
+          </Typography>
+
+          {/* Closing quote */}
+          <Typography sx={{
+            fontSize: '60px',
+            color: 'rgba(255, 255, 255, 0.3)',
+            fontFamily: 'Georgia, serif',
+            lineHeight: 0.5,
+            mb: 3,
+            fontWeight: 'normal'
+          }}>
+            "
           </Typography>
 
           {/* Action buttons */}
-          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+          <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center', mt: 4 }}>
             <Button
-              variant="contained"
               onClick={handleGetMotivated}
               sx={{
-                bgcolor: '#FF6B6B',
+                bgcolor: 'rgba(255, 255, 255, 0.2)',
                 color: 'white',
-                fontWeight: 'bold',
                 px: 3,
-                py: 1,
+                py: 1.5,
                 borderRadius: '25px',
+                border: '1px solid rgba(255, 255, 255, 0.3)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                 textTransform: 'none',
-                fontSize: '16px',
-                boxShadow: '0 4px 15px rgba(255,107,107,0.4)',
+                fontSize: '14px',
+                fontWeight: 'bold',
+                backdropFilter: 'blur(10px)',
                 '&:hover': {
-                  bgcolor: '#FF5252',
+                  bgcolor: 'rgba(255, 255, 255, 0.3)',
                   transform: 'translateY(-2px)',
-                  boxShadow: '0 6px 20px rgba(255,107,107,0.6)'
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)'
                 },
                 transition: 'all 0.3s ease'
               }}
             >
-              Let's Create Magic! ✨
+              Let's Create Magic ✨
             </Button>
-            
+
             <Button
-              variant="outlined"
               onClick={handleClose}
               sx={{
-                color: 'white',
-                borderColor: 'white',
-                fontWeight: 'bold',
+                bgcolor: 'rgba(255, 255, 255, 0.1)',
+                color: 'rgba(255, 255, 255, 0.8)',
                 px: 3,
-                py: 1,
+                py: 1.5,
                 borderRadius: '25px',
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                boxShadow: '0 4px 12px rgba(0,0,0,0.2)',
                 textTransform: 'none',
-                fontSize: '16px',
+                fontSize: '14px',
+                fontWeight: '500',
+                backdropFilter: 'blur(10px)',
                 '&:hover': {
-                  bgcolor: 'rgba(255,255,255,0.1)',
-                  borderColor: 'white'
-                }
+                  bgcolor: 'rgba(255, 255, 255, 0.2)',
+                  transform: 'translateY(-2px)',
+                  boxShadow: '0 6px 16px rgba(0,0,0,0.3)'
+                },
+                transition: 'all 0.3s ease'
               }}
             >
-              Maybe Later
+              Maybe Later 😔
             </Button>
           </Box>
         </Box>
