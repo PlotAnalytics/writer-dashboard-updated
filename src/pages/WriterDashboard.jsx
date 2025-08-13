@@ -22,6 +22,7 @@ import {
   faSort,
   faPlayCircle,
 } from "@fortawesome/free-solid-svg-icons";
+import MotivationalPopup from "../components/MotivationalPopup";
 
 
 const WriterDashboard = () => {
@@ -303,6 +304,7 @@ const WriterDashboard = () => {
 
   return (
     <div className="dashboard">
+      <MotivationalPopup />
       <div style={{ marginTop: "30px" }}>
         <Container>
           {writer && (

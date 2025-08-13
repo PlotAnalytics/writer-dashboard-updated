@@ -11,6 +11,7 @@ import {
 } from '@mui/material';
 import Layout from '../components/Layout.jsx';
 import PreviousSubmissions from '../components/PreviousSubmissions.jsx';
+import MotivationalPopup from '../components/MotivationalPopup.jsx';
 
 import { useAuth } from '../contexts/AuthContext.jsx';
 import useSocket from '../hooks/useSocket.js';
@@ -530,6 +531,7 @@ const Dashboard = () => {
 
   return (
     <Layout>
+      <MotivationalPopup />
       <Box sx={{
         minHeight: '100vh',
         background: 'transparent',
