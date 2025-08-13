@@ -563,11 +563,7 @@ app.post("/api/scripts", async (req, res) => {
     }
 
     // Determine Trello list ID and status
-    // const storyContinuationID = "6801db782202edad6322e7f5";
-    // const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
-
-    // Hotwire fix to route all submission to Writer Submissions (QA) list in trello.
-    const storyContinuationID = listId;
+    const storyContinuationID = "6801db782202edad6322e7f5";
     const autoApprovedListID = listId;
 
     // Check if title contains "STL" keyword
@@ -579,7 +575,7 @@ app.post("/api/scripts", async (req, res) => {
     if (isStoryLine) {
       // If it's a story line (contains STL), use story continuation list and status
       targetListId = storyContinuationID;
-      trelloStatus = "Story Continuation";
+      trelloStatus = "STL Writer Submissions (QA)";
     } else {
       // If it's not a story line, apply the skipQA logic
       targetListId = skipQA ? autoApprovedListID : listId;
