@@ -563,7 +563,7 @@ app.post("/api/scripts", async (req, res) => {
     }
 
     // Determine Trello list ID and status
-    const storyContinuationID = "6801db782202edad6322e7f5";
+    const storyContinuationID = "6898270f55dc602c1b578c98";
     const autoApprovedListID = listId;
 
     // Check if title contains "STL" keyword
