@@ -873,24 +873,25 @@ const Dashboard = () => {
 
                 {/* Structure Selection - Hidden for intern writers */}
                 {!['quinn', 'kayla', 'gianmarco'].includes(user?.username?.toLowerCase()) && (
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="body2" sx={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      mb: 1.2,
-                      fontWeight: '700',
-                      fontSize: '13px'
-                    }}>
-                      Structure <span style={{ color: '#ff4444' }}>*</span>
-                    </Typography>
-                    <FormControl size="medium" fullWidth>
-                      <Select
-                        value={selectedStructure}
-                        onChange={(e) => {
-                          setSelectedStructure(e.target.value);
-                          if (e.target.value !== "No Structure") {
-                            setStructureExplanation("");
-                          }
-                        }}
+                  <>
+                    <Box sx={{ mb: 2.5 }}>
+                      <Typography variant="body2" sx={{
+                        color: 'rgba(255, 255, 255, 0.8)',
+                        mb: 1.2,
+                        fontWeight: '700',
+                        fontSize: '13px'
+                      }}>
+                        Structure <span style={{ color: '#ff4444' }}>*</span>
+                      </Typography>
+                      <FormControl size="medium" fullWidth>
+                        <Select
+                          value={selectedStructure}
+                          onChange={(e) => {
+                            setSelectedStructure(e.target.value);
+                            if (e.target.value !== "No Structure") {
+                              setStructureExplanation("");
+                            }
+                          }}
                       displayEmpty
                       MenuProps={{
                         PaperProps: {
@@ -1002,6 +1003,7 @@ const Dashboard = () => {
                     </Box>
                   </Box>
                 )}
+                  </>
                 )}
 
                 {/* Modern Type Section */}
