@@ -37,7 +37,6 @@ export const ProtectedRoute = ({ children }) => {
     const allowedMasterEditorPaths = [
       "/master-editor",
       "/writer-settings",
-      "/admin-settings",
       "/settings",
     ];
     const isAllowed = allowedMasterEditorPaths.some((p) =>

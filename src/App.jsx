@@ -19,7 +19,6 @@ import Settings from "./pages/Settings.jsx";
 import RetentionMaster from "./pages/RetentionMaster.jsx";
 import MasterEditor from "./pages/MasterEditor.jsx";
 import WriterSettings from "./pages/WriterSettings.jsx";
-import AdminSettings from "./pages/AdminSettings.jsx";
 
 import "./styles/mobile-responsive.css";
 import "./styles/mobile-fixes.css";
@@ -206,14 +205,6 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <WriterSettings />
-                  </ProtectedRoute>
-                }
-              />
-              <Route
-                path="/admin-settings"
-                element={
-                  <ProtectedRoute>
-                    <AdminSettings />
                   </ProtectedRoute>
                 }
               />
