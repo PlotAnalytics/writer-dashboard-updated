@@ -440,35 +440,36 @@ const MasterEditor = () => {
           </Button>
         </Box>
 
-        <TableContainer>
-          <Table>
+        <TableContainer sx={{ overflowX: 'auto' }}>
+          <Table sx={{ minWidth: '100%', tableLayout: 'fixed' }}>
             <TableHead>
               <TableRow sx={{ borderBottom: '1px solid #333' }}>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>ID</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Title</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '50px' }}>ID</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '200px' }}>Title</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '90px' }}>
                   <TableSortLabel
                     active={true}
                     direction={sortOrder}
                     onClick={handleSortToggle}
                     sx={{
                       color: '#888 !important',
+                      fontSize: '0.75rem',
                       '&:hover': { color: 'white !important' },
                       '& .MuiTableSortLabel-icon': {
                         color: '#667eea !important'
                       }
                     }}
                   >
-                    Created At
+                    Date
                   </TableSortLabel>
                 </TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Writer Name</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Current Type</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>New Type</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Current Structure</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>New Structure</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Action</TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold' }}>Status</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '100px' }}>Writer</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '80px' }}>Curr Type</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '100px' }}>New Type</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '80px' }}>Curr Struct</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '120px' }}>New Struct</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '70px' }}>Action</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, fontWeight: 'bold', width: '80px' }}>Status</TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
@@ -483,42 +484,51 @@ const MasterEditor = () => {
                     }
                   }}
                 >
-                  <TableCell sx={{ border: 'none', py: 2, color: 'white' }}>{script.id}</TableCell>
-                  <TableCell sx={{ border: 'none', py: 2, maxWidth: 400 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5, color: 'white', fontSize: '0.75rem' }}>{script.id}</TableCell>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'white',
                       overflow: 'hidden',
                       textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap'
+                      whiteSpace: 'nowrap',
+                      fontSize: '0.75rem',
+                      lineHeight: 1.2
                     }}>
                       {script.title}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'white' }}>
-                      {script.created_at ? new Date(script.created_at).toLocaleDateString() : 'N/A'}
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
+                    <Typography variant="body2" sx={{ color: 'white', fontSize: '0.7rem' }}>
+                      {script.created_at ? new Date(script.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : 'N/A'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'white' }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'white',
+                      fontSize: '0.75rem',
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap'
+                    }}>
                       {script.writer_name || 'Unknown'}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
                     <Typography variant="body2" sx={{
                       color: '#667eea',
                       fontWeight: 500,
                       background: 'rgba(102, 126, 234, 0.1)',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: '6px',
-                      display: 'inline-block'
+                      px: 0.5,
+                      py: 0.25,
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                      fontSize: '0.7rem'
                     }}>
                       {extractCurrentType(script.title)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <FormControl size="small" sx={{ minWidth: 120 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
+                    <FormControl size="small" sx={{ minWidth: 90, width: '100%' }}>
                       <Select
                         value={selectedTypes[script.id] || ''}
                         onChange={(e) => handleTypeChange(script.id, e.target.value)}
@@ -527,7 +537,8 @@ const MasterEditor = () => {
                           background: 'rgba(255, 255, 255, 0.04)',
                           backdropFilter: 'blur(5px)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '8px',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
                           '& .MuiOutlinedInput-notchedOutline': {
                             border: 'none'
                           },
@@ -538,28 +549,29 @@ const MasterEditor = () => {
                         }}
                       >
                         {typeOptions.map(type => (
-                          <MenuItem key={type} value={type}>
+                          <MenuItem key={type} value={type} sx={{ fontSize: '0.75rem' }}>
                             {type}
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
                     <Typography variant="body2" sx={{
                       color: '#764ba2',
                       fontWeight: 500,
                       background: 'rgba(118, 75, 162, 0.1)',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: '6px',
-                      display: 'inline-block'
+                      px: 0.5,
+                      py: 0.25,
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                      fontSize: '0.7rem'
                     }}>
-                      {extractCurrentStructure(script.title)}
+                      {extractCurrentStructure(script.title).replace('Looked Down Upon', 'LDU').replace('Payback Revenge', 'Payback')}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <FormControl size="small" sx={{ minWidth: 140 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
+                    <FormControl size="small" sx={{ minWidth: 110, width: '100%' }}>
                       <Select
                         value={selectedStructures[script.id] || ''}
                         onChange={(e) => handleStructureChange(script.id, e.target.value)}
@@ -568,7 +580,8 @@ const MasterEditor = () => {
                           background: 'rgba(255, 255, 255, 0.04)',
                           backdropFilter: 'blur(5px)',
                           border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '8px',
+                          borderRadius: '6px',
+                          fontSize: '0.75rem',
                           '& .MuiOutlinedInput-notchedOutline': {
                             border: 'none'
                           },
@@ -579,14 +592,14 @@ const MasterEditor = () => {
                         }}
                       >
                         {structureOptions.map(structure => (
-                          <MenuItem key={structure} value={structure}>
-                            {structure}
+                          <MenuItem key={structure} value={structure} sx={{ fontSize: '0.75rem' }}>
+                            {structure.replace('Looked Down Upon', 'LDU').replace('Payback Revenge', 'Payback')}
                           </MenuItem>
                         ))}
                       </Select>
                     </FormControl>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
                     <Button
                       variant="contained"
                       size="small"
@@ -601,8 +614,12 @@ const MasterEditor = () => {
                       sx={{
                         background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                         color: 'white',
-                        borderRadius: '8px',
+                        borderRadius: '6px',
                         textTransform: 'none',
+                        fontSize: '0.7rem',
+                        minWidth: '50px',
+                        px: 1,
+                        py: 0.5,
                         '&:hover': {
                           background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
                           transform: 'translateY(-1px)',
@@ -616,21 +633,22 @@ const MasterEditor = () => {
                       }}
                     >
                       {editingScript === script.id ? (
-                        <CircularProgress size={16} color="inherit" />
+                        <CircularProgress size={12} color="inherit" />
                       ) : (
                         'Edit'
                       )}
                     </Button>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 1.5 }}>
                     <Typography variant="body2" sx={{
                       color: script.approval_status === 'Posted' ? '#4caf50' : '#888',
                       fontWeight: 500,
                       background: script.approval_status === 'Posted' ? 'rgba(76, 175, 80, 0.1)' : 'rgba(136, 136, 136, 0.1)',
-                      px: 1,
-                      py: 0.5,
-                      borderRadius: '6px',
-                      display: 'inline-block'
+                      px: 0.5,
+                      py: 0.25,
+                      borderRadius: '4px',
+                      display: 'inline-block',
+                      fontSize: '0.7rem'
                     }}>
                       {script.approval_status}
                     </Typography>
