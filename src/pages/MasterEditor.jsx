@@ -20,17 +20,43 @@ import {
   IconButton,
   Chip,
   Stack,
-  TableSortLabel
+  TableSortLabel,
+  Modal,
+  Backdrop,
+  Fade,
+  keyframes
 } from '@mui/material';
 import {
   LogoutOutlined,
   FilterList as FilterIcon,
-  Clear as ClearIcon
+  Clear as ClearIcon,
+  DeleteSweep as CacheIcon
 } from '@mui/icons-material';
 import axios from 'axios';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
+
+// Keyframes for wave animation
+const waveAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(2.5);
+    opacity: 0;
+  }
+`;
+
+const pulseAnimation = keyframes`
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+`;
 
 const MasterEditor = () => {
   const [scripts, setScripts] = useState([]);
@@ -43,6 +69,9 @@ const MasterEditor = () => {
   const [writerFilter, setWriterFilter] = useState('');
   const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
   const [availableWriters, setAvailableWriters] = useState([]);
+  const [cacheModalOpen, setCacheModalOpen] = useState(false);
+  const [cacheClearing, setCacheClearing] = useState(false);
+  const [cacheCleared, setCacheCleared] = useState(false);
 
   const { logout, user } = useAuth();
   const navigate = useNavigate();
@@ -195,6 +224,27 @@ const MasterEditor = () => {
     navigate('/login');
   };
 
+  const handleClearCache = async () => {
+    try {
+      setCacheClearing(true);
+      const response = await axios.post('/api/clear-cache');
+
+      if (response.data.success) {
+        setCacheCleared(true);
+        // Reset after 3 seconds
+        setTimeout(() => {
+          setCacheCleared(false);
+          setCacheModalOpen(false);
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Error clearing cache:', error);
+      setError('Failed to clear cache');
+    } finally {
+      setCacheClearing(false);
+    }
+  };
+
   const extractCurrentType = (title) => {
     if (!title || typeof title !== 'string') return 'Unknown';
     const match = title.match(/\[(Original|Remix|Re-write|STL)\]/);
@@ -250,27 +300,50 @@ const MasterEditor = () => {
             }}>
               Script Type Editor
             </Typography>
-            <Button
-              variant="outlined"
-              onClick={handleLogout}
-              startIcon={<LogoutOutlined />}
-              sx={{
-                color: 'white',
-                borderColor: 'rgba(255, 255, 255, 0.3)',
-                background: 'rgba(255, 255, 255, 0.04)',
-                backdropFilter: 'blur(5px)',
-                borderRadius: '12px',
-                textTransform: 'none',
-                '&:hover': {
-                  borderColor: 'rgba(102, 126, 234, 0.5)',
-                  background: 'rgba(102, 126, 234, 0.1)',
-                  transform: 'translateY(-1px)',
-                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
-                }
-              }}
-            >
-              Logout
-            </Button>
+            <Box sx={{ display: 'flex', gap: 2 }}>
+              <Button
+                variant="outlined"
+                onClick={() => setCacheModalOpen(true)}
+                startIcon={<CacheIcon />}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  backdropFilter: 'blur(5px)',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: 'rgba(255, 87, 34, 0.5)',
+                    background: 'rgba(255, 87, 34, 0.1)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(255, 87, 34, 0.15)',
+                  }
+                }}
+              >
+                Cache Manager
+              </Button>
+              <Button
+                variant="outlined"
+                onClick={handleLogout}
+                startIcon={<LogoutOutlined />}
+                sx={{
+                  color: 'white',
+                  borderColor: 'rgba(255, 255, 255, 0.3)',
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  backdropFilter: 'blur(5px)',
+                  borderRadius: '12px',
+                  textTransform: 'none',
+                  '&:hover': {
+                    borderColor: 'rgba(102, 126, 234, 0.5)',
+                    background: 'rgba(102, 126, 234, 0.1)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                  }
+                }}
+              >
+                Logout
+              </Button>
+            </Box>
           </Box>
         </Box>
 
@@ -596,6 +669,162 @@ const MasterEditor = () => {
           </Typography>
         )}
         </Box>
+
+        {/* Cache Management Modal */}
+        <Modal
+          open={cacheModalOpen}
+          onClose={() => !cacheClearing && setCacheModalOpen(false)}
+          closeAfterTransition
+          BackdropComponent={Backdrop}
+          BackdropProps={{
+            timeout: 500,
+            sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+          }}
+        >
+          <Fade in={cacheModalOpen}>
+            <Box sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: { xs: '90%', sm: 500 },
+              bgcolor: 'rgba(26, 26, 46, 0.95)',
+              backdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '20px',
+              boxShadow: '0 25px 50px rgba(0,0,0,0.5)',
+              p: 6,
+              outline: 'none',
+              textAlign: 'center'
+            }}>
+              <Typography variant="h4" sx={{
+                color: 'white',
+                fontWeight: 700,
+                mb: 2,
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                backgroundClip: 'text',
+                WebkitBackgroundClip: 'text',
+                WebkitTextFillColor: 'transparent',
+              }}>
+                Cache Management
+              </Typography>
+
+              <Typography variant="body1" sx={{
+                color: 'rgba(255, 255, 255, 0.7)',
+                mb: 4,
+                lineHeight: 1.6
+              }}>
+                Clear all Redis cache data to ensure fresh analytics and content loading.
+                This action will remove all cached data from the system.
+              </Typography>
+
+              {/* Animated Clear Cache Button */}
+              <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                {/* Wave animations */}
+                {!cacheCleared && !cacheClearing && (
+                  <>
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(244, 67, 54, 0.3)',
+                      animation: `${waveAnimation} 2s infinite`,
+                      animationDelay: '0s'
+                    }} />
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(244, 67, 54, 0.2)',
+                      animation: `${waveAnimation} 2s infinite`,
+                      animationDelay: '0.5s'
+                    }} />
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      width: '100px',
+                      height: '100px',
+                      borderRadius: '50%',
+                      border: '2px solid rgba(244, 67, 54, 0.1)',
+                      animation: `${waveAnimation} 2s infinite`,
+                      animationDelay: '1s'
+                    }} />
+                  </>
+                )}
+
+                <Button
+                  variant="contained"
+                  onClick={handleClearCache}
+                  disabled={cacheClearing}
+                  sx={{
+                    position: 'relative',
+                    zIndex: 1,
+                    width: '200px',
+                    height: '60px',
+                    borderRadius: '30px',
+                    fontSize: '16px',
+                    fontWeight: 'bold',
+                    textTransform: 'none',
+                    background: cacheCleared
+                      ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                      : 'linear-gradient(135deg, #f44336 0%, #d32f2f 100%)',
+                    color: 'white',
+                    boxShadow: cacheCleared
+                      ? '0 8px 25px rgba(76, 175, 80, 0.4)'
+                      : '0 8px 25px rgba(244, 67, 54, 0.4)',
+                    animation: !cacheCleared && !cacheClearing ? `${pulseAnimation} 1.5s infinite` : 'none',
+                    '&:hover': {
+                      background: cacheCleared
+                        ? 'linear-gradient(135deg, #4CAF50 0%, #45a049 100%)'
+                        : 'linear-gradient(135deg, #e53935 0%, #c62828 100%)',
+                      transform: cacheCleared ? 'none' : 'translateY(-2px)',
+                      boxShadow: cacheCleared
+                        ? '0 8px 25px rgba(76, 175, 80, 0.4)'
+                        : '0 12px 30px rgba(244, 67, 54, 0.6)',
+                    },
+                    '&:disabled': {
+                      background: 'linear-gradient(135deg, #666 0%, #555 100%)',
+                      color: 'rgba(255, 255, 255, 0.5)',
+                      boxShadow: 'none',
+                      animation: 'none'
+                    }
+                  }}
+                >
+                  {cacheClearing ? (
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                      <CircularProgress size={20} color="inherit" />
+                      Clearing...
+                    </Box>
+                  ) : cacheCleared ? (
+                    '✅ Cache Cleared!'
+                  ) : (
+                    '🗑️ Clear Cache'
+                  )}
+                </Button>
+              </Box>
+
+              {cacheCleared && (
+                <Typography variant="body2" sx={{
+                  color: '#4CAF50',
+                  mt: 2,
+                  fontWeight: 500
+                }}>
+                  Redis cache has been successfully cleared!
+                </Typography>
+              )}
+            </Box>
+          </Fade>
+        </Modal>
       </Box>
     </Layout>
   );
