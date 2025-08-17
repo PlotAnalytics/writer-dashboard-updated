@@ -3029,11 +3029,38 @@ async function handleAnalyticsRequest(req, res) {
           customDateRange: customStartDate && customEndDate ? `${customStartDate} to ${customEndDate}` : null
         });
 
-        // Cache the response data using actual dates
+        // Cache the response data using actual dates with custom TTL
         if (redisService && redisService.isAvailable()) {
           const cacheKey = `analytics:overview:v9:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
-          await redisService.set(cacheKey, analyticsData, 43200); // Cache for 12 hours
-          console.log('✅ Cached analytics overview data with video performance breakdown:', {
+
+          // Calculate TTL to expire at 10:36:46 AM UTC+5:30 (6 minutes after 10:30:46 AM)
+          const calculateCustomTTL = () => {
+            const now = new Date();
+            const istOffset = 5.5 * 60 * 60 * 1000; // UTC+5:30 in milliseconds
+            const nowIST = new Date(now.getTime() + istOffset);
+
+            // Target time: 10:36:46 AM IST (6 minutes after 10:30:46 AM)
+            const targetTime = new Date(nowIST);
+            targetTime.setHours(10, 36, 46, 0);
+
+            // If target time has passed today, set for tomorrow
+            if (nowIST >= targetTime) {
+              targetTime.setDate(targetTime.getDate() + 1);
+            }
+
+            // Calculate seconds until target time
+            const ttlMs = targetTime.getTime() - nowIST.getTime();
+            const ttlSeconds = Math.floor(ttlMs / 1000);
+
+            console.log(`🕐 Cache will expire at: ${targetTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })} IST`);
+            console.log(`⏱️ TTL set to: ${ttlSeconds} seconds (${Math.floor(ttlSeconds / 3600)}h ${Math.floor((ttlSeconds % 3600) / 60)}m)`);
+
+            return Math.max(ttlSeconds, 60); // Minimum 1 minute TTL
+          };
+
+          const customTTL = calculateCustomTTL();
+          await redisService.set(cacheKey, analyticsData, customTTL);
+          console.log('✅ Cached analytics overview data with custom daily expiration:', {
             megaVirals: analyticsData.megaViralsCount,
             virals: analyticsData.viralsCount,
             almostVirals: analyticsData.almostViralsCount,
