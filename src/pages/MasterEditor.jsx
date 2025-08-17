@@ -67,6 +67,8 @@ const MasterEditor = () => {
   const [scripts, setScripts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [scriptsLoading, setScriptsLoading] = useState(false);
+  const [postingAccountsLoading, setPostingAccountsLoading] = useState(false);
+  const [writersLoading, setWritersLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [editingScript, setEditingScript] = useState(null);
@@ -239,11 +241,8 @@ const MasterEditor = () => {
     const init = async () => {
       try {
         setLoading(true);
-        // Only fetch posting accounts and writer settings initially
-        // Scripts will be fetched when Script Editor tab is selected
+        // Only suggest IDs initially, data will be loaded per tab
         await Promise.all([
-          fetchPostingAccounts(),
-          fetchWriterSettings(),
           suggestNextPostingAccountId(),
           suggestNextWriterSettingId(),
         ]);
@@ -440,12 +439,40 @@ const MasterEditor = () => {
     navigate("/login");
   };
 
-  // Admin handler functions
-  const handleTabChange = async (event, newValue) => {
-    setCurrentTab(newValue);
+  // Track which tabs have been loaded to avoid unnecessary reloads
+  const [loadedTabs, setLoadedTabs] = useState(new Set());
 
-    // Fetch scripts only when Script Editor tab (index 2) is selected
-    if (newValue === 2 && scripts.length === 0) {
+  // Load data for the initial tab (Posting Accounts) when component mounts
+  useEffect(() => {
+    if (!loading && currentTab === 0 && !loadedTabs.has(0)) {
+      // Use setTimeout to avoid blocking the initial render
+      setTimeout(() => {
+        loadTabData(0);
+      }, 100); // Slightly longer delay for initial load
+    }
+  }, [loading]);
+
+  // Function to refresh data for a specific tab
+  const refreshTabData = async (tabIndex) => {
+    if (tabIndex === 0 && !postingAccountsLoading) {
+      try {
+        setPostingAccountsLoading(true);
+        await fetchPostingAccounts();
+      } catch (e) {
+        setError(e?.response?.data?.error || e.message);
+      } finally {
+        setPostingAccountsLoading(false);
+      }
+    } else if (tabIndex === 1 && !writersLoading) {
+      try {
+        setWritersLoading(true);
+        await fetchWriterSettings();
+      } catch (e) {
+        setError(e?.response?.data?.error || e.message);
+      } finally {
+        setWritersLoading(false);
+      }
+    } else if (tabIndex === 2 && !scriptsLoading) {
       try {
         setScriptsLoading(true);
         await fetchScripts();
@@ -454,6 +481,69 @@ const MasterEditor = () => {
       } finally {
         setScriptsLoading(false);
       }
+    }
+  };
+
+  // Admin handler functions
+  const handleTabChange = (event, newValue) => {
+    // ONLY switch tabs - absolutely nothing else
+    setCurrentTab(newValue);
+  };
+
+  // Separate useEffect to handle data loading after tab changes
+  useEffect(() => {
+    // Only trigger if we haven't loaded this tab yet
+    if (!loadedTabs.has(currentTab)) {
+      // Use setTimeout to completely decouple from the tab change
+      const timeoutId = setTimeout(() => {
+        loadTabData(currentTab);
+      }, 100); // Longer delay to ensure smooth transition
+
+      return () => clearTimeout(timeoutId);
+    }
+  }, [currentTab]); // Only depend on currentTab
+
+  // Separate function to load data for a specific tab
+  const loadTabData = (tabIndex) => {
+    if (tabIndex === 0 && !postingAccountsLoading && !loadedTabs.has(0)) {
+      const loadPostingAccounts = async () => {
+        try {
+          setPostingAccountsLoading(true);
+          await fetchPostingAccounts();
+          setLoadedTabs((prev) => new Set([...prev, 0]));
+        } catch (e) {
+          setError(e?.response?.data?.error || e.message);
+        } finally {
+          setPostingAccountsLoading(false);
+        }
+      };
+      loadPostingAccounts();
+    } else if (tabIndex === 1 && !writersLoading && !loadedTabs.has(1)) {
+      const loadWriterSettings = async () => {
+        try {
+          setWritersLoading(true);
+          await fetchWriterSettings();
+          setLoadedTabs((prev) => new Set([...prev, 1]));
+        } catch (e) {
+          setError(e?.response?.data?.error || e.message);
+        } finally {
+          setWritersLoading(false);
+        }
+      };
+      loadWriterSettings();
+    } else if (tabIndex === 2 && !scriptsLoading && !loadedTabs.has(2)) {
+      const loadScripts = async () => {
+        try {
+          setScriptsLoading(true);
+          await fetchScripts();
+          setLoadedTabs((prev) => new Set([...prev, 2]));
+        } catch (e) {
+          setError(e?.response?.data?.error || e.message);
+        } finally {
+          setScriptsLoading(false);
+        }
+      };
+      loadScripts();
     }
   };
 
@@ -826,392 +916,462 @@ const MasterEditor = () => {
               }}
             >
               <CardContent>
-                <Typography variant="h6" sx={{ color: "white", mb: 2 }}>
-                  Posting Accounts
-                </Typography>
-
-                {/* Toolbar and Filters */}
                 <Box
                   sx={{
                     display: "flex",
-                    gap: 1,
+                    justifyContent: "space-between",
                     alignItems: "center",
                     mb: 2,
-                    flexWrap: "wrap",
                   }}
                 >
-                  <TextField
-                    size="small"
-                    placeholder="Search account"
-                    value={postFilter.search}
-                    onChange={(e) =>
-                      setPostFilter((prev) => ({
-                        ...prev,
-                        search: e.target.value,
-                      }))
-                    }
-                    InputProps={{
-                      startAdornment: <SearchIcon fontSize="small" />,
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        color: "white",
-                        "& fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "#667eea",
-                        },
-                      },
-                      "& .MuiInputLabel-root": {
-                        color: "rgba(255, 255, 255, 0.7)",
-                      },
-                    }}
-                  />
-                  <FormControl size="small" sx={{ minWidth: 160 }}>
-                    <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
-                      Platform
-                    </InputLabel>
-                    <Select
-                      label="Platform"
-                      value={postFilter.platform}
-                      onChange={(e) =>
-                        setPostFilter((prev) => ({
-                          ...prev,
-                          platform: e.target.value,
-                        }))
-                      }
-                      sx={{
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "#667eea",
-                        },
-                      }}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      {PLATFORM_OPTIONS.map((p) => (
-                        <MenuItem key={p} value={p}>
-                          {p}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 160 }}>
-                    <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
-                      Status
-                    </InputLabel>
-                    <Select
-                      label="Status"
-                      value={postFilter.status}
-                      onChange={(e) =>
-                        setPostFilter((prev) => ({
-                          ...prev,
-                          status: e.target.value,
-                        }))
-                      }
-                      sx={{
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "#667eea",
-                        },
-                      }}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      {STATUS_OPTIONS.map((s) => (
-                        <MenuItem key={s} value={s}>
-                          {s}
-                        </MenuItem>
-                      ))}
-                    </Select>
-                  </FormControl>
+                  <Typography variant="h6" sx={{ color: "white" }}>
+                    Posting Accounts
+                  </Typography>
                   <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={async () => {
-                      await suggestNextPostingAccountId();
-                      setPostModalMode("create");
-                      setPostEdit({ ...newPostAcct });
-                      setPostModalOpen(true);
-                    }}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => refreshTabData(0)}
+                    disabled={postingAccountsLoading}
                     sx={{
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white",
-                      borderRadius: "8px",
-                      textTransform: "none",
+                      borderColor: "rgba(255,255,255,0.3)",
                       "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)",
-                        transform: "translateY(-1px)",
-                        boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                        borderColor: "#667eea",
+                        backgroundColor: "rgba(102, 126, 234, 0.1)",
                       },
                     }}
                   >
-                    Add Account
+                    {postingAccountsLoading ? "Refreshing..." : "Refresh"}
                   </Button>
                 </Box>
 
-                {/* Table */}
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "8%",
-                          }}
-                        >
-                          ID
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "20%",
-                          }}
-                        >
-                          Account
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "15%",
-                          }}
-                        >
+                {postingAccountsLoading ||
+                (!loadedTabs.has(0) && postingAccounts.length === 0) ? (
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="center"
+                    alignItems="center"
+                    minHeight="200px"
+                    sx={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <CircularProgress
+                      size={40}
+                      sx={{
+                        color: "#667eea",
+                        mb: 2,
+                      }}
+                    />
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: "white",
+                        mb: 1,
+                      }}
+                    >
+                      Loading Posting Accounts
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "rgba(255,255,255,0.7)",
+                      }}
+                    >
+                      Please wait...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Toolbar and Filters */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        mb: 2,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <TextField
+                        size="small"
+                        placeholder="Search account"
+                        value={postFilter.search}
+                        onChange={(e) =>
+                          setPostFilter((prev) => ({
+                            ...prev,
+                            search: e.target.value,
+                          }))
+                        }
+                        InputProps={{
+                          startAdornment: <SearchIcon fontSize="small" />,
+                        }}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            color: "white",
+                            "& fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "#667eea",
+                            },
+                          },
+                          "& .MuiInputLabel-root": {
+                            color: "rgba(255, 255, 255, 0.7)",
+                          },
+                        }}
+                      />
+                      <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
                           Platform
-                        </TableCell>
-                        <TableCell
+                        </InputLabel>
+                        <Select
+                          label="Platform"
+                          value={postFilter.platform}
+                          onChange={(e) =>
+                            setPostFilter((prev) => ({
+                              ...prev,
+                              platform: e.target.value,
+                            }))
+                          }
                           sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "12%",
+                            color: "white",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#667eea",
+                            },
                           }}
                         >
+                          <MenuItem value="">All</MenuItem>
+                          {PLATFORM_OPTIONS.map((p) => (
+                            <MenuItem key={p} value={p}>
+                              {p}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 160 }}>
+                        <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
                           Status
-                        </TableCell>
-                        <TableCell
+                        </InputLabel>
+                        <Select
+                          label="Status"
+                          value={postFilter.status}
+                          onChange={(e) =>
+                            setPostFilter((prev) => ({
+                              ...prev,
+                              status: e.target.value,
+                            }))
+                          }
                           sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "12%",
+                            color: "white",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#667eea",
+                            },
                           }}
                         >
-                          Daily Used
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "12%",
-                          }}
-                        >
-                          Daily Limit
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "21%",
-                          }}
-                          align="right"
-                        >
-                          Actions
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {postingAccounts
-                        .filter(
-                          (a) =>
-                            !postFilter.search ||
-                            a.account
-                              ?.toLowerCase()
-                              .includes(postFilter.search.toLowerCase())
-                        )
-                        .filter(
-                          (a) =>
-                            !postFilter.platform ||
-                            a.platform === postFilter.platform
-                        )
-                        .filter(
-                          (a) =>
-                            !postFilter.status || a.status === postFilter.status
-                        )
-                        .map((acct) => (
-                          <TableRow
-                            key={acct.id}
-                            hover
-                            sx={{
-                              borderBottom:
-                                "1px solid rgba(255, 255, 255, 0.05)",
-                              "&:hover": {
-                                backgroundColor: "rgba(102, 126, 234, 0.05)",
-                                borderColor: "rgba(102, 126, 234, 0.1)",
-                              },
-                            }}
-                          >
+                          <MenuItem value="">All</MenuItem>
+                          {STATUS_OPTIONS.map((s) => (
+                            <MenuItem key={s} value={s}>
+                              {s}
+                            </MenuItem>
+                          ))}
+                        </Select>
+                      </FormControl>
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={async () => {
+                          await suggestNextPostingAccountId();
+                          setPostModalMode("create");
+                          setPostEdit({ ...newPostAcct });
+                          setPostModalOpen(true);
+                        }}
+                        sx={{
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          color: "white",
+                          borderRadius: "8px",
+                          textTransform: "none",
+                          "&:hover": {
+                            background:
+                              "linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                          },
+                        }}
+                      >
+                        Add Account
+                      </Button>
+                    </Box>
+
+                    {/* Table */}
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "8%",
-                                maxWidth: "8%",
                               }}
                             >
-                              {acct.id}
+                              ID
                             </TableCell>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "20%",
-                                maxWidth: "20%",
-                                overflow: "hidden",
-                                textOverflow: "ellipsis",
-                                whiteSpace: "nowrap",
                               }}
-                              title={acct.account}
                             >
-                              {acct.account}
+                              Account
                             </TableCell>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "15%",
-                                maxWidth: "15%",
                               }}
                             >
-                              {acct.platform}
+                              Platform
                             </TableCell>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "12%",
-                                maxWidth: "12%",
                               }}
                             >
-                              {acct.status}
+                              Status
                             </TableCell>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "12%",
-                                maxWidth: "12%",
                               }}
                             >
-                              {acct.daily_used}
+                              Daily Used
                             </TableCell>
                             <TableCell
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
-                                color: "white",
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "12%",
-                                maxWidth: "12%",
                               }}
                             >
-                              {acct.daily_limit}
+                              Daily Limit
                             </TableCell>
                             <TableCell
-                              align="right"
                               sx={{
+                                color: "#888",
                                 border: "none",
-                                py: 2,
+                                py: 1,
+                                fontWeight: "bold",
                                 width: "21%",
-                                maxWidth: "21%",
                               }}
+                              align="right"
                             >
-                              <Tooltip title="Edit">
-                                <IconButton
-                                  size="small"
-                                  sx={{ color: "white" }}
-                                  onClick={() => {
-                                    setPostModalMode("edit");
-                                    setPostEdit({ ...acct });
-                                    setPostModalOpen(true);
-                                  }}
-                                >
-                                  <EditIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete">
-                                <IconButton
-                                  size="small"
-                                  color="error"
-                                  onClick={async () => {
-                                    if (
-                                      confirm(
-                                        `Delete posting account ${acct.account} (ID ${acct.id})?`
-                                      )
-                                    ) {
-                                      await axios.delete(
-                                        `/api/admin/posting-accounts/${acct.id}`
-                                      );
-                                      await fetchPostingAccounts();
-                                    }
-                                  }}
-                                >
-                                  <DeleteIcon fontSize="small" />
-                                </IconButton>
-                              </Tooltip>
+                              Actions
                             </TableCell>
                           </TableRow>
-                        ))}
-                      {postingAccounts.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={7}>
-                            <Typography
-                              variant="body2"
-                              sx={{ color: "rgba(255,255,255,0.7)" }}
-                            >
-                              No posting accounts found.
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                        </TableHead>
+                        <TableBody>
+                          {postingAccounts
+                            .filter(
+                              (a) =>
+                                !postFilter.search ||
+                                a.account
+                                  ?.toLowerCase()
+                                  .includes(postFilter.search.toLowerCase())
+                            )
+                            .filter(
+                              (a) =>
+                                !postFilter.platform ||
+                                a.platform === postFilter.platform
+                            )
+                            .filter(
+                              (a) =>
+                                !postFilter.status ||
+                                a.status === postFilter.status
+                            )
+                            .map((acct) => (
+                              <TableRow
+                                key={acct.id}
+                                hover
+                                sx={{
+                                  borderBottom:
+                                    "1px solid rgba(255, 255, 255, 0.05)",
+                                  "&:hover": {
+                                    backgroundColor:
+                                      "rgba(102, 126, 234, 0.05)",
+                                    borderColor: "rgba(102, 126, 234, 0.1)",
+                                  },
+                                }}
+                              >
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "8%",
+                                    maxWidth: "8%",
+                                  }}
+                                >
+                                  {acct.id}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "20%",
+                                    maxWidth: "20%",
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                  }}
+                                  title={acct.account}
+                                >
+                                  {acct.account}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "15%",
+                                    maxWidth: "15%",
+                                  }}
+                                >
+                                  {acct.platform}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "12%",
+                                    maxWidth: "12%",
+                                  }}
+                                >
+                                  {acct.status}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "12%",
+                                    maxWidth: "12%",
+                                  }}
+                                >
+                                  {acct.daily_used}
+                                </TableCell>
+                                <TableCell
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    color: "white",
+                                    width: "12%",
+                                    maxWidth: "12%",
+                                  }}
+                                >
+                                  {acct.daily_limit}
+                                </TableCell>
+                                <TableCell
+                                  align="right"
+                                  sx={{
+                                    border: "none",
+                                    py: 2,
+                                    width: "21%",
+                                    maxWidth: "21%",
+                                  }}
+                                >
+                                  <Tooltip title="Edit">
+                                    <IconButton
+                                      size="small"
+                                      sx={{ color: "white" }}
+                                      onClick={() => {
+                                        setPostModalMode("edit");
+                                        setPostEdit({ ...acct });
+                                        setPostModalOpen(true);
+                                      }}
+                                    >
+                                      <EditIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                  <Tooltip title="Delete">
+                                    <IconButton
+                                      size="small"
+                                      color="error"
+                                      onClick={async () => {
+                                        if (
+                                          confirm(
+                                            `Delete posting account ${acct.account} (ID ${acct.id})?`
+                                          )
+                                        ) {
+                                          await axios.delete(
+                                            `/api/admin/posting-accounts/${acct.id}`
+                                          );
+                                          await fetchPostingAccounts();
+                                        }
+                                      }}
+                                    >
+                                      <DeleteIcon fontSize="small" />
+                                    </IconButton>
+                                  </Tooltip>
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          {postingAccounts.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={7}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                                >
+                                  No posting accounts found.
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -1225,424 +1385,497 @@ const MasterEditor = () => {
               }}
             >
               <CardContent>
-                <Typography variant="h6" sx={{ color: "white", mb: 2 }}>
-                  Writer Setup
-                </Typography>
-
-                {/* Toolbar */}
                 <Box
                   sx={{
                     display: "flex",
-                    gap: 1,
+                    justifyContent: "space-between",
                     alignItems: "center",
                     mb: 2,
-                    flexWrap: "wrap",
                   }}
                 >
-                  <TextField
-                    size="small"
-                    placeholder="Search writer name"
-                    value={adminWriterFilter.search}
-                    onChange={(e) =>
-                      setAdminWriterFilter((prev) => ({
-                        ...prev,
-                        search: e.target.value,
-                      }))
-                    }
-                    InputProps={{
-                      startAdornment: <SearchIcon fontSize="small" />,
-                    }}
-                    sx={{
-                      "& .MuiOutlinedInput-root": {
-                        color: "white",
-                        "& fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover fieldset": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused fieldset": {
-                          borderColor: "#667eea",
-                        },
-                      },
-                      "& .MuiInputLabel-root": {
-                        color: "rgba(255, 255, 255, 0.7)",
-                      },
-                    }}
-                  />
-                  <FormControl size="small" sx={{ minWidth: 140 }}>
-                    <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
-                      Skip QA
-                    </InputLabel>
-                    <Select
-                      label="Skip QA"
-                      value={adminWriterFilter.skip_qa ?? ""}
-                      onChange={(e) =>
-                        setAdminWriterFilter((prev) => ({
-                          ...prev,
-                          skip_qa: e.target.value,
-                        }))
-                      }
-                      sx={{
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "#667eea",
-                        },
-                      }}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      <MenuItem value="true">Yes</MenuItem>
-                      <MenuItem value="false">No</MenuItem>
-                    </Select>
-                  </FormControl>
-                  <FormControl size="small" sx={{ minWidth: 170 }}>
-                    <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
-                      Advanced Types
-                    </InputLabel>
-                    <Select
-                      label="Advanced Types"
-                      value={adminWriterFilter.access_advanced_types ?? ""}
-                      onChange={(e) =>
-                        setAdminWriterFilter((prev) => ({
-                          ...prev,
-                          access_advanced_types: e.target.value,
-                        }))
-                      }
-                      sx={{
-                        color: "white",
-                        "& .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.3)",
-                        },
-                        "&:hover .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "rgba(255, 255, 255, 0.5)",
-                        },
-                        "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                          borderColor: "#667eea",
-                        },
-                      }}
-                    >
-                      <MenuItem value="">All</MenuItem>
-                      <MenuItem value="true">Has access</MenuItem>
-                      <MenuItem value="false">No access</MenuItem>
-                    </Select>
-                  </FormControl>
+                  <Typography variant="h6" sx={{ color: "white" }}>
+                    Writer Setup
+                  </Typography>
                   <Button
-                    variant="contained"
-                    startIcon={<AddIcon />}
-                    onClick={async () => {
-                      await suggestNextWriterSettingId();
-                      setWriterModalMode("create");
-                      setWriterEdit({ ...newWriterSetting });
-                      setWriterModalOpen(true);
-                    }}
+                    variant="outlined"
+                    size="small"
+                    onClick={() => refreshTabData(1)}
+                    disabled={writersLoading}
                     sx={{
-                      background:
-                        "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
                       color: "white",
-                      borderRadius: "8px",
-                      textTransform: "none",
+                      borderColor: "rgba(255,255,255,0.3)",
                       "&:hover": {
-                        background:
-                          "linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)",
-                        transform: "translateY(-1px)",
-                        boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                        borderColor: "#667eea",
+                        backgroundColor: "rgba(102, 126, 234, 0.1)",
                       },
                     }}
                   >
-                    Add Writer
+                    {writersLoading ? "Refreshing..." : "Refresh"}
                   </Button>
                 </Box>
 
-                {/* Table */}
-                <TableContainer>
-                  <Table size="small">
-                    <TableHead>
-                      <TableRow>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "5%",
-                          }}
-                        >
-                          ID
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "10%",
-                          }}
-                        >
-                          Writer Name
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "15%",
-                          }}
-                        >
-                          First Name
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "15%",
-                          }}
-                        >
-                          Last Name
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "10%",
-                          }}
-                        >
+                {writersLoading ||
+                (!loadedTabs.has(1) && writerSettings.length === 0) ? (
+                  <Box
+                    display="flex"
+                    flexDirection="column"
+                    justifyContent="center"
+                    alignItems="center"
+                    minHeight="200px"
+                    sx={{
+                      background: "rgba(255,255,255,0.02)",
+                      borderRadius: "8px",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                    }}
+                  >
+                    <CircularProgress
+                      size={40}
+                      sx={{
+                        color: "#667eea",
+                        mb: 2,
+                      }}
+                    />
+                    <Typography
+                      variant="body1"
+                      sx={{
+                        color: "white",
+                        mb: 1,
+                      }}
+                    >
+                      Loading Writer Settings
+                    </Typography>
+                    <Typography
+                      variant="body2"
+                      sx={{
+                        color: "rgba(255,255,255,0.7)",
+                      }}
+                    >
+                      Please wait...
+                    </Typography>
+                  </Box>
+                ) : (
+                  <>
+                    {/* Toolbar */}
+                    <Box
+                      sx={{
+                        display: "flex",
+                        gap: 1,
+                        alignItems: "center",
+                        mb: 2,
+                        flexWrap: "wrap",
+                      }}
+                    >
+                      <TextField
+                        size="small"
+                        placeholder="Search writer name"
+                        value={adminWriterFilter.search}
+                        onChange={(e) =>
+                          setAdminWriterFilter((prev) => ({
+                            ...prev,
+                            search: e.target.value,
+                          }))
+                        }
+                        InputProps={{
+                          startAdornment: <SearchIcon fontSize="small" />,
+                        }}
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            color: "white",
+                            "& fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover fieldset": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused fieldset": {
+                              borderColor: "#667eea",
+                            },
+                          },
+                          "& .MuiInputLabel-root": {
+                            color: "rgba(255, 255, 255, 0.7)",
+                          },
+                        }}
+                      />
+                      <FormControl size="small" sx={{ minWidth: 140 }}>
+                        <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
                           Skip QA
-                        </TableCell>
-                        <TableCell
+                        </InputLabel>
+                        <Select
+                          label="Skip QA"
+                          value={adminWriterFilter.skip_qa ?? ""}
+                          onChange={(e) =>
+                            setAdminWriterFilter((prev) => ({
+                              ...prev,
+                              skip_qa: e.target.value,
+                            }))
+                          }
                           sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "10%",
-                          }}
-                        >
-                          Advanced Types
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "25%",
-                          }}
-                        >
-                          Posting Accounts
-                        </TableCell>
-                        <TableCell
-                          sx={{
-                            color: "#888",
-                            border: "none",
-                            py: 1,
-                            fontWeight: "bold",
-                            width: "10%",
-                          }}
-                          align="right"
-                        >
-                          Actions
-                        </TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {filteredWriterSettings.map((ws) => (
-                        <TableRow
-                          key={ws.id}
-                          hover
-                          sx={{
-                            borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                            "&:hover": {
-                              backgroundColor: "rgba(102, 126, 234, 0.05)",
-                              borderColor: "rgba(102, 126, 234, 0.1)",
+                            color: "white",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#667eea",
                             },
                           }}
                         >
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              color: "white",
-                              width: "5%",
-                              maxWidth: "5%",
-                            }}
-                          >
-                            {ws.id}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              color: "white",
-                              width: "10%",
-                              maxWidth: "10%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                            title={ws.writer_name}
-                          >
-                            {ws.writer_name}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              color: "white",
-                              width: "15%",
-                              maxWidth: "15%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                            title={ws.writer_fname ?? ""}
-                          >
-                            {ws.writer_fname ?? ""}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              color: "white",
-                              width: "15%",
-                              maxWidth: "15%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                            title={ws.writer_lname ?? ""}
-                          >
-                            {ws.writer_lname ?? ""}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              width: "10%",
-                              maxWidth: "10%",
-                            }}
-                          >
-                            <Checkbox
-                              checked={!!ws.skip_qa}
-                              disabled
-                              sx={{ color: "white" }}
-                            />
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              width: "10%",
-                              maxWidth: "10%",
-                            }}
-                          >
-                            <Checkbox
-                              checked={!!ws.access_advanced_types}
-                              disabled
-                              sx={{ color: "white" }}
-                            />
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              color: "white",
-                              width: "25%",
-                              maxWidth: "25%",
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                            title={renderPostingAccountsInTable(
-                              ws.post_acct_list
-                            )}
-                          >
-                            {renderTruncatedPostingAccounts(ws.post_acct_list)}
-                          </TableCell>
-                          <TableCell
-                            align="right"
-                            sx={{
-                              border: "none",
-                              py: 2,
-                              width: "10%",
-                              maxWidth: "10%",
-                            }}
-                          >
-                            <Tooltip title="Edit">
-                              <IconButton
-                                size="small"
-                                sx={{ color: "white" }}
-                                onClick={() => {
-                                  setWriterModalMode("edit");
-                                  const editData = {
-                                    ...ws,
-                                    post_acct_list: (() => {
-                                      try {
-                                        return Array.isArray(ws.post_acct_list)
-                                          ? ws.post_acct_list
-                                          : ws.post_acct_list
-                                          ? JSON.parse(ws.post_acct_list)
-                                          : [];
-                                      } catch (e) {
-                                        return [];
-                                      }
-                                    })(),
-                                  };
-                                  setWriterEdit(editData);
-                                  setWriterModalOpen(true);
-                                }}
-                              >
-                                <EditIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                            <Tooltip title="Delete">
-                              <IconButton
-                                size="small"
-                                color="error"
-                                onClick={async () => {
-                                  if (
-                                    confirm(
-                                      `Delete writer setting ${ws.writer_name} (ID ${ws.id})?`
-                                    )
-                                  ) {
-                                    await axios.delete(
-                                      `/api/admin/writer-settings/${ws.id}`
-                                    );
-                                    await fetchWriterSettings();
-                                  }
-                                }}
-                              >
-                                <DeleteIcon fontSize="small" />
-                              </IconButton>
-                            </Tooltip>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                      {filteredWriterSettings.length === 0 && (
-                        <TableRow>
-                          <TableCell colSpan={8}>
-                            <Typography
-                              variant="body2"
-                              sx={{ color: "rgba(255,255,255,0.7)" }}
+                          <MenuItem value="">All</MenuItem>
+                          <MenuItem value="true">Yes</MenuItem>
+                          <MenuItem value="false">No</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <FormControl size="small" sx={{ minWidth: 170 }}>
+                        <InputLabel sx={{ color: "rgba(255, 255, 255, 0.7)" }}>
+                          Advanced Types
+                        </InputLabel>
+                        <Select
+                          label="Advanced Types"
+                          value={adminWriterFilter.access_advanced_types ?? ""}
+                          onChange={(e) =>
+                            setAdminWriterFilter((prev) => ({
+                              ...prev,
+                              access_advanced_types: e.target.value,
+                            }))
+                          }
+                          sx={{
+                            color: "white",
+                            "& .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.3)",
+                            },
+                            "&:hover .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "rgba(255, 255, 255, 0.5)",
+                            },
+                            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
+                              borderColor: "#667eea",
+                            },
+                          }}
+                        >
+                          <MenuItem value="">All</MenuItem>
+                          <MenuItem value="true">Has access</MenuItem>
+                          <MenuItem value="false">No access</MenuItem>
+                        </Select>
+                      </FormControl>
+                      <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={async () => {
+                          await suggestNextWriterSettingId();
+                          setWriterModalMode("create");
+                          setWriterEdit({ ...newWriterSetting });
+                          setWriterModalOpen(true);
+                        }}
+                        sx={{
+                          background:
+                            "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                          color: "white",
+                          borderRadius: "8px",
+                          textTransform: "none",
+                          "&:hover": {
+                            background:
+                              "linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.3)",
+                          },
+                        }}
+                      >
+                        Add Writer
+                      </Button>
+                    </Box>
+
+                    {/* Table */}
+                    <TableContainer>
+                      <Table size="small">
+                        <TableHead>
+                          <TableRow>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "5%",
+                              }}
                             >
-                              No writer settings found.
-                            </Typography>
-                          </TableCell>
-                        </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
+                              ID
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "10%",
+                              }}
+                            >
+                              Writer Name
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "15%",
+                              }}
+                            >
+                              First Name
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "15%",
+                              }}
+                            >
+                              Last Name
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "10%",
+                              }}
+                            >
+                              Skip QA
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "10%",
+                              }}
+                            >
+                              Advanced Types
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "25%",
+                              }}
+                            >
+                              Posting Accounts
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                color: "#888",
+                                border: "none",
+                                py: 1,
+                                fontWeight: "bold",
+                                width: "10%",
+                              }}
+                              align="right"
+                            >
+                              Actions
+                            </TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {filteredWriterSettings.map((ws) => (
+                            <TableRow
+                              key={ws.id}
+                              hover
+                              sx={{
+                                borderBottom:
+                                  "1px solid rgba(255, 255, 255, 0.05)",
+                                "&:hover": {
+                                  backgroundColor: "rgba(102, 126, 234, 0.05)",
+                                  borderColor: "rgba(102, 126, 234, 0.1)",
+                                },
+                              }}
+                            >
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  color: "white",
+                                  width: "5%",
+                                  maxWidth: "5%",
+                                }}
+                              >
+                                {ws.id}
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  color: "white",
+                                  width: "10%",
+                                  maxWidth: "10%",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={ws.writer_name}
+                              >
+                                {ws.writer_name}
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  color: "white",
+                                  width: "15%",
+                                  maxWidth: "15%",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={ws.writer_fname ?? ""}
+                              >
+                                {ws.writer_fname ?? ""}
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  color: "white",
+                                  width: "15%",
+                                  maxWidth: "15%",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={ws.writer_lname ?? ""}
+                              >
+                                {ws.writer_lname ?? ""}
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  width: "10%",
+                                  maxWidth: "10%",
+                                }}
+                              >
+                                <Checkbox
+                                  checked={!!ws.skip_qa}
+                                  disabled
+                                  sx={{ color: "white" }}
+                                />
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  width: "10%",
+                                  maxWidth: "10%",
+                                }}
+                              >
+                                <Checkbox
+                                  checked={!!ws.access_advanced_types}
+                                  disabled
+                                  sx={{ color: "white" }}
+                                />
+                              </TableCell>
+                              <TableCell
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  color: "white",
+                                  width: "25%",
+                                  maxWidth: "25%",
+                                  overflow: "hidden",
+                                  textOverflow: "ellipsis",
+                                  whiteSpace: "nowrap",
+                                }}
+                                title={renderPostingAccountsInTable(
+                                  ws.post_acct_list
+                                )}
+                              >
+                                {renderTruncatedPostingAccounts(
+                                  ws.post_acct_list
+                                )}
+                              </TableCell>
+                              <TableCell
+                                align="right"
+                                sx={{
+                                  border: "none",
+                                  py: 2,
+                                  width: "10%",
+                                  maxWidth: "10%",
+                                }}
+                              >
+                                <Tooltip title="Edit">
+                                  <IconButton
+                                    size="small"
+                                    sx={{ color: "white" }}
+                                    onClick={() => {
+                                      setWriterModalMode("edit");
+                                      const editData = {
+                                        ...ws,
+                                        post_acct_list: (() => {
+                                          try {
+                                            return Array.isArray(
+                                              ws.post_acct_list
+                                            )
+                                              ? ws.post_acct_list
+                                              : ws.post_acct_list
+                                              ? JSON.parse(ws.post_acct_list)
+                                              : [];
+                                          } catch (e) {
+                                            return [];
+                                          }
+                                        })(),
+                                      };
+                                      setWriterEdit(editData);
+                                      setWriterModalOpen(true);
+                                    }}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                                <Tooltip title="Delete">
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={async () => {
+                                      if (
+                                        confirm(
+                                          `Delete writer setting ${ws.writer_name} (ID ${ws.id})?`
+                                        )
+                                      ) {
+                                        await axios.delete(
+                                          `/api/admin/writer-settings/${ws.id}`
+                                        );
+                                        await fetchWriterSettings();
+                                      }
+                                    }}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </Tooltip>
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                          {filteredWriterSettings.length === 0 && (
+                            <TableRow>
+                              <TableCell colSpan={8}>
+                                <Typography
+                                  variant="body2"
+                                  sx={{ color: "rgba(255,255,255,0.7)" }}
+                                >
+                                  No writer settings found.
+                                </Typography>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </TableBody>
+                      </Table>
+                    </TableContainer>
+                  </>
+                )}
               </CardContent>
             </Card>
           )}
@@ -1650,20 +1883,79 @@ const MasterEditor = () => {
           {/* Script Editor Tab */}
           {currentTab === 2 && (
             <>
-              {scriptsLoading ? (
+              {scriptsLoading ||
+              (!loadedTabs.has(2) && scripts.length === 0) ? (
                 <Box
                   display="flex"
+                  flexDirection="column"
                   justifyContent="center"
                   alignItems="center"
-                  minHeight="200px"
+                  minHeight="400px"
+                  sx={{
+                    background: "rgba(255,255,255,0.02)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
                 >
-                  <CircularProgress sx={{ color: "#667eea" }} />
-                  <Typography sx={{ ml: 2, color: "white" }}>
-                    Loading scripts...
+                  <CircularProgress
+                    size={48}
+                    sx={{
+                      color: "#667eea",
+                      mb: 2,
+                    }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "white",
+                      mb: 1,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Loading Script Editor
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      textAlign: "center",
+                    }}
+                  >
+                    Fetching scripts and preparing the editor...
                   </Typography>
                 </Box>
               ) : (
                 <>
+                  {/* Header with Refresh Button */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
+                    <Typography variant="h6" sx={{ color: "white" }}>
+                      Script Editor
+                    </Typography>
+                    <Button
+                      variant="outlined"
+                      size="small"
+                      onClick={() => refreshTabData(2)}
+                      disabled={scriptsLoading}
+                      sx={{
+                        color: "white",
+                        borderColor: "rgba(255,255,255,0.3)",
+                        "&:hover": {
+                          borderColor: "#667eea",
+                          backgroundColor: "rgba(102, 126, 234, 0.1)",
+                        },
+                      }}
+                    >
+                      {scriptsLoading ? "Refreshing..." : "Refresh"}
+                    </Button>
+                  </Box>
+
                   {/* Filter and Sort Controls */}
                   <Box
                     sx={{
