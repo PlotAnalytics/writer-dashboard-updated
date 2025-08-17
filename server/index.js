@@ -5157,7 +5157,11 @@ app.post("/api/getPostingAccount", async (req, res) => {
       // Otherwise, we'll use the standard post_acct_list view which may filter based on daily limits
       // Add a limit to prevent memory issues with large result sets
       let itemsListQuery;
+
+
+
       let queryParams = [];
+
 
       if (ignore_daily_limit) {
         itemsListQuery = `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`;
