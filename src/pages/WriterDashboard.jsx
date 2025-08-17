@@ -153,7 +153,7 @@ const WriterDashboard = () => {
 
     try {
       // Check if user is an intern (no structure prefix for interns)
-      const isIntern = ['quinn', 'kayla', 'gianmarco'].includes(username?.toLowerCase());
+      const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase());
       const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : "";
 
       const fullTitle =
@@ -403,7 +403,7 @@ const WriterDashboard = () => {
                     )}
                   </div>
                   {/* Hide structure dropdown for intern writers */}
-                  {!['quinn', 'kayla', 'gianmarco'].includes(username?.toLowerCase()) && (
+                  {!['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase()) && (
                     <Form.Group style={{ marginBottom: "25px" }}>
                       <Form.Label>Structure</Form.Label>
                       <Form.Control
