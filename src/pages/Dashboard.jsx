@@ -372,7 +372,7 @@ const Dashboard = () => {
     console.log('✅ Type validation passed');
 
     // Validate Structure selection (skip for intern writers)
-    const isIntern = ['quinn', 'kayla', 'gianmarco'].includes(user?.username?.toLowerCase());
+    const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
     console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure, 'isIntern:', isIntern);
     if (!isIntern && (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --')) {
       console.log('❌ Structure validation failed - must select a valid structure');
@@ -874,7 +874,7 @@ const Dashboard = () => {
                 </Box>
 
                 {/* Structure Selection - Hidden for intern writers */}
-                {!['quinn', 'kayla', 'gianmarco'].includes(user?.username?.toLowerCase()) && (
+                {!['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase()) && (
                   <>
                     <Box sx={{ mb: 2.5 }}>
                       <Typography variant="body2" sx={{
