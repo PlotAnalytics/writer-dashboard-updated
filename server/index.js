@@ -557,62 +557,80 @@ app.post("/api/scripts", async (req, res) => {
       [writer_id]
     );
     const writerSettingsResult = await pool.query(
-      "SELECT skip_qa FROM writer_settings WHERE writer_id = $1",
+      "select writer_id, writer_name as writer_username, skip_qa, post_acct_list, access_advanced_types, writer_fname || ' ' || writer_lname as fullname from writer_settings WHERE writer_id = $1",
       [writer_id]
     );
-    const name = writerResult.rows[0]?.name;
+    const name = writerSettingsResult.rows[0]?.fullname ?? writerSettingsResult.rows[0]?.writer_username ?? writerResult.rows[0]?.name;
     const skipQA = writerSettingsResult.rows[0]?.skip_qa;
     if (!name) {
       return res.status(404).json({ error: "Writer not found" });
     }
 
     // Determine Trello list ID and status
-    const storyContinuationID = "6898270f55dc602c1b578c98";
-    const autoApprovedListID = listId;
+
+    // 1. Rejected(ID: 66982a7f62c627622affc3d0)
+    // 2. STL Writer Submissions(QA)(ID: 6898270f55dc602c1b578c98)
+    // 3. Story Continuation(ID: 6801db782202edad6322e7f5)
+    // 4. Writer Submissions(QA)(ID: 66982a7f16eca6024cd863cc)
+    // 5. Quick Edits(ID: 683954a122d21bedbb45bd69)
+    // 6. Approved Script.Ready for production(ID: 66982de89e8cb1bfb456ba0a)
+    // 7. Video QA(ID: 682233d60c074d867b5226b7)
+    // 8. Finished video(ID: 66982ee523fd45c36d47daa6)
+    // 9. Scheduled Posting(ID: 686caf7d7a0bd42abaa86496)
+    // 10. Posted(ID: 66982a7f45ab869b054bdd24)
+    // 11. Trash(ID: 678588525730a636c0e25347)
+
+    const defaultListID = "66982a7f16eca6024cd863cc";
+    const stlDestinationListID = "6898270f55dc602c1b578c98";
+    const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
 
     // Check if title contains "STL" keyword
-    const isStoryLine = title.includes("STL");
+    const isSTL = title.includes("STL");
+
     let targetListId;
     let trelloStatus;
 
     // Handle STL case separately from skipQA logic
-    if (isStoryLine) {
+    if (isSTL) {
       // If it's a story line (contains STL), use story continuation list and status
-      targetListId = storyContinuationID;
+      targetListId = stlDestinationListID;
       trelloStatus = "STL Writer Submissions (QA)";
     } else {
       // If it's not a story line, apply the skipQA logic
-      targetListId = skipQA ? autoApprovedListID : listId;
+      targetListId = skipQA ? autoApprovedListID : defaultListID;
       trelloStatus = skipQA
         ? "Approved Script. Ready for production"
         : "Writer Submissions (QA)";
     }
 
     // Create a Trello card
+    // Parse aiChatUrl if it contains multiple links separated by " / "
+    const aiChatUrls = aiChatUrl ? aiChatUrl.split(' / ').map(url => url.trim()).filter(Boolean) : [];
+    const attachments = [googleDocLink, ...aiChatUrls, inspiration_link, core_concept_doc].filter(Boolean);
     const trelloCardId = await createTrelloCard(
       apiKey,
       token,
       targetListId,
       `${name} - ${title}`,
       `Script submitted by ${name}.`,
-      [googleDocLink]
+      attachments
     );
     if (!trelloCardId) {
       return res.status(500).json({ error: "Failed to create Trello card" });
     }
 
     // Add AI Chat URL comment to Trello card if provided
-    if (aiChatUrl) {
+    if (structure_explanation) {
       try {
         await addCommentToTrelloCard(
           trelloCardId,
-          `AI Chat URLs: ${aiChatUrl}`,
+          `Structure Explanation: ${structure_explanation}`,
           apiKey,
           token
         );
-        console.log(`AI Chat URL comment added to Trello card ${trelloCardId}`);
+        console.log(`Structure Explanation comment added to Trello card ${trelloCardId}`);
       } catch (commentError) {
-        console.error("Error adding AI Chat URL comment to Trello card:", commentError);
+        console.error("Error adding Structure Explanation comment to Trello card:", commentError);
         // Continue execution - don't fail the request if comment fails
       }
     }
@@ -642,7 +660,7 @@ app.post("/api/scripts", async (req, res) => {
       );
       const response = await axios.post(`${serverUrl}/api/getPostingAccount`, {
         trello_card_id: trelloCardId,
-        ignore_daily_limit: Boolean(isStoryLine),
+        ignore_daily_limit: Boolean(isSTL),
       });
       const accountName = response.data?.account;
 
@@ -5145,7 +5163,7 @@ app.post("/api/getPostingAccount", async (req, res) => {
         itemsListQuery = `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`;
       } else {
         // Use parameterized query to avoid SQL injection - removed problematic cast
-        itemsListQuery = `SELECT id, account from post_accts_by_trello_id_v3($1) ORDER BY id`;
+        itemsListQuery = `SELECT id, account from post_accts_by_trello_id_v4($1) ORDER BY id`;
         queryParams = [trello_card_id];
       }
 
