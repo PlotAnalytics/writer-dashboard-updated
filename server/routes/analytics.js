@@ -783,6 +783,7 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
       WHERE v.writer_id = $1
         AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
         AND v.url IS NOT NULL
+        AND (v.video_type IS NULL OR v.video_type != 'Archived')
         ${dateCondition}
       ORDER BY s.posted_date DESC NULLS LAST, v.id DESC
     `;
