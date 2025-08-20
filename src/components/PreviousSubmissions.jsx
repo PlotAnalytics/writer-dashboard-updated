@@ -13,6 +13,7 @@ import {
   InputAdornment,
   Divider,
 } from '@mui/material';
+import { keyframes } from '@mui/system';
 import {
   FilterList as FilterIcon,
   Sort as SortIcon,
@@ -20,10 +21,28 @@ import {
   Refresh as RefreshIcon,
   Search as SearchIcon,
   DateRange as DateRangeIcon,
+  NotificationImportant as NotificationIcon,
 } from '@mui/icons-material';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import QAResponseModal from './QAResponseModal';
+
+// Pulse animation for notification icon
+const pulseAnimation = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+`;
 
 const PreviousSubmissions = ({
   submissions,
@@ -44,6 +63,10 @@ const PreviousSubmissions = ({
 
   // Modern search state
   const [searchQuery, setSearchQuery] = useState('');
+
+  // QA Response Modal state
+  const [qaModalOpen, setQaModalOpen] = useState(false);
+  const [selectedSubmission, setSelectedSubmission] = useState(null);
 
   const handleFilterClick = (event) => {
     setFilterAnchorEl(event.currentTarget);
@@ -163,6 +186,16 @@ const PreviousSubmissions = ({
       chipShadow: 'rgba(96, 125, 139, 0.4)',
       chipHoverShadow: 'rgba(96, 125, 139, 0.6)',
     },
+    'Quick Edits': {
+      base: '#FF9800',
+      bg: 'rgba(255, 152, 0, 0.05)',
+      border: 'rgba(255, 152, 0, 0.2)',
+      hoverBg: 'rgba(255, 152, 0, 0.1)',
+      hoverBorder: 'rgba(255, 152, 0, 0.4)',
+      shadow: 'rgba(255, 152, 0, 0.3)',
+      chipShadow: 'rgba(255, 152, 0, 0.4)',
+      chipHoverShadow: 'rgba(255, 152, 0, 0.6)',
+    },
   };
 
   // Fallback colors for unknown statuses
@@ -202,6 +235,8 @@ const PreviousSubmissions = ({
         return "Rejected";
       case "posted":
         return "Posted";
+      case "quick edits":
+        return "Quick Edits";
       default:
         return "Pending Approval"; // Default to Pending Approval for all unknown statuses
     }
@@ -261,6 +296,36 @@ const PreviousSubmissions = ({
   };
 
   const sortedSubmissions = filterSubmissions();
+
+  // Handle Open Doc button click
+  const handleOpenDocClick = (submission) => {
+    const displayStatus = getStatusDisplay(submission.approval_status);
+
+    if (displayStatus === 'Quick Edits') {
+      // Show QA Response Modal for Quick Edits status
+      setSelectedSubmission(submission);
+      setQaModalOpen(true);
+    } else {
+      // Open document directly for other statuses
+      if (submission.google_doc_link) {
+        window.open(submission.google_doc_link, '_blank');
+      }
+    }
+  };
+
+  // Handle QA response sent
+  const handleQAResponseSent = (scriptId) => {
+    // Refresh the submissions list
+    if (onRefresh) {
+      onRefresh();
+    }
+  };
+
+  // Handle modal close
+  const handleQAModalClose = () => {
+    setQaModalOpen(false);
+    setSelectedSubmission(null);
+  };
 
   return (
     <Box>
@@ -998,30 +1063,48 @@ const PreviousSubmissions = ({
               <Box sx={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center' }}>
                 <Box sx={{ display: 'flex', gap: 1 }}>
                   {submission.google_doc_link && (
-                    <Button
-                      startIcon={<DocIcon />}
-                      size="small"
-                      onClick={() => window.open(submission.google_doc_link, '_blank')}
-                      sx={{
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        color: 'white',
-                        fontWeight: '500',
-                        fontSize: '0.75rem',
-                        borderRadius: '8px',
-                        px: 1.5,
-                        py: 0.6,
-                        textTransform: 'none',
-                        boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)',
-                        '&:hover': {
-                          background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
-                          transform: 'translateY(-1px)',
-                          boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
-                        },
-                        transition: 'all 0.2s ease'
-                      }}
-                    >
-                      Open Doc
-                    </Button>
+                    <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                      <Button
+                        startIcon={<DocIcon />}
+                        size="small"
+                        onClick={() => handleOpenDocClick(submission)}
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: 'white',
+                          fontWeight: '500',
+                          fontSize: '0.75rem',
+                          borderRadius: '8px',
+                          px: 1.5,
+                          py: 0.6,
+                          textTransform: 'none',
+                          boxShadow: '0 1px 4px rgba(102, 126, 234, 0.3)',
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #5a67d8 0%, #667eea 100%)',
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.4)'
+                          },
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        Open Doc
+                      </Button>
+                      {displayStatus === 'Quick Edits' && (
+                        <NotificationIcon
+                          sx={{
+                            position: 'absolute',
+                            top: -4,
+                            right: -4,
+                            fontSize: 16,
+                            color: '#FF5722',
+                            background: 'white',
+                            borderRadius: '50%',
+                            padding: '2px',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
+                            animation: `${pulseAnimation} 2s infinite`
+                          }}
+                        />
+                      )}
+                    </Box>
                   )}
                   {submission.ai_chat_url && (
                     <Button
@@ -1098,6 +1181,14 @@ const PreviousSubmissions = ({
           )}
         </Stack>
       )}
+
+      {/* QA Response Modal */}
+      <QAResponseModal
+        open={qaModalOpen}
+        onClose={handleQAModalClose}
+        submission={selectedSubmission}
+        onResponseSent={handleQAResponseSent}
+      />
     </Box>
   );
 };

@@ -213,7 +213,7 @@ app.get('/api/submissions', authenticateToken, async (req, res) => {
     const { startDate, endDate, searchTitle } = req.query;
     
     let query = `
-      SELECT id, title, google_doc_link, approval_status, created_at, loom_url, ai_chat_url
+      SELECT id, title, google_doc_link, approval_status, created_at, loom_url, ai_chat_url, trello_card_id
       FROM script
       WHERE writer_id = $1
     `;
@@ -241,9 +241,15 @@ app.get('/api/submissions', authenticateToken, async (req, res) => {
       id: row.id,
       title: row.title,
       googleDocLink: row.google_doc_link,
+      google_doc_link: row.google_doc_link, // Keep both formats for compatibility
+      approval_status: row.approval_status || 'Pending',
       status: row.approval_status || 'Pending',
+      created_at: row.created_at,
       submittedOn: row.created_at,
+      loom_url: row.loom_url,
       loomUrl: row.loom_url,
+      ai_chat_url: row.ai_chat_url,
+      trello_card_id: row.trello_card_id,
       type: 'Script' // Default type
     }));
     

@@ -466,7 +466,7 @@ app.get("/api/scripts", async (req, res) => {
   try {
     if (pool && writer_id) {
       let query = `
-        SELECT id, title, google_doc_link, approval_status, created_at, loom_url, ai_chat_url
+        SELECT id, title, google_doc_link, approval_status, created_at, loom_url, ai_chat_url, trello_card_id
         FROM script
         WHERE writer_id = $1
       `;
@@ -486,7 +486,26 @@ app.get("/api/scripts", async (req, res) => {
       query += " ORDER BY created_at DESC;";
 
       const { rows } = await pool.query(query, params);
-      res.json(rows);
+
+      // Temporarily add a test "Quick Edits" script for testing
+      const testRows = [...rows];
+      if (testRows.length > 0) {
+        // Modify the first script to have "Quick Edits" status for testing
+        testRows[0] = {
+          ...testRows[0],
+          approval_status: "Quick Edits"
+          // Keep the original trello_card_id since it's real
+        };
+      }
+
+      console.log('📝 Scripts response with test data:', testRows.map(r => ({
+        id: r.id,
+        title: r.title?.substring(0, 50),
+        status: r.approval_status,
+        trello_card_id: r.trello_card_id
+      })));
+
+      res.json(testRows);
     } else {
       // Return empty array if no writer_id or no database
       res.json([]);
@@ -4591,6 +4610,118 @@ app.post("/create-trello-card", async (req, res) => {
   }
 });
 
+// QA Response API endpoint
+app.post("/api/qa-response", async (req, res) => {
+  console.log('🔍 QA Response API called with body:', req.body);
+  const { script_id, trello_card_id, response, title } = req.body;
+
+  try {
+    // Validate required fields
+    if (!script_id || !trello_card_id || !response) {
+      console.log('❌ Missing required fields:', { script_id, trello_card_id, response: !!response });
+      return res.status(400).json({
+        error: "Missing required fields: script_id, trello_card_id, and response are required"
+      });
+    }
+
+    // Get Trello API credentials
+    const settingsResult = await pool.query(
+      "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
+    );
+
+    if (settingsResult.rows.length === 0) {
+      return res.status(500).json({ error: "Trello settings not configured" });
+    }
+
+    const { api_key: apiKey, token } = settingsResult.rows[0];
+
+    // Add QA response as a comment to the Trello card
+    const commentText = `**QA Response from Writer:**\n${response}`;
+    console.log('📝 Adding comment to Trello card:', trello_card_id);
+    await addCommentToTrelloCard(trello_card_id, commentText, apiKey, token);
+    console.log('✅ Comment added successfully');
+
+    // Determine target list based on title (STL vs regular)
+    const isSTL = title && title.includes("STL");
+    const targetListId = isSTL
+      ? "6898270f55dc602c1b578c98" // STL Writer Submissions (QA)
+      : "66982a7f16eca6024cd863cc"; // Writer Submissions (QA)
+
+    const targetStatus = isSTL
+      ? "STL Writer Submissions (QA)"
+      : "Writer Submissions (QA)";
+
+    // Move the Trello card to the appropriate list
+    console.log('🔄 Moving Trello card to list:', targetListId);
+    await moveTrelloCard(trello_card_id, targetListId, apiKey, token);
+    console.log('✅ Card moved successfully');
+
+    // Update the script status in the database
+    const updateQuery = `
+      UPDATE script
+      SET approval_status = $1
+      WHERE id = $2 AND trello_card_id = $3
+      RETURNING *;
+    `;
+
+    const { rows } = await pool.query(updateQuery, [targetStatus, script_id, trello_card_id]);
+
+    if (rows.length === 0) {
+      return res.status(404).json({
+        error: `Script not found for the given ID: ${script_id} and Trello Card ID: ${trello_card_id}`
+      });
+    }
+
+    // Log the status update to trello_card_movements table
+    const movementQuery = `
+      INSERT INTO trello_card_movements (timestamp, trello_card_id, status)
+      VALUES (NOW(), $1, $2)
+    `;
+    await pool.query(movementQuery, [trello_card_id, targetStatus]);
+
+    console.log(`✅ QA Response processed: Card ${trello_card_id} moved to ${targetStatus}`);
+
+    res.json({
+      success: true,
+      message: "QA response sent and card moved successfully",
+      new_status: targetStatus,
+      script: rows[0]
+    });
+
+  } catch (error) {
+    console.error("❌ Error processing QA response:", error);
+    console.error("❌ Error details:", {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      stack: error.stack
+    });
+
+    // Check if it's a Trello API error
+    if (error.response?.status === 400) {
+      return res.status(400).json({
+        error: "Invalid Trello card ID or API credentials",
+        details: error.message,
+        trelloError: error.response?.data || null
+      });
+    }
+
+    if (error.response?.status === 401) {
+      return res.status(401).json({
+        error: "Trello API authentication failed",
+        details: "Please check Trello API credentials",
+        trelloError: error.response?.data || null
+      });
+    }
+
+    res.status(500).json({
+      error: "Failed to process QA response",
+      details: error.message,
+      trelloError: error.response?.data || null
+    });
+  }
+});
+
 // Function to select a random item from the list
 function balancedRandomChoice(items) {
   if (!items || items.length === 0) {
@@ -4616,6 +4747,23 @@ async function addCommentToTrelloCard(
 
   try {
     const response = await axios.post(url, null, { params });
+    return response.data;
+  } catch (error) {
+    throw error.response ? error.response.data : error.message;
+  }
+}
+
+// Function to move a Trello card to a different list
+async function moveTrelloCard(trello_card_id, target_list_id, api_key, token) {
+  const url = `https://api.trello.com/1/cards/${trello_card_id}`;
+  const params = {
+    key: api_key,
+    token: token,
+    idList: target_list_id,
+  };
+
+  try {
+    const response = await axios.put(url, null, { params });
     return response.data;
   } catch (error) {
     throw error.response ? error.response.data : error.message;
