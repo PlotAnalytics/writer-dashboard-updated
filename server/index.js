@@ -487,25 +487,14 @@ app.get("/api/scripts", async (req, res) => {
 
       const { rows } = await pool.query(query, params);
 
-      // Temporarily add a test "Quick Edits" script for testing
-      const testRows = [...rows];
-      if (testRows.length > 0) {
-        // Modify the first script to have "Quick Edits" status for testing
-        testRows[0] = {
-          ...testRows[0],
-          approval_status: "Quick Edits"
-          // Keep the original trello_card_id since it's real
-        };
-      }
-
-      console.log('📝 Scripts response with test data:', testRows.map(r => ({
+      console.log('📝 Scripts response:', rows.map(r => ({
         id: r.id,
         title: r.title?.substring(0, 50),
         status: r.approval_status,
         trello_card_id: r.trello_card_id
       })));
 
-      res.json(testRows);
+      res.json(rows);
     } else {
       // Return empty array if no writer_id or no database
       res.json([]);
@@ -4636,7 +4625,7 @@ app.post("/api/qa-response", async (req, res) => {
     const { api_key: apiKey, token } = settingsResult.rows[0];
 
     // Add QA response as a comment to the Trello card
-    const commentText = `**QA Response from Writer:**\n${response}`;
+    const commentText = `**Writer Response to Quick Edits request:**\n${response}`;
     console.log('📝 Adding comment to Trello card:', trello_card_id);
     await addCommentToTrelloCard(trello_card_id, commentText, apiKey, token);
     console.log('✅ Comment added successfully');
