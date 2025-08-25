@@ -3816,6 +3816,130 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
   }
 });
 
+// Get daily video counts for specific writer (for main analytics chart video count boxes)
+router.get('/daily-video-counts', authenticateToken, async (req, res) => {
+  try {
+    const { startDate, endDate } = req.query;
+    const userId = req.user.id;
+
+    if (!startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters: startDate, endDate'
+      });
+    }
+
+    // Get writer ID for the authenticated user
+    const writerQuery = 'SELECT id, name FROM writer WHERE login_id = $1';
+    const { rows: writerRows } = await pool.query(writerQuery, [userId]);
+
+    if (writerRows.length === 0) {
+      return res.status(404).json({ error: 'Writer not found for user' });
+    }
+
+    const writerId = writerRows[0].id;
+    const writerName = writerRows[0].name;
+
+    console.log(`📊 Getting daily video counts for writer ${writerName} (ID: ${writerId}) from ${startDate} to ${endDate}`);
+
+    // Query to get daily video counts from statistics_youtube_api for specific writer
+    // Join video table to get writer_id since statistics_youtube_api doesn't have it
+    const query = `
+      SELECT
+        DATE(s.posted_date) as date,
+        COUNT(DISTINCT s.video_id) as video_count
+      FROM statistics_youtube_api s
+      INNER JOIN video v ON s.video_id = CAST(v.id AS VARCHAR)
+      WHERE s.posted_date IS NOT NULL
+        AND DATE(s.posted_date) BETWEEN $1 AND $2
+        AND v.writer_id = $3
+        AND (v.video_type IS NULL OR v.video_type != 'Archived')
+      GROUP BY DATE(s.posted_date)
+      ORDER BY DATE(s.posted_date) ASC
+    `;
+
+    const { rows } = await pool.query(query, [
+      startDate,
+      endDate,
+      writerId
+    ]);
+
+    console.log(`✅ Found daily video counts for writer ${writerName}: ${rows.length} days with videos`);
+
+    // Transform to match chart data format
+    const dailyCounts = rows.map(row => ({
+      date: row.date.toISOString().split('T')[0], // YYYY-MM-DD format
+      count: parseInt(row.video_count)
+    }));
+
+    res.json({
+      success: true,
+      data: dailyCounts,
+      total_days: dailyCounts.length,
+      total_videos: dailyCounts.reduce((sum, day) => sum + day.count, 0),
+      writer_name: writerName
+    });
+
+  } catch (error) {
+    console.error('❌ Daily video counts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get daily video counts for writer (for chart video count boxes)
+router.get('/writer/daily-video-counts', authenticateToken, async (req, res) => {
+  try {
+    const { writer_id, startDate, endDate } = req.query;
+
+    if (!writer_id || !startDate || !endDate) {
+      return res.status(400).json({
+        error: 'Missing required parameters: writer_id, startDate, endDate'
+      });
+    }
+
+    console.log(`📊 Getting daily video counts for writer ${writer_id} from ${startDate} to ${endDate}`);
+
+    // Query to get daily video counts from statistics_youtube_api
+    const query = `
+      SELECT
+        DATE(s.posted_date) as date,
+        COUNT(DISTINCT s.video_id) as video_count
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      WHERE v.writer_id = $1
+        AND s.posted_date IS NOT NULL
+        AND DATE(s.posted_date) BETWEEN $2 AND $3
+        AND (v.video_type IS NULL OR v.video_type != 'Archived')
+      GROUP BY DATE(s.posted_date)
+      ORDER BY DATE(s.posted_date) ASC
+    `;
+
+    const { rows } = await pool.query(query, [
+      parseInt(writer_id),
+      startDate,
+      endDate
+    ]);
+
+    console.log(`✅ Found daily video counts: ${rows.length} days with videos`);
+
+    // Transform to match chart data format
+    const dailyCounts = rows.map(row => ({
+      date: row.date.toISOString().split('T')[0], // YYYY-MM-DD format
+      count: parseInt(row.video_count)
+    }));
+
+    res.json({
+      success: true,
+      data: dailyCounts,
+      total_days: dailyCounts.length,
+      total_videos: dailyCounts.reduce((sum, day) => sum + day.count, 0)
+    });
+
+  } catch (error) {
+    console.error('❌ Daily video counts error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Writer videos endpoint for Content page - shows ALL videos from statistics_youtube_api
 router.get('/writer/videos', async (req, res) => {
   try {

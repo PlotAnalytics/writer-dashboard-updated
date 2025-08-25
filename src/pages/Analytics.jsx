@@ -290,6 +290,7 @@ const Analytics = () => {
   const [modalCategory, setModalCategory] = useState(null);
   const [modalVideos, setModalVideos] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
+  const [dailyVideoCounts, setDailyVideoCounts] = useState([]);
 
   const dateRangeOptions = [
     { value: 'last7days', label: 'Last 7 days' },
@@ -392,6 +393,63 @@ const Analytics = () => {
         chartDataPoints: overviewData.chartData?.length || 0,
         aggregatedViewsDataPoints: overviewData.aggregatedViewsData?.length || 0
       });
+
+      console.log('🎯 About to fetch daily video counts...');
+      // Fetch daily video counts for chart boxes
+      try {
+        console.log('🎯 Starting daily video counts fetch...');
+        let videoCountsUrl = `${buildApiUrl('/api/analytics/daily-video-counts')}`;
+
+        // Add date parameters for video counts (backend gets writer from auth token)
+        if (params.start_date && params.end_date) {
+          videoCountsUrl += `?startDate=${params.start_date}&endDate=${params.end_date}`;
+          console.log('🎯 Using custom date range:', params.start_date, 'to', params.end_date);
+        } else {
+          // Use default date range based on dateRange
+          const today = new Date();
+          let startDate, endDate;
+
+          switch (dateRange) {
+            case 'last7days':
+              startDate = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last30days':
+              startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last90days':
+              startDate = new Date(today.getTime() - 90 * 24 * 60 * 60 * 1000);
+              break;
+            case 'last365days':
+              startDate = new Date(today.getTime() - 365 * 24 * 60 * 60 * 1000);
+              break;
+            default:
+              startDate = new Date(today.getTime() - 30 * 24 * 60 * 60 * 1000);
+          }
+
+          endDate = today;
+          videoCountsUrl += `?startDate=${startDate.toISOString().split('T')[0]}&endDate=${endDate.toISOString().split('T')[0]}`;
+          console.log('🎯 Using default date range:', startDate.toISOString().split('T')[0], 'to', endDate.toISOString().split('T')[0]);
+        }
+
+        console.log('🎯 Fetching daily video counts from:', videoCountsUrl);
+        const videoCountsResponse = await fetch(videoCountsUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (videoCountsResponse.ok) {
+          const videoCountsData = await videoCountsResponse.json();
+          setDailyVideoCounts(videoCountsData.data || []);
+          console.log('📊 Daily video counts fetched:', videoCountsData.data?.length || 0, 'days');
+        } else {
+          console.warn('⚠️ Failed to fetch daily video counts:', videoCountsResponse.status);
+          setDailyVideoCounts([]);
+        }
+      } catch (error) {
+        console.error('❌ Error fetching daily video counts:', error);
+        setDailyVideoCounts([]);
+      }
 
         // Debug: Check for June 6th in the received data
         if (overviewData.aggregatedViewsData) {
@@ -2827,8 +2885,10 @@ const Analytics = () => {
                   minWidth: 'auto'
                 },
                 display: 'flex',
+                flexDirection: 'column',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                position: 'relative'
               }}>
                 {isChartLoading ? (
                   <Box sx={{
@@ -3149,6 +3209,46 @@ const Analytics = () => {
                   }}
                   style={{ height: '100%', width: '100%' }}
                 />
+                )}
+
+                {/* Daily Video Count Boxes */}
+                {!isChartLoading && analyticsData?.aggregatedViewsData && analyticsData.aggregatedViewsData.length > 0 && (
+                  <Box sx={{
+                    display: "flex",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    mt: 2,
+                    gap: 0.25,
+                    flexWrap: 'wrap'
+                  }}>
+                    {analyticsData.aggregatedViewsData.map((item, index) => {
+                      // Find matching video count for this date
+                      const dateStr = item.time; // YYYY-MM-DD format
+                      const videoCount = dailyVideoCounts.find(vc => vc.date === dateStr)?.count || 0;
+
+                      return (
+                        <Box
+                          key={index}
+                          sx={{
+                            minWidth: "22px",
+                            height: "20px",
+                            backgroundColor: "#666",
+                            borderRadius: "3px",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            color: "white",
+                            fontSize: "10px",
+                            fontWeight: "600",
+                            border: "1px solid #777",
+                            boxShadow: "0 1px 2px rgba(0,0,0,0.3)"
+                          }}
+                        >
+                          {videoCount > 9 ? `${videoCount}+` : videoCount}
+                        </Box>
+                      );
+                    })}
+                  </Box>
                 )}
               </Box>
 

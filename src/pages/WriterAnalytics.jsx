@@ -48,6 +48,7 @@ const WriterAnalytics = () => {
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [showClearButton, setShowClearButton] = useState(false);
+  const [dailyVideoCounts, setDailyVideoCounts] = useState([]);
 
   useEffect(() => {
     const username = localStorage.getItem("username");
@@ -117,6 +118,12 @@ const WriterAnalytics = () => {
         .filter((item) => item.time !== today && item.time !== yesterday) // Exclude today's and yesterday's data
         .sort((a, b) => new Date(a.time) - new Date(b.time));
       setViewsData(sortedViewsData);
+
+      // Fetch daily video counts for chart boxes
+      const videoCountsResponse = await axios.get(`/api/writer/daily-video-counts`, {
+        params: { writer_id: id, startDate, endDate },
+      });
+      setDailyVideoCounts(videoCountsResponse.data.data || []);
 
       // Fetch table data
       const response = await axios.get(`/api/writer/analytics`, {
@@ -431,6 +438,46 @@ const WriterAnalytics = () => {
             <ReactECharts option={chartOptions} />
           )}
         </Box>
+
+        {/* Daily Video Count Boxes */}
+        {!loading && aggregatedViewsData.length > 0 && (
+          <Box sx={{
+            width: "1180px",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            mt: 2,
+            gap: 1
+          }}>
+            {aggregatedViewsData.map((item, index) => {
+              // Find matching video count for this date
+              const dateStr = item.time; // YYYY-MM-DD format
+              const videoCount = dailyVideoCounts.find(vc => vc.date === dateStr)?.count || 0;
+
+              return (
+                <Box
+                  key={index}
+                  sx={{
+                    minWidth: "40px",
+                    height: "32px",
+                    backgroundColor: "#666",
+                    borderRadius: "6px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    color: "white",
+                    fontSize: "14px",
+                    fontWeight: "600",
+                    border: "1px solid #777",
+                    boxShadow: "0 2px 4px rgba(0,0,0,0.3)"
+                  }}
+                >
+                  {videoCount > 9 ? `${videoCount}+` : videoCount}
+                </Box>
+              );
+            })}
+          </Box>
+        )}
 
         {/* Search Field for URL and Title */}
         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, mt: 4 }}>
