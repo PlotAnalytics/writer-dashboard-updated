@@ -371,15 +371,10 @@ const Dashboard = () => {
     }
     console.log('✅ Type validation passed');
 
-    // Validate Structure selection (skip for intern writers)
+    // Structure selection is now optional for all writers
     const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
     console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure, 'isIntern:', isIntern);
-    if (!isIntern && (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --')) {
-      console.log('❌ Structure validation failed - must select a valid structure');
-      setError('Please select a Structure from the dropdown options.');
-      return;
-    }
-    console.log('✅ Structure validation passed');
+    console.log('✅ Structure validation passed (now optional)');
 
     // Validate Script (Google Doc Link)
     if (!googleDocLink.trim()) {
@@ -399,11 +394,7 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate Structure Explanation when "No Structure" is selected (skip for intern writers)
-    if (!isIntern && selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
-      setError("Structure explanation must be at least 50 characters when 'No Structure' is selected.");
-      return;
-    }
+    // Structure explanation validation is now optional
 
     // Validate Inspiration Link for Remix and Re-write
     if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
@@ -883,7 +874,7 @@ const Dashboard = () => {
                         fontWeight: '700',
                         fontSize: '13px'
                       }}>
-                        Structure <span style={{ color: '#ff4444' }}>*</span>
+                        Structure (Optional)
                       </Typography>
                       <FormControl size="medium" fullWidth>
                         <Select
@@ -944,7 +935,7 @@ const Dashboard = () => {
                         '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                       }}
                     >
-                      <MenuItem value="">-- Select Structure --</MenuItem>
+                      <MenuItem value="">-- No Structure Selected --</MenuItem>
                       {structureList.map((structure) => (
                         <MenuItem key={structure.structure_id || structure.id} value={structure.name}>
                           {structure.name}
