@@ -530,9 +530,16 @@ const createTrelloCard = async (
     // Add attachments if provided
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
+        // Support both old format (string) and new format (object with url and name)
+        const attachmentData = typeof attachment === 'string'
+          ? { url: attachment }
+          : { url: attachment.url, name: attachment.name };
+
+        console.log(`📎 Adding attachment: ${attachmentData.name || 'Unnamed'} - ${attachmentData.url}`);
+
         await axios.post(
           `https://api.trello.com/1/cards/${cardId}/attachments?key=${apiKey}&token=${token}`,
-          { url: attachment }
+          attachmentData
         );
       }
     }
@@ -611,10 +618,50 @@ app.post("/api/scripts", async (req, res) => {
         : "Writer Submissions (QA)";
     }
 
-    // Create a Trello card
+    // Create a Trello card with properly named attachments
     // Parse aiChatUrl if it contains multiple links separated by " / "
     const aiChatUrls = aiChatUrl ? aiChatUrl.split(' / ').map(url => url.trim()).filter(Boolean) : [];
-    const attachments = [googleDocLink, ...aiChatUrls, inspiration_link, core_concept_doc].filter(Boolean);
+
+    // Build attachments array with descriptive names
+    const attachments = [];
+
+    // Add Google Doc Link
+    if (googleDocLink) {
+      attachments.push({
+        url: googleDocLink,
+        name: "Writer Script"
+      });
+    }
+
+    // Add AI Chat URLs with numbered names
+    aiChatUrls.forEach((url, index) => {
+      if (url) {
+        attachments.push({
+          url: url,
+          name: `AI Chat URL ${index + 1}`
+        });
+      }
+    });
+
+    // Add Inspiration Link
+    if (inspiration_link) {
+      attachments.push({
+        url: inspiration_link,
+        name: "Inspiration Link"
+      });
+    }
+
+    // Add Core Concept Doc
+    if (core_concept_doc) {
+      attachments.push({
+        url: core_concept_doc,
+        name: "Core Concept Doc"
+      });
+    }
+
+    console.log(`📎 Creating Trello card with ${attachments.length} named attachments:`,
+      attachments.map(att => att.name).join(', '));
+
     const trelloCardId = await createTrelloCard(
       apiKey,
       token,
@@ -4582,9 +4629,16 @@ app.post("/create-trello-card", async (req, res) => {
 
     if (attachments && attachments.length > 0) {
       for (const attachment of attachments) {
+        // Support both old format (string) and new format (object with url and name)
+        const attachmentData = typeof attachment === 'string'
+          ? { url: attachment }
+          : { url: attachment.url, name: attachment.name };
+
+        console.log(`📎 Adding attachment: ${attachmentData.name || 'Unnamed'} - ${attachmentData.url}`);
+
         await axios.post(
           `https://api.trello.com/1/cards/${cardResponse.data.id}/attachments?key=${apiKey}&token=${token}`,
-          { url: attachment }
+          attachmentData
         );
       }
     }
