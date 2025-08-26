@@ -4901,114 +4901,7 @@ const setPostingAccountValue = async (
 
 // Daily Limits and posting account management
 
-/**
- * Checks if counters need to be reset based on the current time and last activity
- */
-async function checkAndResetCounters() {
-  const client = await pool.connect();
-  try {
-    // Use a transaction to prevent race conditions
-    await client.query("BEGIN");
 
-    // Get current date in US Eastern Time
-    const now = new Date();
-
-    // Format current date in YYYY-MM-DD format for consistent comparison and storage
-    const estDate = new Date(
-      now.toLocaleString("en-US", { timeZone: "America/New_York" })
-    );
-    const currentDateStr = `${estDate.getFullYear()}-${String(
-      estDate.getMonth() + 1
-    ).padStart(2, "0")}-${String(estDate.getDate()).padStart(2, "0")}`;
-
-    // Check if we've already reset counters today
-    const lastResetQuery = `
-          SELECT value FROM app_settings
-          WHERE key = 'last_counter_reset_date'
-      `;
-    const lastResetResult = await client.query(lastResetQuery);
-    const lastResetDate =
-      lastResetResult.rows.length > 0 ? lastResetResult.rows[0].value : null;
-
-    // If we've already reset today, no need to check further
-    if (lastResetDate === currentDateStr) {
-      console.log(`Counters already reset today (${currentDateStr})`);
-      await client.query("COMMIT");
-      return;
-    }
-
-    // Get the last activity timestamp from the audit table
-    const lastActivityQuery = `
-          SELECT timestamp
-          FROM posting_account_audit
-          ORDER BY timestamp DESC
-          LIMIT 1
-      `;
-
-    const lastActivityResult = await client.query(lastActivityQuery);
-
-    let shouldReset = false;
-
-    // If there's a last activity record
-    if (lastActivityResult.rows.length > 0) {
-      const lastActivityTime = new Date(lastActivityResult.rows[0].timestamp);
-
-      // Convert last activity to EST for comparison
-      const lastActivityEst = new Date(
-        lastActivityTime.toLocaleString("en-US", {
-          timeZone: "America/New_York",
-        })
-      );
-
-      // Compare just the date portions (year, month, day)
-      const isSameDay =
-        estDate.getFullYear() === lastActivityEst.getFullYear() &&
-        estDate.getMonth() === lastActivityEst.getMonth() &&
-        estDate.getDate() === lastActivityEst.getDate();
-
-      if (!isSameDay) {
-        console.log(
-          `New day detected since last activity. Current: ${currentDateStr}, Last: ${lastActivityEst.toISOString().split("T")[0]
-          }`
-        );
-        shouldReset = true;
-      }
-    } else {
-      // No previous activity, check if it's midnight hour
-      const estHour = estDate.getHours();
-      if (estHour === 0) {
-        console.log(
-          "No previous activity and midnight detected. Resetting counters..."
-        );
-        shouldReset = true;
-      }
-    }
-
-    // Reset counters if needed
-    if (shouldReset) {
-      console.log("Resetting daily posting account counters...");
-      await client.query("CALL reset_posting_daily_used()");
-
-      // Update the last reset date
-      const updateLastResetQuery = `
-              INSERT INTO app_settings (key, value)
-              VALUES ('last_counter_reset_date', $1)
-              ON CONFLICT (key) DO UPDATE SET value = $1
-          `;
-      await client.query(updateLastResetQuery, [currentDateStr]);
-
-      console.log("Daily posting account counters reset successfully.");
-    }
-
-    await client.query("COMMIT");
-  } catch (error) {
-    await client.query("ROLLBACK");
-    console.error("Error in checkAndResetCounters:", error);
-    // We don't rethrow the error to prevent it from affecting the main flow
-  } finally {
-    client.release();
-  }
-}
 
 /**
  * Logs account activity to the audit table
@@ -5078,7 +4971,7 @@ async function logAccountActivity(postAcctId, postAcctName, trelloCardId) {
 // Daily Limits and posting account management
 
 /**
- * Checks if counters need to be reset based on the current time and last activity
+ * Checks if counters need to be reset based on the current EST date comparison
  */
 async function checkAndResetCounters() {
   const client = await pool.connect();
@@ -5088,8 +4981,6 @@ async function checkAndResetCounters() {
 
     // Get current date in US Eastern Time
     const now = new Date();
-
-    // Format current date in YYYY-MM-DD format for consistent comparison and storage
     const estDate = new Date(
       now.toLocaleString("en-US", { timeZone: "America/New_York" })
     );
@@ -5097,89 +4988,61 @@ async function checkAndResetCounters() {
       estDate.getMonth() + 1
     ).padStart(2, "0")}-${String(estDate.getDate()).padStart(2, "0")}`;
 
-    // Check if we've already reset counters today
-    const lastResetQuery = `
-          SELECT value FROM app_settings
-          WHERE key = 'last_counter_reset_date'
-      `;
-    const lastResetResult = await client.query(lastResetQuery);
-    const lastResetDate =
-      lastResetResult.rows.length > 0 ? lastResetResult.rows[0].value : null;
+    console.log(`🔍 Checking counter reset for current EST date: ${currentDateStr}`);
 
-    // If we've already reset today, no need to check further
-    if (lastResetDate === currentDateStr) {
-      console.log(`Counters already reset today (${currentDateStr})`);
+    // Get the last reset date and updated_at from app_settings
+    const lastResetQuery = `
+      SELECT value, updated_at
+      FROM app_settings
+      WHERE key = 'last_counter_reset_date'
+    `;
+    const lastResetResult = await client.query(lastResetQuery);
+
+    let lastResetDate = null;
+    let lastUpdatedAt = null;
+
+    if (lastResetResult.rows.length > 0) {
+      lastResetDate = lastResetResult.rows[0].value;
+      lastUpdatedAt = lastResetResult.rows[0].updated_at;
+      console.log(`📅 Last reset date: ${lastResetDate}, Updated at: ${lastUpdatedAt}`);
+    } else {
+      console.log(`📅 No previous reset date found in app_settings`);
+    }
+
+    // Compare current EST date with stored reference date
+    // If current date is higher (later), we need to reset
+    const shouldReset = !lastResetDate || currentDateStr > lastResetDate;
+
+    if (!shouldReset) {
+      console.log(`✅ Counters already reset for current date (${currentDateStr})`);
       await client.query("COMMIT");
       return;
     }
 
-    // Get the last activity timestamp from the audit table
-    const lastActivityQuery = `
-          SELECT timestamp
-          FROM posting_account_audit
-          ORDER BY timestamp DESC
-          LIMIT 1
-      `;
+    console.log(`🔄 Current EST date (${currentDateStr}) is higher than last reset date (${lastResetDate || 'none'}). Resetting counters...`);
 
-    const lastActivityResult = await client.query(lastActivityQuery);
+    // Reset the posting daily counters
+    await client.query("CALL reset_posting_daily_used()");
+    console.log("✅ Called reset_posting_daily_used() procedure");
 
-    let shouldReset = false;
+    // Update the app_settings with current date and timestamp
+    const updateQuery = `
+      INSERT INTO app_settings (key, value, updated_at)
+      VALUES ('last_counter_reset_date', $1, CURRENT_TIMESTAMP)
+      ON CONFLICT (key)
+      DO UPDATE SET
+        value = $1,
+        updated_at = CURRENT_TIMESTAMP
+    `;
+    await client.query(updateQuery, [currentDateStr]);
 
-    // If there's a last activity record
-    if (lastActivityResult.rows.length > 0) {
-      const lastActivityTime = new Date(lastActivityResult.rows[0].timestamp);
-
-      // Convert last activity to EST for comparison
-      const lastActivityEst = new Date(
-        lastActivityTime.toLocaleString("en-US", {
-          timeZone: "America/New_York",
-        })
-      );
-
-      // Compare just the date portions (year, month, day)
-      const isSameDay =
-        estDate.getFullYear() === lastActivityEst.getFullYear() &&
-        estDate.getMonth() === lastActivityEst.getMonth() &&
-        estDate.getDate() === lastActivityEst.getDate();
-
-      if (!isSameDay) {
-        console.log(
-          `New day detected since last activity. Current: ${currentDateStr}, Last: ${lastActivityEst.toISOString().split("T")[0]
-          }`
-        );
-        shouldReset = true;
-      }
-    } else {
-      // No previous activity, check if it's midnight hour
-      const estHour = estDate.getHours();
-      if (estHour === 0) {
-        console.log(
-          "No previous activity and midnight detected. Resetting counters..."
-        );
-        shouldReset = true;
-      }
-    }
-
-    // Reset counters if needed
-    if (shouldReset) {
-      console.log("Resetting daily posting account counters...");
-      await client.query("CALL reset_posting_daily_used()");
-
-      // Update the last reset date
-      const updateLastResetQuery = `
-              INSERT INTO app_settings (key, value)
-              VALUES ('last_counter_reset_date', $1)
-              ON CONFLICT (key) DO UPDATE SET value = $1
-          `;
-      await client.query(updateLastResetQuery, [currentDateStr]);
-
-      console.log("Daily posting account counters reset successfully.");
-    }
+    console.log(`✅ Updated last_counter_reset_date to ${currentDateStr} with current timestamp`);
+    console.log("🎉 Daily posting account counters reset successfully");
 
     await client.query("COMMIT");
   } catch (error) {
     await client.query("ROLLBACK");
-    console.error("Error in checkAndResetCounters:", error);
+    console.error("❌ Error in checkAndResetCounters:", error);
     // We don't rethrow the error to prevent it from affecting the main flow
   } finally {
     client.release();
