@@ -265,6 +265,23 @@ const Analytics = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
   const { checkMilestones } = useNotifications();
+
+  // Add CSS animations for gamification
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -3166,8 +3183,511 @@ const Analytics = () => {
               </Box>
             </Box>
 
+            {/* Writer Leaderboard and Latest Content Section */}
+            <Box sx={{ mt: 6, mb: 4 }}>
+              <Box sx={{
+                display: 'flex',
+                gap: 4,
+                alignItems: 'flex-start',
+                '@media (max-width: 960px)': {
+                  flexDirection: 'column'
+                }
+              }}>
+                {/* Writer Leaderboard */}
+                <Box sx={{
+                  flex: '1 1 45%',
+                  '@media (max-width: 960px)': {
+                    flex: '1 1 100%'
+                  }
+                }}>
+                  <WriterLeaderboard currentWriterName={user?.name} />
+                </Box>
+
+                {/* Latest Content */}
+                <Box sx={{
+                  flex: '1 1 55%',
+                  '@media (max-width: 960px)': {
+                    flex: '1 1 100%'
+                  }
+                }}>
+                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
+                    Latest content
+                  </Typography>
+                  <Box
+                    sx={{
+                      bgcolor: '#2A2A2A',
+                      borderRadius: '8px',
+                      border: '1px solid #333',
+                      p: 2,
+                    }}
+                  >
+                    {analyticsData.latestContent ? (
+                      <>
+                        {/* Enhanced Video Thumbnail with Preview and Celebration Effects */}
+                        <Box sx={{ position: 'relative', mb: 2 }}>
+                          {/* Celebration Confetti for Viral Videos - Simplified */}
+                          {(analyticsData.latestContent.views || 0) >= 1000000 && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 10,
+                                right: 10,
+                                width: 20,
+                                height: 20,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(45deg, #FFD700, #FF5722)',
+                                animation: 'pulse 2s infinite',
+                                zIndex: 10,
+                                '&:before': {
+                                  content: '"🎉"',
+                                  position: 'absolute',
+                                  top: -5,
+                                  left: -5,
+                                  fontSize: '16px'
+                                }
+                              }}
+                            />
+                          )}
+
+                          <Box
+                            className="video-thumbnail-analytics-large"
+                            component="img"
+                            src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
+                            sx={{
+                              width: '100%',
+                              height: 80,
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              border: (analyticsData.latestContent.views || 0) >= 3000000 ? '2px solid #FFD700' :
+                                      (analyticsData.latestContent.views || 0) >= 1000000 ? '2px solid #FF5722' :
+                                      (analyticsData.latestContent.views || 0) >= 500000 ? '2px solid #FF9800' : '2px solid #333',
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer',
+                              boxShadow: (analyticsData.latestContent.views || 0) >= 1000000 ?
+                                '0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3)' :
+                                'none',
+                              '&:hover': {
+                                border: '2px solid #667eea',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                transform: 'scale(1.02)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <Box
+                            className="video-thumbnail-analytics-large"
+                            sx={{
+                              width: '100%',
+                              height: 80, // Reduced height
+                              bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
+                              borderRadius: '8px',
+                              border: '2px solid #333',
+                              display: 'none',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '40px', // Reduced size
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                border: '2px solid #667eea',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                transform: 'scale(1.02)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                          >
+                            {analyticsData.latestContent.type === 'short' ? '🎯' : '📺'}
+                          </Box>
+
+                          {/* Enhanced Play Button Overlay with Gamification */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: 40,
+                              height: 40,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #FFD700, #FFA000)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #FFA000, #FF8F00)',
+                                transform: 'translate(-50%, -50%) scale(1.1)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                          >
+                            <Typography sx={{
+                              color: 'white',
+                              fontSize: '16px',
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              marginLeft: '2px' // Slight offset for play button centering
+                            }}>
+                              ▶
+                            </Typography>
+                          </Box>
+
+
+
+                          {/* Duration Badge */}
+                          {analyticsData.latestContent.duration && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                bottom: 8,
+                                right: 8,
+                                bgcolor: 'rgba(0,0,0,0.9)',
+                                color: 'white',
+                                px: 1.5,
+                                py: 0.5,
+                                borderRadius: '6px',
+                                fontSize: '12px',
+                                fontWeight: 600
+                              }}
+                            >
+                              {analyticsData.latestContent.duration}
+                            </Box>
+                          )}
+
+                          {/* Video Type Badge */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 8,
+                              left: 8,
+                              bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
+                              color: 'white',
+                              px: 1.5,
+                              py: 0.5,
+                              borderRadius: '6px',
+                              fontSize: '10px',
+                              fontWeight: 600,
+                              textTransform: 'uppercase'
+                            }}
+                          >
+                            {analyticsData.latestContent.type === 'short' ? 'SHORT' : 'VIDEO'}
+                          </Box>
+                        </Box>
+
+                        {/* Video Title */}
+                        <Typography variant="body2" sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          mb: 1.5,
+                          fontSize: '14px', // Reduced size
+                          lineHeight: 1.3
+                        }}>
+                          {analyticsData.latestContent.title || 'Untitled Video'}
+                        </Typography>
+
+                        {/* Achievement Badges */}
+                        {(() => {
+                          const views = analyticsData.latestContent.views || 0;
+                          const engagement = analyticsData.latestContent.engagement || 0;
+                          const stayedToWatch = analyticsData.latestContent.stayedToWatch || 0;
+                          const badges = [];
+
+                          // View milestones
+                          if (views >= 3000000) badges.push({ icon: '👑', text: 'Mega Viral', color: '#FFD700' });
+                          else if (views >= 1000000) badges.push({ icon: '🔥', text: 'Viral Hit', color: '#FF5722' });
+                          else if (views >= 500000) badges.push({ icon: '⭐', text: 'Rising Star', color: '#FF9800' });
+                          else if (views >= 100000) badges.push({ icon: '📈', text: 'Growing', color: '#4CAF50' });
+
+                          // Engagement badges
+                          if (engagement >= 8) badges.push({ icon: '💎', text: 'High Engagement', color: '#9C27B0' });
+                          else if (engagement >= 5) badges.push({ icon: '👍', text: 'Good Engagement', color: '#2196F3' });
+
+                          // Retention badges
+                          if (stayedToWatch >= 70) badges.push({ icon: '🎯', text: 'Captivating', color: '#E91E63' });
+                          else if (stayedToWatch >= 50) badges.push({ icon: '👀', text: 'Engaging', color: '#FF5722' });
+
+                          return badges.length > 0 ? (
+                            <Box sx={{ mb: 1.5 }}>
+                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
+                                {badges.map((badge, index) => (
+                                  <Box
+                                    key={index}
+                                    sx={{
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      gap: 0.5,
+                                      bgcolor: badge.color + '20',
+                                      border: `1px solid ${badge.color}40`,
+                                      borderRadius: '12px',
+                                      px: 1,
+                                      py: 0.25,
+                                      fontSize: '10px',
+                                      fontWeight: 600,
+                                      color: badge.color,
+                                      animation: 'pulse 2s infinite'
+                                    }}
+                                  >
+                                    <span style={{ fontSize: '8px' }}>{badge.icon}</span>
+                                    {badge.text}
+                                  </Box>
+                                ))}
+                              </Box>
+                            </Box>
+                          ) : null;
+                        })()}
+
+                        {/* Enhanced Video Stats with Progress Indicators */}
+                        <Box sx={{ mb: 1.5 }}>
+                          {/* Views with progress bar */}
+                          <Box sx={{ mb: 1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                              <Typography variant="caption" sx={{ color: '#888', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                👁️ Views
+                              </Typography>
+                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
+                                {formatNumber(analyticsData.latestContent.views || 0)}
+                              </Typography>
+                            </Box>
+                            {/* Progress bar to next milestone */}
+                            {(() => {
+                              const views = analyticsData.latestContent.views || 0;
+                              let nextMilestone, progress, milestoneColor;
+
+                              if (views < 100000) {
+                                nextMilestone = 100000;
+                                milestoneColor = '#4CAF50';
+                              } else if (views < 500000) {
+                                nextMilestone = 500000;
+                                milestoneColor = '#FF9800';
+                              } else if (views < 1000000) {
+                                nextMilestone = 1000000;
+                                milestoneColor = '#FF5722';
+                              } else if (views < 3000000) {
+                                nextMilestone = 3000000;
+                                milestoneColor = '#FFD700';
+                              }
+
+                              if (nextMilestone) {
+                                progress = (views / nextMilestone) * 100;
+                                return (
+                                  <Box sx={{ position: 'relative', height: 4, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                    <Box
+                                      sx={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        height: '100%',
+                                        width: `${Math.min(progress, 100)}%`,
+                                        background: `linear-gradient(90deg, ${milestoneColor}80, ${milestoneColor})`,
+                                        borderRadius: 2,
+                                        transition: 'width 1s ease-in-out'
+                                      }}
+                                    />
+                                  </Box>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </Box>
+
+                          {/* Engagement Rate */}
+                          {analyticsData.latestContent.engagement !== undefined && (
+                            <Box sx={{ mb: 1 }}>
+                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                <Typography variant="caption" sx={{ color: '#888', display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                  💝 Engagement
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
+                                  {analyticsData.latestContent.engagement ? analyticsData.latestContent.engagement.toFixed(1) : '0.0'}%
+                                </Typography>
+                              </Box>
+                              <Box sx={{ position: 'relative', height: 4, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
+                                <Box
+                                  sx={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    height: '100%',
+                                    width: `${Math.min((analyticsData.latestContent.engagement || 0) * 10, 100)}%`,
+                                    background: 'linear-gradient(90deg, #9C27B080, #9C27B0)',
+                                    borderRadius: 2,
+                                    transition: 'width 1s ease-in-out'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+                          )}
+
+
+                        </Box>
+
+                        {/* Enhanced Action Buttons with Gamification */}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => navigate(`/content/video/${analyticsData.latestContent.id}`)}
+                            sx={{
+                              color: 'white',
+                              borderColor: '#444',
+                              textTransform: 'none',
+                              flex: 1,
+                              fontSize: '12px',
+                              position: 'relative',
+                              overflow: 'hidden',
+                              '&:hover': {
+                                borderColor: '#667eea',
+                                bgcolor: 'rgba(102, 126, 234, 0.1)'
+                              }
+                            }}
+                          >
+                            📊 Analytics
+                          </Button>
+                          {analyticsData.latestContent.url && (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
+                              sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                textTransform: 'none',
+                                flex: 1,
+                                fontSize: '12px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                '&:hover': {
+                                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)'
+                                }
+                              }}
+                            >
+                              🎬 Watch
+                            </Button>
+                          )}
+                        </Box>
+
+                        {/* Performance Score */}
+                        {(() => {
+                          const views = analyticsData.latestContent.views || 0;
+                          const engagement = analyticsData.latestContent.engagement || 0;
+                          const retention = analyticsData.latestContent.stayedToWatch || 0;
+
+                          // Calculate performance score (0-100)
+                          let viewScore = 0;
+                          if (views >= 3000000) viewScore = 40;
+                          else if (views >= 1000000) viewScore = 35;
+                          else if (views >= 500000) viewScore = 30;
+                          else if (views >= 100000) viewScore = 25;
+                          else if (views >= 50000) viewScore = 20;
+                          else if (views >= 10000) viewScore = 15;
+                          else if (views >= 1000) viewScore = 10;
+                          else viewScore = 5;
+
+                          const engagementScore = Math.min(engagement * 3, 30); // Max 30 points
+                          const retentionScore = Math.min(retention * 0.3, 30); // Max 30 points
+
+                          const totalScore = Math.round(viewScore + engagementScore + retentionScore);
+
+                          let scoreColor, scoreLabel;
+                          if (totalScore >= 90) { scoreColor = '#FFD700'; scoreLabel = 'Legendary'; }
+                          else if (totalScore >= 80) { scoreColor = '#FF5722'; scoreLabel = 'Excellent'; }
+                          else if (totalScore >= 70) { scoreColor = '#FF9800'; scoreLabel = 'Great'; }
+                          else if (totalScore >= 60) { scoreColor = '#4CAF50'; scoreLabel = 'Good'; }
+                          else if (totalScore >= 40) { scoreColor = '#2196F3'; scoreLabel = 'Fair'; }
+                          else { scoreColor = '#9E9E9E'; scoreLabel = 'Needs Work'; }
+
+                          return (
+                            <Box sx={{
+                              mt: 2,
+                              pt: 2,
+                              borderTop: '1px solid rgba(255,255,255,0.1)',
+                              textAlign: 'center'
+                            }}>
+                              <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
+                                Performance Score
+                              </Typography>
+                              <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                gap: 1
+                              }}>
+                                <Box
+                                  sx={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: '50%',
+                                    border: `3px solid ${scoreColor}`,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    position: 'relative',
+                                    background: `conic-gradient(${scoreColor} ${totalScore * 3.6}deg, rgba(255,255,255,0.1) 0deg)`,
+                                    '&:before': {
+                                      content: '""',
+                                      position: 'absolute',
+                                      inset: 3,
+                                      borderRadius: '50%',
+                                      background: '#2A2A2A'
+                                    }
+                                  }}
+                                >
+                                  <Typography
+                                    variant="caption"
+                                    sx={{
+                                      color: scoreColor,
+                                      fontWeight: 700,
+                                      fontSize: '10px',
+                                      position: 'relative',
+                                      zIndex: 1
+                                    }}
+                                  >
+                                    {totalScore}
+                                  </Typography>
+                                </Box>
+                                <Box>
+                                  <Typography variant="caption" sx={{ color: scoreColor, fontWeight: 600, display: 'block' }}>
+                                    {scoreLabel}
+                                  </Typography>
+                                  <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
+                                    /100 points
+                                  </Typography>
+                                </Box>
+                              </Box>
+                            </Box>
+                          );
+                        })()}
+                      </>
+                    ) : (
+                      <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: '#888'
+                      }}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          No recent content found
+                        </Typography>
+                        <Typography variant="caption">
+                          Upload a video to see it here
+                        </Typography>
+                      </Box>
+                    )}
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
             {/* Top Content Section */}
-            <Box sx={{ mt: 6 }}>
+            <Box sx={{ mt: 4 }}>
               <Box sx={{
                 display: 'flex',
                 gap: 4,
@@ -3603,318 +4123,14 @@ const Analytics = () => {
                   </Box>
                 </Box>
 
-                {/* Right Side - Podcasts and Latest Content */}
+                {/* Right Side - Empty for now */}
                 <Box sx={{
                   flex: '1 1 35%',
                   '@media (max-width: 960px)': {
                     flex: '1 1 100%'
                   }
                 }}>
-                  {/* Writer Leaderboard Section */}
-                  <Box sx={{ mb: 4 }}>
-                    <WriterLeaderboard currentWriterName={user?.name} />
-                  </Box>
-
-                  {/* Latest Content Section */}
-                  <Box>
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
-                      Latest content
-                    </Typography>
-                    <Box
-                      sx={{
-                        bgcolor: '#2A2A2A',
-                        borderRadius: '8px',
-                        border: '1px solid #333',
-                        p: 2,
-                        height: '600px', // Fixed height to match top content section
-                        overflowY: 'auto',
-                        '&::-webkit-scrollbar': {
-                          width: '4px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          borderRadius: '2px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          borderRadius: '2px',
-                        },
-                        '&::-webkit-scrollbar-thumb:hover': {
-                          background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)',
-                        },
-                      }}
-                    >
-                      {analyticsData.latestContent ? (
-                        <>
-                          {/* Enhanced Video Thumbnail with Preview */}
-                          <Box sx={{ position: 'relative', mb: 3 }}>
-                            <Box
-                              className="video-thumbnail-analytics-large"
-                              component="img"
-                              src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
-                              sx={{
-                                width: '100%',
-                                height: 140,
-                                borderRadius: '8px',
-                                objectFit: 'cover',
-                                border: '2px solid #333',
-                                transition: 'all 0.2s ease',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  border: '2px solid #667eea',
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  transform: 'scale(1.02)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <Box
-                              className="video-thumbnail-analytics-large"
-                              sx={{
-                                width: '100%',
-                                height: 140,
-                                bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
-                                borderRadius: '8px',
-                                border: '2px solid #333',
-                                display: 'none',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '50px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  border: '2px solid #667eea',
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  transform: 'scale(1.02)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                            >
-                              {analyticsData.latestContent.type === 'short' ? '🎯' : '📺'}
-                            </Box>
-
-                            {/* Play Button Overlay */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: 50,
-                                height: 50,
-                                bgcolor: 'rgba(0,0,0,0.8)',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  bgcolor: 'rgba(228,184,0,0.9)',
-                                  transform: 'translate(-50%, -50%) scale(1.1)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                            >
-                              <Typography sx={{ color: 'white', fontSize: '20px' }}>▶</Typography>
-                            </Box>
-
-                            {/* Duration Badge */}
-                            {analyticsData.latestContent.duration && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  bottom: 8,
-                                  right: 8,
-                                  bgcolor: 'rgba(0,0,0,0.9)',
-                                  color: 'white',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: 600
-                                }}
-                              >
-                                {analyticsData.latestContent.duration}
-                              </Box>
-                            )}
-
-                            {/* Video Type Badge */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
-                                color: 'white',
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: '6px',
-                                fontSize: '10px',
-                                fontWeight: 600,
-                                textTransform: 'uppercase'
-                              }}
-                            >
-                              {analyticsData.latestContent.type === 'short' ? 'SHORT' : 'VIDEO'}
-                            </Box>
-                          </Box>
-
-                          {/* Video Title */}
-                          <Typography variant="body2" sx={{
-                            color: 'white',
-                            fontWeight: 600,
-                            mb: 2,
-                            fontSize: '15px',
-                            lineHeight: 1.4
-                          }}>
-                            {analyticsData.latestContent.title || 'Untitled Video'}
-                          </Typography>
-
-                          {/* Video Stats - matching Content tab format */}
-                          <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Account</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {analyticsData.latestContent.account_name || 'Unknown Account'}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Views</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {formatNumber(analyticsData.latestContent.views || 0)}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Engagement</Typography>
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, display: 'block' }}>
-                                  {analyticsData.latestContent.likes && analyticsData.latestContent.views ?
-                                    ((analyticsData.latestContent.likes / analyticsData.latestContent.views) * 100).toFixed(1) + '%' :
-                                    'N/A'
-                                  }
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#888' }}>
-                                  {analyticsData.latestContent.likes?.toLocaleString() || '0'} likes
-                                </Typography>
-                              </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Stayed to Watch</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {analyticsData.latestContent.stayedToWatch ?
-                                  `${analyticsData.latestContent.stayedToWatch.toFixed(1)}%` :
-                                  'N/A'
-                                }
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          {/* YouTube URL */}
-                          {analyticsData.latestContent.url && (
-                            <Box sx={{ mb: 2, p: 1.5, bgcolor: '#333', borderRadius: '6px' }}>
-                              <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 0.5 }}>
-                                YouTube URL:
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                  '&:hover': { textDecoration: 'underline' }
-                                }}
-                                onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
-                              >
-                                {analyticsData.latestContent.url.length > 40 ?
-                                  analyticsData.latestContent.url.substring(0, 40) + '...' :
-                                  analyticsData.latestContent.url
-                                }
-                              </Typography>
-                            </Box>
-                          )}
-
-                          {/* Publication Date */}
-                          <Typography variant="caption" sx={{ color: '#888', mb: 3, display: 'block' }}>
-                            {analyticsData.latestContent.posted_date ?
-                              `Published ${new Date(analyticsData.latestContent.posted_date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}` :
-                              'Recently published'
-                            }
-                          </Typography>
-
-                          {/* Action Buttons */}
-                          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => navigate(`/content/video/${analyticsData.latestContent.id}`)}
-                              sx={{
-                                color: 'white',
-                                borderColor: '#444',
-                                textTransform: 'none',
-                                flex: 1,
-                                '&:hover': { borderColor: '#666', bgcolor: 'rgba(255,255,255,0.05)' }
-                              }}
-                            >
-                              Analytics
-                            </Button>
-                            {analyticsData.latestContent.url && (
-                              <Button
-                                variant="contained"
-                                size="small"
-                                onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
-                                sx={{
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  color: 'white',
-                                  textTransform: 'none',
-                                  flex: 1,
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  '&:hover': { bgcolor: '#D4A600' }
-                                }}
-                              >
-                                Watch
-                              </Button>
-                            )}
-                          </Box>
-
-                          {/* Footer Info */}
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="caption" sx={{ color: '#888' }}>
-                              Latest of {analyticsData.totalSubmissions || 0} videos
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              fontWeight: 600
-                            }}>
-                              LATEST
-                            </Typography>
-                          </Box>
-                        </>
-                      ) : (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
-                            No recent content available
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#666' }}>
-                            Latest videos will appear here when posted
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-
-
+                  {/* This space can be used for other widgets in the future */}
                 </Box>
               </Box>
             </Box>
