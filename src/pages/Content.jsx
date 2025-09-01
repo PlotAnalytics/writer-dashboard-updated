@@ -28,13 +28,20 @@ import {
   KeyboardArrowDown as ArrowDownIcon,
   NavigateBefore as PrevIcon,
   NavigateNext as NextIcon,
-  Search as SearchIcon
+  ArrowBack as ArrowBackIcon,
+  ArrowForward as ArrowForwardIcon,
+  Search as SearchIcon,
+  Description as DescriptionIcon,
+  Chat as ChatIcon,
+  Article as ArticleIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import axios from 'axios';
 import { contentApi } from '../utils/simpleApi.js';
 import { buildApiUrl } from '../config/api.js';
+import claudeIcon from '../assets/claude.png';
+import googleDocIcon from '../assets/google_doc.png';
 
 const Content = () => {
   const navigate = useNavigate();
@@ -69,6 +76,11 @@ const Content = () => {
   const [stlResult, setStlResult] = useState(null);
   const [stlLoading, setStlLoading] = useState(false);
   const [stlError, setStlError] = useState(null);
+
+  // Core concept titles state
+  const [coreConceptTitles, setCoreConceptTitles] = useState({});
+  const [coreConceptFilter, setCoreConceptFilter] = useState('');
+  const [availableCoreConceptTitles, setAvailableCoreConceptTitles] = useState([]);
 
   // Function to extract video ID from YouTube URL
   const extractVideoId = (url) => {
@@ -136,6 +148,39 @@ const Content = () => {
     }
   };
 
+  // Function to fetch core concept titles from Google Sheets
+  const fetchCoreConceptTitles = async () => {
+    try {
+      console.log('📊 Fetching core concept titles...');
+      const apiUrl = buildApiUrl('/api/analytics/core-concept-titles');
+      const response = await fetch(apiUrl);
+      const data = await response.json();
+
+      if (data.success) {
+        setCoreConceptTitles(data.titleMapping);
+        console.log(`✅ Loaded ${data.count} core concept titles`);
+      } else {
+        console.error('❌ Failed to fetch core concept titles:', data.message);
+      }
+    } catch (error) {
+      console.error('❌ Error fetching core concept titles:', error);
+    }
+  };
+
+  // Function to extract document ID from core concept URL
+  const extractDocumentId = (url) => {
+    if (!url) return null;
+    const match = url.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+    return match ? match[1] : null;
+  };
+
+  // Function to get core concept title from URL
+  const getCoreConceptTitle = (coreConceptUrl) => {
+    if (!coreConceptUrl) return null;
+    const docId = extractDocumentId(coreConceptUrl);
+    return docId ? coreConceptTitles[docId] : null;
+  };
+
   // Fetch writer-specific videos from InfluxDB and PostgreSQL
   const fetchContentData = async () => {
     setLoading(true);
@@ -169,7 +214,7 @@ const Content = () => {
 
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 
-      // Try InfluxDB first, then PostgreSQL fallback
+      // Use same data source for all tabs (including virals)
       let responseData;
       try {
         const { data } = await contentApi.getVideos({
@@ -177,7 +222,7 @@ const Content = () => {
           range: dateRange,
           page: currentPage,
           limit: videosPerPage,
-          type: videoTypeFilter
+          type: videoTypeFilter // Pass virals type directly to backend
         });
         responseData = data;
         console.log('✅ Got response from /api/writer/videos:', data);
@@ -188,7 +233,7 @@ const Content = () => {
             writer_id: writerId,
             page: currentPage,
             limit: videosPerPage,
-            type: videoTypeFilter
+            type: videoTypeFilter // Pass virals type directly to backend
           }
         });
         responseData = response.data;
@@ -222,6 +267,8 @@ const Content = () => {
         // Apply sorting
         videos = sortVideos(videos, sortBy, sortOrder);
 
+        // Virals filtering is now handled by the backend
+
         // Apply filtering (video type filtering is now done server-side)
         if (filterStatus !== 'all') {
           videos = videos.filter(video =>
@@ -239,8 +286,29 @@ const Content = () => {
           });
         }
 
+        // Apply core concept filter if provided
+        if (coreConceptFilter.trim()) {
+          videos = videos.filter(video => {
+            if (!video.core_concept_doc) return false;
+            const title = getCoreConceptTitle(video.core_concept_doc);
+            return title === coreConceptFilter;
+          });
+        }
+
         setContentData(videos);
         console.log('📺 Writer videos loaded:', videos.length, 'videos for writer', writerId, 'Page:', currentPage, 'Type filter:', videoTypeFilter, 'Tab:', tabValue);
+
+        // Extract available core concept titles for filtering
+        const uniqueTitles = new Set();
+        videos.forEach(video => {
+          if (video.core_concept_doc) {
+            const title = getCoreConceptTitle(video.core_concept_doc);
+            if (title) {
+              uniqueTitles.add(title);
+            }
+          }
+        });
+        setAvailableCoreConceptTitles(Array.from(uniqueTitles).sort());
 
         // Debug: Log video types in the response
         if (videos.length > 0) {
@@ -372,7 +440,12 @@ const Content = () => {
 
   useEffect(() => {
     fetchContentData();
-  }, [sortBy, sortOrder, filterStatus, dateRange, currentPage, videoTypeFilter, searchQuery]);
+  }, [sortBy, sortOrder, filterStatus, dateRange, currentPage, videoTypeFilter, searchQuery, coreConceptFilter]);
+
+  // Fetch core concept titles on component mount
+  useEffect(() => {
+    fetchCoreConceptTitles();
+  }, []);
 
   // Handle sort change
   const handleSort = (field) => {
@@ -529,6 +602,9 @@ const Content = () => {
                 setStlUrl('');
                 setStlResult(null);
                 setStlError(null);
+              } else if (newValue === 3) {
+                console.log('🔄 Setting filter to: virals');
+                setVideoTypeFilter('virals'); // Virals tab
               }
               setCurrentPage(1); // Reset to first page when changing tabs
             }}
@@ -552,6 +628,7 @@ const Content = () => {
             <Tab label="Shorts" />
             <Tab label="Videos" />
             <Tab label="Script to Link" />
+            <Tab label="Virals" />
 
           </Tabs>
         </Box>
@@ -641,14 +718,15 @@ const Content = () => {
           </Menu>
         </Box>
 
-        {/* Modern Search Bar */}
+        {/* Modern Search Bar and Filters */}
         <Box sx={{ p: 2, borderBottom: '1px solid #333' }}>
-          <TextField
-            fullWidth
-            placeholder="Search content by title or URL..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            size="small"
+          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+            <TextField
+              fullWidth
+              placeholder="Search content by title or URL..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              size="small"
             slotProps={{
               input: {
                 startAdornment: (
@@ -696,10 +774,691 @@ const Content = () => {
               },
             }}
           />
+
+          {/* Core Concept Filter */}
+          {availableCoreConceptTitles.length > 0 && (
+            <FormControl size="small" sx={{ minWidth: 200 }}>
+              <Select
+                value={coreConceptFilter}
+                onChange={(e) => setCoreConceptFilter(e.target.value)}
+                displayEmpty
+                sx={{
+                  background: 'rgba(255, 255, 255, 0.04)',
+                  backdropFilter: 'blur(5px)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: '12px',
+                  color: 'white',
+                  transition: 'all 0.2s ease-in-out',
+                  '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                  '&:hover': {
+                    border: '1px solid rgba(102, 126, 234, 0.3)',
+                    background: 'rgba(255, 255, 255, 0.06)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.15)',
+                  },
+                  '&.Mui-focused': {
+                    border: '1px solid rgba(102, 126, 234, 0.5)',
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 20px rgba(102, 126, 234, 0.25)',
+                  },
+                  '& .MuiSelect-icon': {
+                    color: 'rgba(255, 255, 255, 0.5)',
+                  },
+                }}
+                MenuProps={{
+                  PaperProps: {
+                    sx: {
+                      bgcolor: '#1a1a1a',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      '& .MuiMenuItem-root': {
+                        color: 'white',
+                        '&:hover': {
+                          bgcolor: 'rgba(102, 126, 234, 0.1)',
+                        },
+                        '&.Mui-selected': {
+                          bgcolor: 'rgba(102, 126, 234, 0.2)',
+                        },
+                      },
+                    },
+                  },
+                }}
+              >
+                <MenuItem value="">
+                  <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>
+                    All Core Concepts
+                  </Typography>
+                </MenuItem>
+                {availableCoreConceptTitles.map((title) => (
+                  <MenuItem key={title} value={title}>
+                    <Typography sx={{ color: 'white' }}>
+                      {title}
+                    </Typography>
+                  </MenuItem>
+                ))}
+              </Select>
+            </FormControl>
+          )}
+          </Box>
         </Box>
 
-        {/* STL (Script To Link) Content */}
-        {videoTypeFilter === 'stl' ? (
+        {/* Virals Content */}
+        {videoTypeFilter === 'virals' ? (
+          <>
+            {/* Content Table */}
+            <TableContainer>
+          <Table>
+            <TableHead>
+              <TableRow sx={{ borderBottom: '1px solid #333' }}>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
+                  <Checkbox
+                    checked={isAllSelected}
+                    indeterminate={isIndeterminate}
+                    onChange={handleSelectAll}
+                    sx={{
+                      color: 'rgba(255, 255, 255, 0.4)',
+                      '&.Mui-checked': {
+                        color: '#667eea',
+                      },
+                      '&.MuiCheckbox-indeterminate': {
+                        color: '#667eea',
+                      },
+                      '&:hover': {
+                        backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                      }
+                    }}
+                  />
+                </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
+                  <Button
+                    onClick={() => handleSort('title')}
+                    sx={{
+                      color: '#888',
+                      textTransform: 'none',
+                      p: 0,
+                      minWidth: 'auto',
+                      '&:hover': { color: 'white' }
+                    }}
+                  >
+                    Viral Video
+                    {sortBy === 'title' && (
+                      <ArrowDownIcon
+                        sx={{
+                          fontSize: 16,
+                          ml: 0.5,
+                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none'
+                        }}
+                      />
+                    )}
+                  </Button>
+                </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
+                  <Button
+                    onClick={() => handleSort('date')}
+                    sx={{
+                      color: '#888',
+                      textTransform: 'none',
+                      p: 0,
+                      minWidth: 'auto',
+                      '&:hover': { color: 'white' }
+                    }}
+                  >
+                    Date
+                    {sortBy === 'date' && (
+                      <ArrowDownIcon
+                        sx={{
+                          fontSize: 16,
+                          ml: 0.5,
+                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none'
+                        }}
+                      />
+                    )}
+                  </Button>
+                </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
+                  <Button
+                    onClick={() => handleSort('views')}
+                    sx={{
+                      color: '#888',
+                      textTransform: 'none',
+                      p: 0,
+                      minWidth: 'auto',
+                      '&:hover': { color: 'white' }
+                    }}
+                  >
+                    Views
+                    {sortBy === 'views' && (
+                      <ArrowDownIcon
+                        sx={{
+                          fontSize: 16,
+                          ml: 0.5,
+                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none'
+                        }}
+                      />
+                    )}
+                  </Button>
+                </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}></TableCell>
+              </TableRow>
+            </TableHead>
+            <TableBody>
+              {loading ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                    <CircularProgress sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '50%',
+                      '& .MuiCircularProgress-circle': {
+                        stroke: 'url(#gradient)',
+                      },
+                      '& svg': {
+                        filter: 'drop-shadow(0 0 8px rgba(102, 126, 234, 0.3))',
+                      }
+                    }} />
+                    <svg width="0" height="0">
+                      <defs>
+                        <linearGradient id="gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                          <stop offset="0%" stopColor="#667eea" />
+                          <stop offset="100%" stopColor="#764ba2" />
+                        </linearGradient>
+                      </defs>
+                    </svg>
+                    <Typography variant="body2" sx={{
+                      color: '#888',
+                      mt: 2,
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      backgroundClip: 'text',
+                      WebkitBackgroundClip: 'text',
+                      WebkitTextFillColor: 'transparent'
+                    }}>
+                      Loading viral videos...
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ color: '#ff6b6b', mb: 1 }}>
+                      Error loading viral videos: {error}
+                    </Typography>
+                    <Button
+                      onClick={fetchContentData}
+                      sx={{ color: '#ffb300', textTransform: 'none' }}
+                    >
+                      Retry
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ) : currentContent.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={5} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                    <Typography variant="body2" sx={{ color: '#888' }}>
+                      No viral videos found (1M+ views)
+                    </Typography>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                currentContent.map((item) => (
+                  <TableRow
+                    key={item.id}
+                    onClick={videoTypeFilter === 'virals' ? undefined : (event) => handleVideoClick(item.id, event)}
+                    sx={{
+                      borderBottom: '1px solid #333',
+                      cursor: videoTypeFilter === 'virals' ? 'default' : 'pointer',
+                      '&:hover': { bgcolor: videoTypeFilter === 'virals' ? 'transparent' : '#2a2a2a' }
+                    }}
+                  >
+                    <TableCell sx={{ border: 'none', py: 2 }}>
+                      <Checkbox
+                        checked={isSelected(item.id)}
+                        onChange={() => handleSelectItem(item.id)}
+                        sx={{
+                          color: 'rgba(255, 255, 255, 0.4)',
+                          '&.Mui-checked': {
+                            color: '#667eea',
+                          },
+                          '&:hover': {
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                          }
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={{ border: 'none', py: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        {/* Thumbnail */}
+                        <Box sx={{ position: 'relative' }}>
+                          <Box
+                            className="video-thumbnail"
+                            component="img"
+                            src={item.preview || `https://img.youtube.com/vi/${item.url?.split('v=')[1]}/maxresdefault.jpg`}
+                            sx={{
+                              width: 60,
+                              height: 40,
+                              borderRadius: '4px',
+                              objectFit: 'cover',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                              }
+                            }}
+                            onClick={(event) => handleThumbnailClick(item.url, event)}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <Box
+                            className="video-thumbnail"
+                            sx={{
+                              width: 60,
+                              height: 40,
+                              bgcolor: '#333',
+                              borderRadius: '4px',
+                              display: 'none',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '20px',
+                              color: '#888',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                              }
+                            }}
+                            onClick={(event) => handleThumbnailClick(item.url, event)}
+                          >
+                            🎬
+                          </Box>
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              bottom: 2,
+                              right: 2,
+                              bgcolor: 'rgba(0,0,0,0.8)',
+                              color: 'white',
+                              px: 0.5,
+                              borderRadius: '2px',
+                              fontSize: '10px'
+                            }}
+                          >
+                            {item.duration || '0:30'}
+                          </Box>
+                        </Box>
+
+                        {/* Sleek Link Button */}
+                        <Button
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            window.open(item.url, '_blank');
+                          }}
+                          sx={{
+                            minWidth: '50px',
+                            height: '28px',
+                            px: 1.5,
+                            py: 0.5,
+                            background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: 500,
+                            textTransform: 'none',
+                            borderRadius: '6px',
+                            border: 'none',
+                            boxShadow: '0 2px 8px rgba(102, 126, 234, 0.3)',
+                            transition: 'all 0.2s ease',
+                            '&:hover': {
+                              background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                              transform: 'translateY(-1px)',
+                              boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                            },
+                            '&:active': {
+                              transform: 'translateY(0)',
+                              boxShadow: '0 2px 6px rgba(102, 126, 234, 0.3)',
+                            }
+                          }}
+                        >
+                          Link
+                        </Button>
+
+                        {/* Title and Description */}
+                        <Box sx={{ flex: 1 }}>
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, maxWidth: '100%' }}>
+                            <Typography
+                              variant="body2"
+                              sx={{
+                                color: 'white',
+                                fontWeight: 500,
+                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) ? '350px' : '500px',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                fontSize: '0.85rem'
+                              }}
+                              title={item.title}
+                            >
+                              {item.title}
+                            </Typography>
+                            {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && (
+                              <Typography
+                                variant="caption"
+                                sx={{
+                                  color: '#667eea',
+                                  fontSize: '0.7rem',
+                                  fontWeight: 600,
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                  padding: '1px 4px',
+                                  borderRadius: '3px',
+                                  border: '1px solid rgba(102, 126, 234, 0.3)',
+                                  whiteSpace: 'nowrap',
+                                  flexShrink: 0
+                                }}
+                                title={getCoreConceptTitle(item.core_concept_doc)}
+                              >
+                                {getCoreConceptTitle(item.core_concept_doc)}
+                              </Typography>
+                            )}
+                          </Box>
+                          <Typography variant="caption" sx={{ color: '#888' }}>
+                            {item.writer_name || 'Writer'}
+                          </Typography>
+                        </Box>
+                      </Box>
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Box>
+                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                        {formatDate(item.posted_date)}
+                      </Typography>
+                      <Typography variant="caption" sx={{ color: '#888' }}>
+                        {item.status || 'Published'}
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Typography variant="body2" sx={{ color: 'white' }}>
+                      {formatViews(item.views)}
+                    </Typography>
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2 }}>
+                    <Box sx={{ display: 'flex', gap: 1 }}>
+                      {item.google_doc_link && (
+                        <IconButton
+                          size="small"
+                          sx={{ color: '#888', '&:hover': { color: 'white' } }}
+                          onClick={(event) => {
+                            event.stopPropagation(); // Prevent row click
+                            window.open(item.google_doc_link, '_blank');
+                          }}
+                          title="Open Google Doc"
+                        >
+                          <Box
+                            sx={{
+                              width: 16,
+                              height: 16,
+                              backgroundColor: '#4285f4', // Google blue color
+                              mask: `url(${googleDocIcon}) no-repeat center`,
+                              maskSize: 'contain',
+                              WebkitMask: `url(${googleDocIcon}) no-repeat center`,
+                              WebkitMaskSize: 'contain',
+                              '&:hover': {
+                                backgroundColor: '#5a95f5',
+                                transform: 'scale(1.1)'
+                              }
+                            }}
+                          />
+                        </IconButton>
+                      )}
+                      {item.ai_chat_url && (
+                        <IconButton
+                          size="small"
+                          sx={{ color: '#888', '&:hover': { color: 'white' } }}
+                          onClick={(event) => {
+                            event.stopPropagation(); // Prevent row click
+                            window.open(item.ai_chat_url, '_blank');
+                          }}
+                          title="Open AI Chat"
+                        >
+                          <Box
+                            component="img"
+                            src={claudeIcon}
+                            sx={{
+                              width: 16,
+                              height: 16,
+                              backgroundColor: 'transparent',
+                              objectFit: 'contain',
+                              filter: 'brightness(1.2) contrast(1.1)', // Make it fully bright and crisp
+                              '&:hover': {
+                                filter: 'brightness(1.4) contrast(1.2)',
+                                transform: 'scale(1.1)'
+                              }
+                            }}
+                          />
+                        </IconButton>
+                      )}
+                      {item.core_concept_doc && (
+                        <IconButton
+                          size="small"
+                          sx={{ color: '#888', '&:hover': { color: 'white' } }}
+                          onClick={(event) => {
+                            event.stopPropagation(); // Prevent row click
+                            window.open(item.core_concept_doc, '_blank');
+                          }}
+                          title="Open Core Concept Doc"
+                        >
+                          <ArticleIcon fontSize="small" />
+                        </IconButton>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+              )}
+            </TableBody>
+          </Table>
+        </TableContainer>
+
+        {/* Pagination */}
+        <Box sx={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          p: 2,
+          borderTop: '1px solid #333'
+        }}>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <Typography variant="body2" sx={{ color: '#888' }}>
+              Rows per page:
+            </Typography>
+            <Button
+              variant="text"
+              size="small"
+              endIcon={<ArrowDownIcon />}
+              sx={{ color: '#888', textTransform: 'none' }}
+            >
+              30
+            </Button>
+          </Box>
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+            <Typography variant="body2" sx={{ color: '#888' }}>
+              {((pagination.currentPage - 1) * pagination.videosPerPage) + 1}-{Math.min(pagination.currentPage * pagination.videosPerPage, pagination.totalVideos)} of {pagination.totalVideos}
+            </Typography>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <IconButton
+                sx={{
+                  color: pagination.hasPrevPage ? '#888' : '#444',
+                  '&:hover': { color: pagination.hasPrevPage ? 'white' : '#444' }
+                }}
+                disabled={!pagination.hasPrevPage || loading}
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+              >
+                <PrevIcon />
+              </IconButton>
+              <IconButton
+                sx={{
+                  color: pagination.hasNextPage ? '#888' : '#444',
+                  '&:hover': { color: pagination.hasNextPage ? 'white' : '#444' }
+                }}
+                disabled={!pagination.hasNextPage || loading}
+                onClick={() => setCurrentPage(prev => Math.min(pagination.totalPages, prev + 1))}
+              >
+                <NextIcon />
+              </IconButton>
+            </Box>
+          </Box>
+        </Box>
+        </>
+        ) : videoTypeFilter === 'stl' ? (
+          <Box sx={{ p: 3 }}>
+            <Typography variant="h6" sx={{ color: 'white', mb: 3 }}>
+              Script to Link
+            </Typography>
+            <Typography variant="body2" sx={{ color: '#888', mb: 3 }}>
+              Enter a YouTube URL to find the associated script document.
+            </Typography>
+
+            {/* URL Input */}
+            <Box sx={{ display: 'flex', gap: 2, mb: 3 }}>
+              <TextField
+                fullWidth
+                placeholder="Enter YouTube URL (e.g., https://youtu.be/a8-VQUH489I or https://youtube.com/shorts/Ozt2mn5nJ3Y)"
+                value={stlUrl}
+                onChange={(e) => setStlUrl(e.target.value)}
+                size="small"
+                slotProps={{
+                  input: {
+                    sx: {
+                      color: 'white',
+                      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(102, 126, 234, 0.3)',
+                      borderRadius: '8px',
+                      '&:hover': {
+                        border: '1px solid rgba(102, 126, 234, 0.5)',
+                        background: 'rgba(255, 255, 255, 0.08)',
+                      },
+                      '&.Mui-focused': {
+                        border: '1px solid rgba(102, 126, 234, 0.7)',
+                        background: 'rgba(255, 255, 255, 0.1)',
+                        boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.2)',
+                      },
+                      '& .MuiInputBase-input': {
+                        color: 'white',
+                        '&::placeholder': {
+                          color: 'rgba(255, 255, 255, 0.5)',
+                          opacity: 1,
+                        },
+                      },
+                    },
+                  },
+                }}
+              />
+              <Button
+                onClick={searchScript}
+                disabled={stlLoading}
+                sx={{
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  color: 'white',
+                  px: 3,
+                  py: 1,
+                  borderRadius: '8px',
+                  textTransform: 'none',
+                  fontWeight: 500,
+                  minWidth: '100px',
+                  '&:hover': {
+                    background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                    transform: 'translateY(-1px)',
+                    boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                  },
+                  '&:disabled': {
+                    background: 'rgba(102, 126, 234, 0.3)',
+                    color: 'rgba(255, 255, 255, 0.5)',
+                  }
+                }}
+              >
+                {stlLoading ? <CircularProgress size={20} sx={{ color: 'white' }} /> : 'Search'}
+              </Button>
+            </Box>
+
+            {/* Error Display */}
+            {stlError && (
+              <Box sx={{
+                p: 2,
+                mb: 3,
+                borderRadius: '8px',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                border: '1px solid rgba(244, 67, 54, 0.3)'
+              }}>
+                <Typography sx={{ color: '#f44336', fontSize: '14px' }}>
+                  {stlError}
+                </Typography>
+              </Box>
+            )}
+
+            {/* Results Display */}
+            {stlResult && (
+              <Box sx={{
+                p: 3,
+                borderRadius: '12px',
+                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                border: '1px solid rgba(102, 126, 234, 0.3)'
+              }}>
+                <Typography variant="h6" sx={{ color: 'white', mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
+                  📄 Script Found
+                </Typography>
+
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#888', mb: 0.5 }}>
+                      Script Title:
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: 'white' }}>
+                      {stlResult.title || 'No title available'}
+                    </Typography>
+                  </Box>
+
+                  <Box>
+                    <Typography variant="body2" sx={{ color: '#888', mb: 0.5 }}>
+                      Video URL:
+                    </Typography>
+                    <Typography variant="body1" sx={{ color: '#667eea' }}>
+                      {stlResult.url || 'No URL available'}
+                    </Typography>
+                  </Box>
+
+                  {stlResult.google_doc_link && (
+                    <Box>
+                      <Typography variant="body2" sx={{ color: '#888', mb: 1 }}>
+                        Google Doc:
+                      </Typography>
+                      <Button
+                        href={stlResult.google_doc_link}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        sx={{
+                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                          color: 'white',
+                          px: 2,
+                          py: 1,
+                          borderRadius: '6px',
+                          textTransform: 'none',
+                          fontWeight: 500,
+                          '&:hover': {
+                            background: 'linear-gradient(135deg, #5a6fd8 0%, #6a4190 100%)',
+                            transform: 'translateY(-1px)',
+                            boxShadow: '0 4px 12px rgba(102, 126, 234, 0.4)',
+                          }
+                        }}
+                      >
+                        📄 Open Google Doc
+                      </Button>
+                    </Box>
+                  )}
+                </Box>
+              </Box>
+            )}
+          </Box>
+        ) : videoTypeFilter === 'stl' ? (
           <Box sx={{ p: 3 }}>
             <Typography variant="h6" sx={{ color: 'white', mb: 3 }}>
               Script to Link
@@ -825,7 +1584,7 @@ const Content = () => {
               </Box>
             )}
           </Box>
-        ) : (
+        ) : videoTypeFilter !== 'virals' ? (
           <>
             {/* Content Table */}
             <TableContainer>
@@ -1129,9 +1888,42 @@ const Content = () => {
                       </Button>
                       {/* Title and Description */}
                       <Box sx={{ flex: 1 }}>
-                        <Typography variant="body2" sx={{ color: 'white', fontWeight: 500, mb: 0.5 }}>
-                          {item.title}
-                        </Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, mb: 0.5, maxWidth: '100%' }}>
+                          <Typography
+                            variant="body2"
+                            sx={{
+                              color: 'white',
+                              fontWeight: 500,
+                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) ? '350px' : '500px',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              whiteSpace: 'nowrap',
+                              fontSize: '0.85rem'
+                            }}
+                            title={item.title}
+                          >
+                            {item.title}
+                          </Typography>
+                          {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && (
+                            <Typography
+                              variant="caption"
+                              sx={{
+                                color: '#667eea',
+                                fontSize: '0.7rem',
+                                fontWeight: 600,
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)',
+                                padding: '1px 4px',
+                                borderRadius: '3px',
+                                border: '1px solid rgba(102, 126, 234, 0.3)',
+                                whiteSpace: 'nowrap',
+                                flexShrink: 0
+                              }}
+                              title={getCoreConceptTitle(item.core_concept_doc)}
+                            >
+                              {getCoreConceptTitle(item.core_concept_doc)}
+                            </Typography>
+                          )}
+                        </Box>
                         <Typography variant="caption" sx={{ color: '#888' }}>
                           {item.writer_name || 'Writer'}
                         </Typography>
@@ -1236,7 +2028,7 @@ const Content = () => {
           </Box>
         </Box>
         </>
-        )}
+        ) : null}
       </Box>
     </Layout>
   );
