@@ -189,39 +189,95 @@ const WriterLeaderboard = ({ currentWriterName }) => {
         </Box>
         
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <FormControl size="small" sx={{ minWidth: 80 }}>
+          <FormControl size="small" sx={{ minWidth: 40 }}>
             <Select
               value={period}
               onChange={handlePeriodChange}
+              variant="outlined"
+              MenuProps={{
+                PaperProps: {
+                  sx: {
+                    background: 'rgba(30, 30, 50, 0.95)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '4px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)',
+                    '& .MuiMenuItem-root': {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                      fontSize: '12px',
+                      minHeight: '24px',
+                      padding: '4px 8px',
+                      '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.1)'
+                      },
+                      '&.Mui-selected': {
+                        background: 'rgba(102, 126, 234, 0.2)',
+                        '&:hover': {
+                          background: 'rgba(102, 126, 234, 0.3)'
+                        }
+                      }
+                    }
+                  }
+                }
+              }}
               sx={{
+                height: '20px',
+                minHeight: '20px',
                 '& .MuiOutlinedInput-root': {
                   background: 'rgba(255, 255, 255, 0.1)',
-                  borderRadius: '8px',
-                  height: '36px',
-                  fontSize: '13px',
-                  color: 'white',
-                  '& fieldset': { border: '1px solid rgba(102, 126, 234, 0.3)' },
-                  '&:hover fieldset': { border: '1px solid rgba(102, 126, 234, 0.5)' },
-                  '&.Mui-focused fieldset': { border: '1px solid #667eea' }
+                  borderRadius: '100px',
+                  height: '20px',
+                  minHeight: '20px',
+                  fontSize: '11px',
+                  color: 'rgba(255, 255, 255, 0.9)',
+                  fontWeight: 500,
+                  border: 'none !important',
+                  outline: 'none !important',
+                  '& fieldset': {
+                    border: 'none !important',
+                    outline: 'none !important'
+                  },
+                  '&:hover fieldset': {
+                    border: 'none !important',
+                    outline: 'none !important'
+                  },
+                  '&.Mui-focused fieldset': {
+                    border: 'none !important',
+                    outline: 'none !important'
+                  },
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.15)'
+                  },
+                  '& .MuiSelect-select': {
+                    paddingLeft: '8px',
+                    paddingRight: '20px !important',
+                    paddingTop: '0px',
+                    paddingBottom: '0px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    height: '20px',
+                    minHeight: '20px',
+                    lineHeight: '20px'
+                  },
+                  '& .MuiSelect-icon': {
+                    color: 'rgba(255, 255, 255, 0.7)',
+                    fontSize: '12px',
+                    right: '2px',
+                    top: '50%',
+                    transform: 'translateY(-50%)'
+                  }
+                },
+                '& .MuiInputBase-root': {
+                  height: '20px',
+                  minHeight: '20px'
                 }
               }}
             >
-              <MenuItem value="7d" sx={{ fontSize: '13px' }}>7d</MenuItem>
-              <MenuItem value="14d" sx={{ fontSize: '13px' }}>14d</MenuItem>
-              <MenuItem value="30d" sx={{ fontSize: '13px' }}>30d</MenuItem>
+              <MenuItem value="7d">7d</MenuItem>
+              <MenuItem value="14d">14d</MenuItem>
+              <MenuItem value="30d">30d</MenuItem>
             </Select>
           </FormControl>
-          
-          <IconButton
-            onClick={handleRefresh}
-            size="small"
-            sx={{
-              color: 'white',
-              '&:hover': { bgcolor: 'rgba(255, 255, 255, 0.1)' }
-            }}
-          >
-            <RefreshIcon sx={{ fontSize: 18 }} />
-          </IconButton>
         </Box>
       </Box>
 

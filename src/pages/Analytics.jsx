@@ -37,6 +37,7 @@ import VideoDetailsModal from '../components/VideoDetailsModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
+import { Scroll } from 'lucide-react';
 
 // Shimmer animation for progress bar
 const shimmer = keyframes`
@@ -307,6 +308,21 @@ const Analytics = () => {
   const [modalCategory, setModalCategory] = useState(null);
   const [modalVideos, setModalVideos] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
+
+  // Quest progress state
+  const [questProgress, setQuestProgress] = useState(0); // Track quest progress (0-2)
+
+  // Function to increment quest progress
+  const incrementQuestProgress = () => {
+    if (questProgress < 2) {
+      setQuestProgress(prev => prev + 1);
+    }
+  };
+
+  // Function to reset quest progress (for testing or daily reset)
+  const resetQuestProgress = () => {
+    setQuestProgress(0);
+  };
 
   const dateRangeOptions = [
     { value: 'last7days', label: 'Last 7 days' },
@@ -3183,7 +3199,7 @@ const Analytics = () => {
               </Box>
             </Box>
 
-            {/* Writer Leaderboard and Latest Content Section */}
+            {/* Writer Leaderboard and Right Column Section */}
             <Box sx={{ mt: 6, mb: 4 }}>
               <Box sx={{
                 display: 'flex',
@@ -3203,59 +3219,295 @@ const Analytics = () => {
                   <WriterLeaderboard currentWriterName={user?.name} />
                 </Box>
 
-                {/* Latest Content */}
+                {/* Right Column - Daily Quest and Latest Content */}
                 <Box sx={{
                   flex: '1 1 55%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
                   '@media (max-width: 960px)': {
                     flex: '1 1 100%'
                   }
                 }}>
-                  <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
-                    Latest content
-                  </Typography>
-                  <Box
-                    sx={{
-                      bgcolor: '#2A2A2A',
-                      borderRadius: '8px',
-                      border: '1px solid #333',
+                  {/* Daily Quest */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(102, 126, 234, 0.2)',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                    overflow: 'hidden',
+                    p: 2.5,
+                    flex: '0 0 auto'
+                  }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h6" sx={{
+                        fontWeight: 700,
+                        fontSize: '18px',
+                        color: 'white'
+                      }}>
+                        Daily Quest
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          color: '#667eea',
+                          borderColor: '#667eea',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          py: 0.5,
+                          px: 1.5,
+                          '&:hover': {
+                            borderColor: '#764ba2',
+                            color: '#764ba2',
+                            background: 'rgba(102, 126, 234, 0.1)'
+                          }
+                        }}
+                      >
+                        Claim all
+                      </Button>
+                    </Box>
+
+                    {/* Quest Item */}
+                    <Box sx={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '10px',
                       p: 2,
-                    }}
-                  >
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        {/* Quest Icon */}
+                        <Box sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0
+                        }}>
+                          <Scroll size={20} color="white" />
+                        </Box>
+
+                        {/* Quest Content */}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body1" sx={{
+                            color: 'white',
+                            fontWeight: 600,
+                            mb: 0.5,
+                            fontSize: '14px'
+                          }}>
+                            Complete 2 Scripts Today
+                          </Typography>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                            <Typography variant="body2" sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              backgroundClip: 'text',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              fontWeight: 600,
+                              fontSize: '12px'
+                            }}>
+                              +140 Exp
+                            </Typography>
+
+                            {/* Clickable Counter */}
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={incrementQuestProgress}
+                              disabled={questProgress >= 2}
+                              sx={{
+                                minWidth: '32px',
+                                width: '32px',
+                                height: '24px',
+                                borderRadius: '12px',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                color: questProgress >= 2 ? 'rgba(255, 255, 255, 0.5)' : '#667eea',
+                                borderColor: questProgress >= 2 ? 'rgba(255, 255, 255, 0.3)' : '#667eea',
+                                '&:hover': {
+                                  borderColor: questProgress >= 2 ? 'rgba(255, 255, 255, 0.3)' : '#764ba2',
+                                  color: questProgress >= 2 ? 'rgba(255, 255, 255, 0.5)' : '#764ba2',
+                                  background: questProgress >= 2 ? 'transparent' : 'rgba(102, 126, 234, 0.1)'
+                                }
+                              }}
+                            >
+                              +
+                            </Button>
+                          </Box>
+
+                          {/* Progress Bar */}
+                          <Box sx={{ mb: 1.5 }}>
+                            <Box sx={{
+                              width: '100%',
+                              height: 6,
+                              bgcolor: 'rgba(255, 255, 255, 0.1)',
+                              borderRadius: '3px',
+                              overflow: 'hidden'
+                            }}>
+                              <Box sx={{
+                                width: `${(questProgress / 2) * 100}%`, // Dynamic progress based on state
+                                height: '100%',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '3px',
+                                transition: 'width 0.5s ease'
+                              }} />
+                            </Box>
+                          </Box>
+
+                          {/* Progress Text and Claim Button */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                fontSize: '12px'
+                              }}>
+                                {questProgress}/2 Completed
+                              </Typography>
+
+                              {/* Reset button for testing */}
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={resetQuestProgress}
+                                sx={{
+                                  minWidth: 'auto',
+                                  fontSize: '10px',
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  textTransform: 'none',
+                                  p: 0.5,
+                                  '&:hover': {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    background: 'rgba(255, 255, 255, 0.05)'
+                                  }
+                                }}
+                              >
+                                Reset
+                              </Button>
+                            </Box>
+
+                            <Button
+                              variant="contained"
+                              size="small"
+                              disabled={questProgress < 2} // Enabled when quest is complete
+                              onClick={() => {
+                                if (questProgress >= 2) {
+                                  // Handle reward claim logic here
+                                  console.log('Reward claimed!');
+                                  // Could show notification, add to user stats, etc.
+                                }
+                              }}
+                              sx={{
+                                background: questProgress >= 2
+                                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                  : 'rgba(255, 255, 255, 0.1)',
+                                color: questProgress >= 2 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                borderRadius: '16px',
+                                px: 1.5,
+                                py: 0.5,
+                                minWidth: 'auto',
+                                '&:hover:not(:disabled)': {
+                                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                                },
+                                '&:disabled': {
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  color: 'rgba(255, 255, 255, 0.5)'
+                                }
+                              }}
+                            >
+                              ⭐ Claim Reward
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Latest Content */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(102, 126, 234, 0.2)',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                    overflow: 'hidden',
+                    p: 2.5,
+                    flex: '1 1 auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" sx={{
+                          fontWeight: 700,
+                          fontSize: '18px',
+                          color: 'white'
+                        }}>
+                          Latest content
+                        </Typography>
+                        <Typography variant="body2" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '14px',
+                          ml: 0.5
+                        }}>
+                          ▶
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Content Area */}
+                    <Box sx={{ flex: 1, overflow: 'auto' }}>
                     {analyticsData.latestContent ? (
                       <>
-                        {/* Enhanced Video Thumbnail with Preview and Celebration Effects */}
+                        {/* Compact Video Thumbnail */}
                         <Box sx={{ position: 'relative', mb: 2 }}>
-                          {/* Celebration Confetti for Viral Videos - Simplified */}
+                          {/* Viral indicator */}
                           {(analyticsData.latestContent.views || 0) >= 1000000 && (
                             <Box
                               sx={{
                                 position: 'absolute',
-                                top: 10,
-                                right: 10,
-                                width: 20,
-                                height: 20,
+                                top: 6,
+                                right: 6,
+                                width: 16,
+                                height: 16,
                                 borderRadius: '50%',
                                 background: 'linear-gradient(45deg, #FFD700, #FF5722)',
-                                animation: 'pulse 2s infinite',
                                 zIndex: 10,
                                 '&:before': {
                                   content: '"🎉"',
                                   position: 'absolute',
-                                  top: -5,
-                                  left: -5,
-                                  fontSize: '16px'
+                                  top: -3,
+                                  left: -3,
+                                  fontSize: '12px'
                                 }
                               }}
                             />
                           )}
 
                           <Box
-                            className="video-thumbnail-analytics-large"
                             component="img"
                             src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
                             sx={{
                               width: '100%',
-                              height: 80,
+                              height: 60,
                               borderRadius: '8px',
                               objectFit: 'cover',
                               border: (analyticsData.latestContent.views || 0) >= 3000000 ? '2px solid #FFD700' :
@@ -3263,9 +3515,6 @@ const Analytics = () => {
                                       (analyticsData.latestContent.views || 0) >= 500000 ? '2px solid #FF9800' : '2px solid #333',
                               transition: 'all 0.3s ease',
                               cursor: 'pointer',
-                              boxShadow: (analyticsData.latestContent.views || 0) >= 1000000 ?
-                                '0 0 20px rgba(255, 215, 0, 0.5), 0 0 40px rgba(255, 215, 0, 0.3)' :
-                                'none',
                               '&:hover': {
                                 border: '2px solid #667eea',
                                 boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
@@ -3279,17 +3528,16 @@ const Analytics = () => {
                             }}
                           />
                           <Box
-                            className="video-thumbnail-analytics-large"
                             sx={{
                               width: '100%',
-                              height: 80, // Reduced height
+                              height: 60,
                               bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
                               borderRadius: '8px',
                               border: '2px solid #333',
                               display: 'none',
                               alignItems: 'center',
                               justifyContent: 'center',
-                              fontSize: '40px', // Reduced size
+                              fontSize: '30px',
                               cursor: 'pointer',
                               transition: 'all 0.2s ease',
                               '&:hover': {
@@ -3303,15 +3551,15 @@ const Analytics = () => {
                             {analyticsData.latestContent.type === 'short' ? '🎯' : '📺'}
                           </Box>
 
-                          {/* Enhanced Play Button Overlay with Gamification */}
+                          {/* Compact Play Button */}
                           <Box
                             sx={{
                               position: 'absolute',
                               top: '50%',
                               left: '50%',
                               transform: 'translate(-50%, -50%)',
-                              width: 40,
-                              height: 40,
+                              width: 30,
+                              height: 30,
                               borderRadius: '50%',
                               background: 'linear-gradient(135deg, #FFD700, #FFA000)',
                               display: 'flex',
@@ -3329,29 +3577,27 @@ const Analytics = () => {
                           >
                             <Typography sx={{
                               color: 'white',
-                              fontSize: '16px',
+                              fontSize: '12px',
                               textShadow: '0 2px 4px rgba(0,0,0,0.3)',
-                              marginLeft: '2px' // Slight offset for play button centering
+                              marginLeft: '1px'
                             }}>
                               ▶
                             </Typography>
                           </Box>
-
-
 
                           {/* Duration Badge */}
                           {analyticsData.latestContent.duration && (
                             <Box
                               sx={{
                                 position: 'absolute',
-                                bottom: 8,
-                                right: 8,
+                                bottom: 4,
+                                right: 4,
                                 bgcolor: 'rgba(0,0,0,0.9)',
                                 color: 'white',
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: '6px',
-                                fontSize: '12px',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: '4px',
+                                fontSize: '10px',
                                 fontWeight: 600
                               }}
                             >
@@ -3363,14 +3609,14 @@ const Analytics = () => {
                           <Box
                             sx={{
                               position: 'absolute',
-                              top: 8,
-                              left: 8,
+                              top: 4,
+                              left: 4,
                               bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
                               color: 'white',
-                              px: 1.5,
-                              py: 0.5,
-                              borderRadius: '6px',
-                              fontSize: '10px',
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: '4px',
+                              fontSize: '8px',
                               fontWeight: 600,
                               textTransform: 'uppercase'
                             }}
@@ -3379,154 +3625,70 @@ const Analytics = () => {
                           </Box>
                         </Box>
 
-                        {/* Video Title */}
-                        <Typography variant="body2" sx={{
-                          color: 'white',
-                          fontWeight: 600,
-                          mb: 1.5,
-                          fontSize: '14px', // Reduced size
-                          lineHeight: 1.3
-                        }}>
-                          {analyticsData.latestContent.title || 'Untitled Video'}
-                        </Typography>
-
-                        {/* Achievement Badges */}
-                        {(() => {
-                          const views = analyticsData.latestContent.views || 0;
-                          const engagement = analyticsData.latestContent.engagement || 0;
-                          const stayedToWatch = analyticsData.latestContent.stayedToWatch || 0;
-                          const badges = [];
-
-                          // View milestones
-                          if (views >= 3000000) badges.push({ icon: '👑', text: 'Mega Viral', color: '#FFD700' });
-                          else if (views >= 1000000) badges.push({ icon: '🔥', text: 'Viral Hit', color: '#FF5722' });
-                          else if (views >= 500000) badges.push({ icon: '⭐', text: 'Rising Star', color: '#FF9800' });
-                          else if (views >= 100000) badges.push({ icon: '📈', text: 'Growing', color: '#4CAF50' });
-
-                          // Engagement badges
-                          if (engagement >= 8) badges.push({ icon: '💎', text: 'High Engagement', color: '#9C27B0' });
-                          else if (engagement >= 5) badges.push({ icon: '👍', text: 'Good Engagement', color: '#2196F3' });
-
-                          // Retention badges
-                          if (stayedToWatch >= 70) badges.push({ icon: '🎯', text: 'Captivating', color: '#E91E63' });
-                          else if (stayedToWatch >= 50) badges.push({ icon: '👀', text: 'Engaging', color: '#FF5722' });
-
-                          return badges.length > 0 ? (
-                            <Box sx={{ mb: 1.5 }}>
-                              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 1.5 }}>
-                                {badges.map((badge, index) => (
-                                  <Box
-                                    key={index}
-                                    sx={{
-                                      display: 'flex',
-                                      alignItems: 'center',
-                                      gap: 0.5,
-                                      bgcolor: badge.color + '20',
-                                      border: `1px solid ${badge.color}40`,
-                                      borderRadius: '12px',
-                                      px: 1,
-                                      py: 0.25,
-                                      fontSize: '10px',
-                                      fontWeight: 600,
-                                      color: badge.color,
-                                      animation: 'pulse 2s infinite'
-                                    }}
-                                  >
-                                    <span style={{ fontSize: '8px' }}>{badge.icon}</span>
-                                    {badge.text}
-                                  </Box>
-                                ))}
-                              </Box>
-                            </Box>
-                          ) : null;
-                        })()}
-
-                        {/* Enhanced Video Stats with Progress Indicators */}
+                        {/* Compact Video Info */}
                         <Box sx={{ mb: 1.5 }}>
-                          {/* Views with progress bar */}
-                          <Box sx={{ mb: 1 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                              <Typography variant="caption" sx={{ color: '#888', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                👁️ Views
-                              </Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {formatNumber(analyticsData.latestContent.views || 0)}
-                              </Typography>
-                            </Box>
-                            {/* Progress bar to next milestone */}
-                            {(() => {
-                              const views = analyticsData.latestContent.views || 0;
-                              let nextMilestone, progress, milestoneColor;
+                          <Typography variant="body2" sx={{
+                            color: 'white',
+                            fontWeight: 600,
+                            mb: 1,
+                            fontSize: '12px',
+                            lineHeight: 1.2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {analyticsData.latestContent.title || 'Untitled Video'}
+                          </Typography>
 
-                              if (views < 100000) {
-                                nextMilestone = 100000;
-                                milestoneColor = '#4CAF50';
-                              } else if (views < 500000) {
-                                nextMilestone = 500000;
-                                milestoneColor = '#FF9800';
-                              } else if (views < 1000000) {
-                                nextMilestone = 1000000;
-                                milestoneColor = '#FF5722';
-                              } else if (views < 3000000) {
-                                nextMilestone = 3000000;
-                                milestoneColor = '#FFD700';
-                              }
-
-                              if (nextMilestone) {
-                                progress = (views / nextMilestone) * 100;
-                                return (
-                                  <Box sx={{ position: 'relative', height: 4, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-                                    <Box
-                                      sx={{
-                                        position: 'absolute',
-                                        left: 0,
-                                        top: 0,
-                                        height: '100%',
-                                        width: `${Math.min(progress, 100)}%`,
-                                        background: `linear-gradient(90deg, ${milestoneColor}80, ${milestoneColor})`,
-                                        borderRadius: 2,
-                                        transition: 'width 1s ease-in-out'
-                                      }}
-                                    />
-                                  </Box>
-                                );
-                              }
-                              return null;
-                            })()}
+                          {/* Compact Stats */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
+                              👁 {(analyticsData.latestContent.views || 0).toLocaleString()}
+                            </Typography>
+                            {analyticsData.latestContent.engagement && (
+                              <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
+                                💝 {analyticsData.latestContent.engagement.toFixed(1)}%
+                              </Typography>
+                            )}
                           </Box>
 
-                          {/* Engagement Rate */}
-                          {analyticsData.latestContent.engagement !== undefined && (
-                            <Box sx={{ mb: 1 }}>
-                              <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="caption" sx={{ color: '#888', display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                  💝 Engagement
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                  {analyticsData.latestContent.engagement ? analyticsData.latestContent.engagement.toFixed(1) : '0.0'}%
+                          {/* Compact Achievement Badge */}
+                          {(() => {
+                            const views = analyticsData.latestContent.views || 0;
+                            let badge = null;
+
+                            if (views >= 3000000) badge = { icon: '👑', text: 'Mega Viral', color: '#FFD700' };
+                            else if (views >= 1000000) badge = { icon: '🔥', text: 'Viral', color: '#FF5722' };
+                            else if (views >= 500000) badge = { icon: '⭐', text: 'Rising', color: '#FF9800' };
+                            else if (views >= 100000) badge = { icon: '📈', text: 'Growing', color: '#4CAF50' };
+
+                            return badge ? (
+                              <Box sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                bgcolor: `${badge.color}20`,
+                                border: `1px solid ${badge.color}40`,
+                                borderRadius: '12px',
+                                px: 1,
+                                py: 0.25,
+                                mb: 1
+                              }}>
+                                <Typography sx={{ fontSize: '10px' }}>{badge.icon}</Typography>
+                                <Typography variant="caption" sx={{
+                                  color: badge.color,
+                                  fontWeight: 600,
+                                  fontSize: '9px'
+                                }}>
+                                  {badge.text}
                                 </Typography>
                               </Box>
-                              <Box sx={{ position: 'relative', height: 4, bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 2, overflow: 'hidden' }}>
-                                <Box
-                                  sx={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    height: '100%',
-                                    width: `${Math.min((analyticsData.latestContent.engagement || 0) * 10, 100)}%`,
-                                    background: 'linear-gradient(90deg, #9C27B080, #9C27B0)',
-                                    borderRadius: 2,
-                                    transition: 'width 1s ease-in-out'
-                                  }}
-                                />
-                              </Box>
-                            </Box>
-                          )}
-
-
+                            ) : null;
+                          })()}
                         </Box>
 
-                        {/* Enhanced Action Buttons with Gamification */}
+                        {/* Compact Action Buttons */}
                         <Box sx={{ display: 'flex', gap: 1 }}>
                           <Button
                             variant="outlined"
@@ -3537,9 +3699,8 @@ const Analytics = () => {
                               borderColor: '#444',
                               textTransform: 'none',
                               flex: 1,
-                              fontSize: '12px',
-                              position: 'relative',
-                              overflow: 'hidden',
+                              fontSize: '10px',
+                              py: 0.5,
                               '&:hover': {
                                 borderColor: '#667eea',
                                 bgcolor: 'rgba(102, 126, 234, 0.1)'
@@ -3558,10 +3719,8 @@ const Analytics = () => {
                                 color: 'white',
                                 textTransform: 'none',
                                 flex: 1,
-                                fontSize: '12px',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                fontSize: '10px',
+                                py: 0.5,
                                 '&:hover': {
                                   background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)'
                                 }
@@ -3571,98 +3730,6 @@ const Analytics = () => {
                             </Button>
                           )}
                         </Box>
-
-                        {/* Performance Score */}
-                        {(() => {
-                          const views = analyticsData.latestContent.views || 0;
-                          const engagement = analyticsData.latestContent.engagement || 0;
-                          const retention = analyticsData.latestContent.stayedToWatch || 0;
-
-                          // Calculate performance score (0-100)
-                          let viewScore = 0;
-                          if (views >= 3000000) viewScore = 40;
-                          else if (views >= 1000000) viewScore = 35;
-                          else if (views >= 500000) viewScore = 30;
-                          else if (views >= 100000) viewScore = 25;
-                          else if (views >= 50000) viewScore = 20;
-                          else if (views >= 10000) viewScore = 15;
-                          else if (views >= 1000) viewScore = 10;
-                          else viewScore = 5;
-
-                          const engagementScore = Math.min(engagement * 3, 30); // Max 30 points
-                          const retentionScore = Math.min(retention * 0.3, 30); // Max 30 points
-
-                          const totalScore = Math.round(viewScore + engagementScore + retentionScore);
-
-                          let scoreColor, scoreLabel;
-                          if (totalScore >= 90) { scoreColor = '#FFD700'; scoreLabel = 'Legendary'; }
-                          else if (totalScore >= 80) { scoreColor = '#FF5722'; scoreLabel = 'Excellent'; }
-                          else if (totalScore >= 70) { scoreColor = '#FF9800'; scoreLabel = 'Great'; }
-                          else if (totalScore >= 60) { scoreColor = '#4CAF50'; scoreLabel = 'Good'; }
-                          else if (totalScore >= 40) { scoreColor = '#2196F3'; scoreLabel = 'Fair'; }
-                          else { scoreColor = '#9E9E9E'; scoreLabel = 'Needs Work'; }
-
-                          return (
-                            <Box sx={{
-                              mt: 2,
-                              pt: 2,
-                              borderTop: '1px solid rgba(255,255,255,0.1)',
-                              textAlign: 'center'
-                            }}>
-                              <Typography variant="caption" sx={{ color: '#888', mb: 1, display: 'block' }}>
-                                Performance Score
-                              </Typography>
-                              <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                gap: 1
-                              }}>
-                                <Box
-                                  sx={{
-                                    width: 40,
-                                    height: 40,
-                                    borderRadius: '50%',
-                                    border: `3px solid ${scoreColor}`,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    position: 'relative',
-                                    background: `conic-gradient(${scoreColor} ${totalScore * 3.6}deg, rgba(255,255,255,0.1) 0deg)`,
-                                    '&:before': {
-                                      content: '""',
-                                      position: 'absolute',
-                                      inset: 3,
-                                      borderRadius: '50%',
-                                      background: '#2A2A2A'
-                                    }
-                                  }}
-                                >
-                                  <Typography
-                                    variant="caption"
-                                    sx={{
-                                      color: scoreColor,
-                                      fontWeight: 700,
-                                      fontSize: '10px',
-                                      position: 'relative',
-                                      zIndex: 1
-                                    }}
-                                  >
-                                    {totalScore}
-                                  </Typography>
-                                </Box>
-                                <Box>
-                                  <Typography variant="caption" sx={{ color: scoreColor, fontWeight: 600, display: 'block' }}>
-                                    {scoreLabel}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
-                                    /100 points
-                                  </Typography>
-                                </Box>
-                              </Box>
-                            </Box>
-                          );
-                        })()}
                       </>
                     ) : (
                       <Box sx={{
@@ -3681,6 +3748,7 @@ const Analytics = () => {
                         </Typography>
                       </Box>
                     )}
+                    </Box>
                   </Box>
                 </Box>
               </Box>

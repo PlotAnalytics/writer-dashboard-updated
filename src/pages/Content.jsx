@@ -265,7 +265,7 @@ const Content = () => {
         }
 
         // Apply sorting
-        videos = sortVideos(videos, sortBy, sortOrder);
+        videos = sortVideos(videos, sortBy, sortOrder, videoTypeFilter);
 
         // Virals filtering is now handled by the backend
 
@@ -286,13 +286,30 @@ const Content = () => {
           });
         }
 
-        // Apply core concept filter if provided
-        if (coreConceptFilter.trim()) {
+        // Apply core concept filter if provided (only for virals tab)
+        if (coreConceptFilter.trim() && videoTypeFilter === 'virals') {
           videos = videos.filter(video => {
             if (!video.core_concept_doc) return false;
             const title = getCoreConceptTitle(video.core_concept_doc);
             return title === coreConceptFilter;
           });
+        }
+
+        // Apply virals-specific filtering: only show videos with 500k+ views and core concept titles
+        if (videoTypeFilter === 'virals') {
+          videos = videos.filter(video => {
+            // Must have views over 500,000
+            const views = video.views || 0;
+            if (views <= 500000) return false;
+
+            // Must have a core concept title
+            if (!video.core_concept_doc) return false;
+            const title = getCoreConceptTitle(video.core_concept_doc);
+            if (!title) return false;
+
+            return true;
+          });
+          console.log('🔥 Virals filtered: showing', videos.length, 'videos with 500k+ views and core concepts');
         }
 
         setContentData(videos);
@@ -308,7 +325,31 @@ const Content = () => {
             }
           }
         });
-        setAvailableCoreConceptTitles(Array.from(uniqueTitles).sort());
+        // Sort core concept titles numerically by the number at the beginning
+        const sortedTitles = Array.from(uniqueTitles).sort((a, b) => {
+          const extractNumber = (title) => {
+            if (!title) return 0;
+            const match = title.match(/^(\d+)/);
+            return match ? parseInt(match[1], 10) : 0;
+          };
+
+          const numA = extractNumber(a);
+          const numB = extractNumber(b);
+
+          // If both have numbers, sort by number
+          if (numA && numB) {
+            return numA - numB;
+          }
+
+          // If only one has a number, prioritize the one with number
+          if (numA && !numB) return -1;
+          if (!numA && numB) return 1;
+
+          // If neither has numbers, sort alphabetically
+          return a.localeCompare(b);
+        });
+
+        setAvailableCoreConceptTitles(sortedTitles);
 
         // Debug: Log video types in the response
         if (videos.length > 0) {
@@ -353,7 +394,7 @@ const Content = () => {
   };
 
   // Sort videos function
-  const sortVideos = (videos, sortField, order) => {
+  const sortVideos = (videos, sortField, order, currentVideoTypeFilter) => {
     return [...videos].sort((a, b) => {
       let aVal, bVal;
 
@@ -367,8 +408,44 @@ const Content = () => {
           bVal = b.views || 0;
           break;
         case 'title':
-          aVal = a.title?.toLowerCase() || '';
-          bVal = b.title?.toLowerCase() || '';
+          // For virals tab, sort by core concept numbers if available
+          if (currentVideoTypeFilter === 'virals') {
+            const extractCoreConceptNumber = (video) => {
+              if (!video.core_concept_doc) return 0;
+              const title = getCoreConceptTitle(video.core_concept_doc);
+              if (!title) return 0;
+              const match = title.match(/^(\d+)/);
+              const number = match ? parseInt(match[1], 10) : 0;
+              console.log(`🔍 Core concept for video "${video.title}": title="${title}", number=${number}`);
+              return number;
+            };
+
+            aVal = extractCoreConceptNumber(a);
+            bVal = extractCoreConceptNumber(b);
+            console.log(`📊 Comparing: ${aVal} vs ${bVal} (order: ${order})`);
+
+            // If no core concept numbers found, fall back to video title sorting
+            if (aVal === 0 && bVal === 0) {
+              aVal = a.title?.toLowerCase() || '';
+              bVal = b.title?.toLowerCase() || '';
+            }
+          } else {
+            // For other tabs, extract numbers from video titles for numerical sorting
+            const extractNumber = (title) => {
+              if (!title) return 0;
+              const match = title.match(/\d+/);
+              return match ? parseInt(match[0], 10) : 0;
+            };
+
+            aVal = extractNumber(a.title);
+            bVal = extractNumber(b.title);
+
+            // If no numbers found, fall back to alphabetical sorting
+            if (aVal === 0 && bVal === 0) {
+              aVal = a.title?.toLowerCase() || '';
+              bVal = b.title?.toLowerCase() || '';
+            }
+          }
           break;
         case 'likes':
           aVal = a.likes || 0;
@@ -605,6 +682,8 @@ const Content = () => {
               } else if (newValue === 3) {
                 console.log('🔄 Setting filter to: virals');
                 setVideoTypeFilter('virals'); // Virals tab
+                setSortBy('title'); // Default sort by core concept numbers for virals
+                setSortOrder('asc'); // Ascending order for numerical sorting
               }
               setCurrentPage(1); // Reset to first page when changing tabs
             }}
@@ -775,8 +854,8 @@ const Content = () => {
             }}
           />
 
-          {/* Core Concept Filter */}
-          {availableCoreConceptTitles.length > 0 && (
+          {/* Core Concept Filter - Only show for virals tab */}
+          {availableCoreConceptTitles.length > 0 && videoTypeFilter === 'virals' && (
             <FormControl size="small" sx={{ minWidth: 200 }}>
               <Select
                 value={coreConceptFilter}
@@ -1130,7 +1209,7 @@ const Content = () => {
                               sx={{
                                 color: 'white',
                                 fontWeight: 500,
-                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) ? '350px' : '500px',
+                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1140,7 +1219,7 @@ const Content = () => {
                             >
                               {item.title}
                             </Typography>
-                            {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && (
+                            {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                               <Typography
                                 variant="caption"
                                 sx={{
@@ -1237,7 +1316,7 @@ const Content = () => {
                           />
                         </IconButton>
                       )}
-                      {item.core_concept_doc && (
+                      {item.core_concept_doc && videoTypeFilter === 'virals' && (
                         <IconButton
                           size="small"
                           sx={{ color: '#888', '&:hover': { color: 'white' } }}
@@ -1894,7 +1973,7 @@ const Content = () => {
                             sx={{
                               color: 'white',
                               fontWeight: 500,
-                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) ? '350px' : '500px',
+                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1904,7 +1983,7 @@ const Content = () => {
                           >
                             {item.title}
                           </Typography>
-                          {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && (
+                          {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                             <Typography
                               variant="caption"
                               sx={{
