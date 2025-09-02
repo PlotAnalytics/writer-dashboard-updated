@@ -142,7 +142,8 @@ const Content = () => {
         setStlResult({
           videoId: videoId,
           googleDocLink: data.googleDocLink,
-          trelloCardId: data.trelloCardId
+          trelloCardId: data.trelloCardId,
+          writerName: data.writerName
         });
       } else {
         console.log('❌ STL No Results - Data:', data);
@@ -1506,10 +1507,10 @@ const Content = () => {
 
                   <Box>
                     <Typography variant="body2" sx={{ color: '#888', mb: 0.5 }}>
-                      Trello Card ID:
+                      Writer:
                     </Typography>
                     <Typography variant="body1" sx={{ color: '#667eea' }}>
-                      {stlResult.trelloCardId || 'Not available'}
+                      {stlResult.writerName || 'Unknown Writer'}
                     </Typography>
                   </Box>
 
