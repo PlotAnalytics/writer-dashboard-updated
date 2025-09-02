@@ -112,6 +112,8 @@ const Content = () => {
     }
 
     const videoId = extractVideoId(stlUrl.trim());
+    console.log('🔍 STL Search - URL:', stlUrl.trim(), 'Extracted Video ID:', videoId);
+
     if (!videoId) {
       setStlError('Invalid YouTube URL. Please enter a valid YouTube URL.');
       return;
@@ -124,20 +126,26 @@ const Content = () => {
     try {
       // Use the buildApiUrl helper to construct the proper API URL
       const apiUrl = buildApiUrl(`/api/search-script?videoId=${encodeURIComponent(videoId)}`);
+      console.log('🌐 STL API Call:', apiUrl);
+
       const response = await fetch(apiUrl);
       const data = await response.json();
+
+      console.log('📡 STL API Response:', { status: response.status, data });
 
       if (!response.ok) {
         throw new Error(data.error || 'Failed to search for script');
       }
 
       if (data.success && data.googleDocLink) {
+        console.log('✅ STL Success - Found script:', data.googleDocLink);
         setStlResult({
           videoId: videoId,
           googleDocLink: data.googleDocLink,
           trelloCardId: data.trelloCardId
         });
       } else {
+        console.log('❌ STL No Results - Data:', data);
         setStlError('No script found for this video. The video might not be in our database or might not have an associated script.');
       }
     } catch (error) {
@@ -1489,29 +1497,29 @@ const Content = () => {
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <Box>
                     <Typography variant="body2" sx={{ color: '#888', mb: 0.5 }}>
-                      Script Title:
+                      Video ID:
                     </Typography>
                     <Typography variant="body1" sx={{ color: 'white' }}>
-                      {stlResult.title || 'No title available'}
+                      {stlResult.videoId}
                     </Typography>
                   </Box>
 
                   <Box>
                     <Typography variant="body2" sx={{ color: '#888', mb: 0.5 }}>
-                      Video URL:
+                      Trello Card ID:
                     </Typography>
                     <Typography variant="body1" sx={{ color: '#667eea' }}>
-                      {stlResult.url || 'No URL available'}
+                      {stlResult.trelloCardId || 'Not available'}
                     </Typography>
                   </Box>
 
-                  {stlResult.google_doc_link && (
+                  {stlResult.googleDocLink && (
                     <Box>
                       <Typography variant="body2" sx={{ color: '#888', mb: 1 }}>
                         Google Doc:
                       </Typography>
                       <Button
-                        href={stlResult.google_doc_link}
+                        href={stlResult.googleDocLink}
                         target="_blank"
                         rel="noopener noreferrer"
                         sx={{
