@@ -39,6 +39,14 @@ import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
 import { Scroll } from 'lucide-react';
 
+// Badge assets
+import level1Badge from '../assets/level_1.png';
+import level2Badge from '../assets/level_2.png';
+import level3Badge from '../assets/level_3.png';
+import level4Badge from '../assets/level_4.png';
+import level5Badge from '../assets/level_5.png';
+import level6Badge from '../assets/level_6.png';
+
 // Shimmer animation for progress bar
 const shimmer = keyframes`
   0% {
@@ -49,10 +57,39 @@ const shimmer = keyframes`
   }
 `;
 
+// Pulse animation for badge spotlight
+const pulse = keyframes`
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+`;
+
 // Utility functions like WriterAnalytics.jsx
 const formatNumber = (value) => {
   if (typeof value !== "number") return "N/A";
   return Math.round(value).toLocaleString(); // Round to the nearest integer and format with commas
+};
+
+// Function to get badge image based on level
+const getBadgeImage = (level) => {
+  const badges = {
+    1: level1Badge,
+    2: level2Badge,
+    3: level3Badge,
+    4: level4Badge,
+    5: level5Badge,
+    6: level6Badge
+  };
+  return badges[level] || level1Badge;
 };
 
 
@@ -3196,6 +3233,453 @@ const Analytics = () => {
                 }
               }}>
                 <RealtimeWidget />
+              </Box>
+            </Box>
+
+            {/* Writer Profile Section */}
+            <Box sx={{ mt: 6, mb: 4 }}>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 600, mb: 3 }}>
+                Writer Profile
+              </Typography>
+
+              {/* Profile Cards */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                gap: 3,
+                mb: 4
+              }}>
+                {/* Experience Level Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Badge Image - No background, bigger */}
+                  <Box sx={{
+                    width: 120,
+                    height: 120,
+                    mx: 'auto',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img
+                      src={getBadgeImage((() => {
+                        const views = analyticsData?.totalViews || 0;
+                        // 100M split into 6 levels: 0-16.7M, 16.7-33.3M, 33.3-50M, 50-66.7M, 66.7-83.3M, 83.3M+
+                        if (views >= 83333333) return 6;
+                        if (views >= 66666666) return 5;
+                        if (views >= 50000000) return 4;
+                        if (views >= 33333333) return 3;
+                        if (views >= 16666666) return 2;
+                        return 1;
+                      })())}
+                      alt="Experience Badge"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  </Box>
+
+                  {/* Writer Name */}
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      mb: 1,
+                      fontSize: '18px'
+                    }}
+                  >
+                    {user?.username || 'Writer'}
+                  </Typography>
+
+                  {/* Level Information */}
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mb: 2
+                  }}>
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '20px',
+                      px: 3,
+                      py: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '14px'
+                        }}
+                      >
+                        Level {(() => {
+                          const views = analyticsData?.totalViews || 0;
+                          if (views >= 83333333) return 6;
+                          if (views >= 66666666) return 5;
+                          if (views >= 50000000) return 4;
+                          if (views >= 33333333) return 3;
+                          if (views >= 16666666) return 2;
+                          return 1;
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  {/* Progress Bar to 100M */}
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1
+                    }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px' }}>
+                        Progress to 100M
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px' }}>
+                        {Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100)).toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <Box sx={{
+                      width: '100%',
+                      height: 8,
+                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                      borderRadius: 4,
+                      overflow: 'hidden',
+                      position: 'relative'
+                    }}>
+                      <Box sx={{
+                        width: `${Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100))}%`,
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                        borderRadius: 4,
+                        transition: 'width 0.3s ease'
+                      }} />
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Badge Progress Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Badge Carousel */}
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    gap: 4,
+                    mb: 4,
+                    position: 'relative',
+                    height: 180
+                  }}>
+                    {(() => {
+                      const views = analyticsData?.totalViews || 0;
+                      let currentLevel = 1;
+                      if (views >= 83333333) currentLevel = 6;
+                      else if (views >= 66666666) currentLevel = 5;
+                      else if (views >= 50000000) currentLevel = 4;
+                      else if (views >= 33333333) currentLevel = 3;
+                      else if (views >= 16666666) currentLevel = 2;
+
+                      const leftLevel = currentLevel === 1 ? 6 : currentLevel - 1;
+                      const rightLevel = currentLevel === 6 ? 1 : currentLevel + 1;
+
+                      return (
+                        <>
+                          {/* Left Badge (Previous/Last level) */}
+                          <Box sx={{
+                            width: 120,
+                            height: 120,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            zIndex: 1,
+                            transform: 'translateY(10px) scale(0.85)',
+                            opacity: 0.65
+                          }}>
+                            <img
+                              src={getBadgeImage(leftLevel)}
+                              alt={`Level ${leftLevel} Badge`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                filter: 'grayscale(40%)'
+                              }}
+                            />
+                          </Box>
+
+                          {/* Center Badge (Current level - Highlighted & Biggest) */}
+                          <Box sx={{
+                            width: 170,
+                            height: 170,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            zIndex: 3,
+                            '&::before': {
+                              content: '""',
+                              position: 'absolute',
+                              top: -8,
+                              left: -8,
+                              right: -8,
+                              bottom: -8,
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              borderRadius: '50%',
+                              opacity: 0.15,
+                              animation: `${pulse} 3s ease-in-out infinite`,
+                              zIndex: -1
+                            }
+                          }}>
+                            <img
+                              src={getBadgeImage(currentLevel)}
+                              alt={`Level ${currentLevel} Badge`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                filter: 'drop-shadow(0 0 15px rgba(102, 126, 234, 0.3))'
+                              }}
+                            />
+                          </Box>
+
+                          {/* Right Badge (Next level) */}
+                          <Box sx={{
+                            width: 120,
+                            height: 120,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            position: 'relative',
+                            zIndex: 1,
+                            transform: 'translateY(10px) scale(0.85)',
+                            opacity: 0.65
+                          }}>
+                            <img
+                              src={getBadgeImage(rightLevel)}
+                              alt={`Level ${rightLevel} Badge`}
+                              style={{
+                                width: '100%',
+                                height: '100%',
+                                objectFit: 'contain',
+                                filter: 'grayscale(40%)'
+                              }}
+                            />
+                          </Box>
+                        </>
+                      );
+                    })()}
+                  </Box>
+
+                  <Typography variant="h5" sx={{
+                    color: '#FFD700',
+                    fontWeight: 800,
+                    mb: 1,
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                    textShadow: '0 0 10px rgba(255, 215, 0, 0.5)'
+                  }}>
+                    {(() => {
+                      const views = analyticsData?.totalViews || 0;
+                      let currentLevel = 1;
+                      if (views >= 83333333) currentLevel = 6;
+                      else if (views >= 66666666) currentLevel = 5;
+                      else if (views >= 50000000) currentLevel = 4;
+                      else if (views >= 33333333) currentLevel = 3;
+                      else if (views >= 16666666) currentLevel = 2;
+
+                      const badgeNames = {
+                        1: 'NEWBIE',
+                        2: 'ROOKIE',
+                        3: 'RISING STAR',
+                        4: 'EXPERT',
+                        5: 'MASTER',
+                        6: 'LEGEND'
+                      };
+
+                      return badgeNames[currentLevel];
+                    })()}
+                  </Typography>
+                  <Typography variant="body2" sx={{
+                    color: '#888',
+                    textAlign: 'center',
+                    fontStyle: 'italic'
+                  }}>
+                    Current Badge Level
+                  </Typography>
+                </Box>
+
+                {/* Performance Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Performance Title - Top Left */}
+                  <Typography variant="body1" sx={{
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    mb: 2,
+                    textAlign: 'left',
+                    position: 'absolute',
+                    top: 16,
+                    left: 24,
+                    zIndex: 2
+                  }}>
+                    Performance
+                  </Typography>
+
+                  {/* Bigger Radar Chart */}
+                  <Box sx={{
+                    height: 240,
+                    width: '100%',
+                    mt: 3,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <ReactECharts
+                      option={{
+                        backgroundColor: 'transparent',
+                        radar: {
+                          indicator: [
+                            { name: 'Creativity', max: 100 },
+                            { name: 'Teamwork', max: 100 },
+                            { name: 'Problem Solving', max: 100 },
+                            { name: 'Discipline', max: 100 },
+                            { name: 'Curiosity', max: 100 }
+                          ],
+                          radius: 90,
+                          center: ['50%', '50%'],
+                          axisName: {
+                            color: '#888',
+                            fontSize: 11,
+                            fontWeight: 500
+                          },
+                          splitLine: {
+                            lineStyle: {
+                              color: 'rgba(255, 255, 255, 0.15)',
+                              width: 1
+                            }
+                          },
+                          axisLine: {
+                            lineStyle: {
+                              color: 'rgba(255, 255, 255, 0.25)',
+                              width: 1
+                            }
+                          },
+                          splitArea: {
+                            show: true,
+                            areaStyle: {
+                              color: ['rgba(255, 255, 255, 0.02)', 'rgba(255, 255, 255, 0.05)']
+                            }
+                          }
+                        },
+                        series: [{
+                          type: 'radar',
+                          data: [{
+                            value: [
+                              Math.min(100, Math.max(20, (analyticsData?.avgVideoViews || 0) / 10000)),
+                              Math.min(100, Math.max(20, (analyticsData?.totalSubmissions || 0) * 2)),
+                              Math.min(100, Math.max(20, (analyticsData?.totalViews || 0) / 100000)),
+                              Math.min(100, Math.max(20, 60 + Math.random() * 30)),
+                              Math.min(100, Math.max(20, 50 + Math.random() * 40))
+                            ],
+                            areaStyle: {
+                              color: {
+                                type: 'radial',
+                                x: 0.5,
+                                y: 0.5,
+                                r: 0.8,
+                                colorStops: [
+                                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+                                  { offset: 1, color: 'rgba(118, 75, 162, 0.1)' }
+                                ]
+                              }
+                            },
+                            lineStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 1,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: '#667eea' },
+                                  { offset: 1, color: '#764ba2' }
+                                ]
+                              },
+                              width: 3
+                            },
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            itemStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 1,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: '#667eea' },
+                                  { offset: 1, color: '#764ba2' }
+                                ]
+                              }
+                            }
+                          }]
+                        }]
+                      }}
+                      style={{ height: '100%', width: '100%' }}
+                    />
+                  </Box>
+
+
+                </Box>
               </Box>
             </Box>
 

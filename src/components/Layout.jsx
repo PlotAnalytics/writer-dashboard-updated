@@ -680,15 +680,19 @@ const Layout = ({
               borderRight: "none",
               boxShadow: "4px 0 20px rgba(0, 0, 0, 0.3)",
               "&::-webkit-scrollbar": {
-                width: "6px",
+                width: "0px",
+                background: "transparent",
               },
               "&::-webkit-scrollbar-track": {
-                background: "rgba(255, 255, 255, 0.1)",
+                background: "transparent",
               },
               "&::-webkit-scrollbar-thumb": {
-                background: "rgba(255, 255, 255, 0.3)",
-                borderRadius: "3px",
+                background: "transparent",
               },
+              // For Firefox
+              scrollbarWidth: "none",
+              // For IE and Edge
+              msOverflowStyle: "none",
             },
           }}
           variant="permanent"
@@ -716,6 +720,20 @@ const Layout = ({
                 "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
               borderRight: "none",
               boxShadow: "4px 0 20px rgba(0, 0, 0, 0.3)",
+              "&::-webkit-scrollbar": {
+                width: "0px",
+                background: "transparent",
+              },
+              "&::-webkit-scrollbar-track": {
+                background: "transparent",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "transparent",
+              },
+              // For Firefox
+              scrollbarWidth: "none",
+              // For IE and Edge
+              msOverflowStyle: "none",
             },
           }}
         >
