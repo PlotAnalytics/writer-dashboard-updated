@@ -3524,8 +3524,8 @@ const Analytics = () => {
                       else if (views >= 16666666) currentLevel = 2;
 
                       const badgeNames = {
-                        1: 'NEWBIE',
-                        2: 'ROOKIE',
+                        1: 'BEGINNER',
+                        2: 'APPRENTICE',
                         3: 'RISING STAR',
                         4: 'EXPERT',
                         5: 'MASTER',
