@@ -6568,6 +6568,33 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       leaderboardRows.push(...fallbackRows);
     }
 
+    // Get avatar seeds for all writers in the leaderboard
+    const writerNames = leaderboardRows.map(row => row.writer_name);
+    let avatarSeeds = {};
+
+    if (writerNames.length > 0) {
+      try {
+        const avatarQuery = `
+          SELECT w.name, l.avatar_seed, l.username
+          FROM writer w
+          JOIN login l ON w.login_id = l.id
+          WHERE w.name = ANY($1)
+        `;
+
+        const avatarResult = await pool.query(avatarQuery, [writerNames]);
+
+        // Create a map of writer_name -> avatar_seed
+        avatarResult.rows.forEach(row => {
+          avatarSeeds[row.name] = row.avatar_seed || row.username;
+        });
+
+        console.log('🎭 Avatar seeds fetched for leaderboard:', avatarSeeds);
+      } catch (error) {
+        console.error('❌ Error fetching avatar seeds:', error);
+        // Continue without avatar seeds if there's an error
+      }
+    }
+
     const leaderboardData = leaderboardRows.map(row => ({
       rank: parseInt(row.rank),
       writer_name: row.writer_name,
@@ -6580,7 +6607,8 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       last_active_date: null, // Not stored in cache
       progress_to_1b_percent: parseFloat(((parseInt(row.total_views) / 1000000000.0) * 100).toFixed(2)),
       views_per_million: (parseInt(row.total_views) / 1000000).toFixed(1),
-      is_active: true // All cached entries are considered active
+      is_active: true, // All cached entries are considered active
+      avatar_seed: avatarSeeds[row.writer_name] || row.writer_name // Add avatar seed
     }));
 
     console.log(`✅ Fast leaderboard retrieved: ${leaderboardData.length} writers`);

@@ -214,7 +214,7 @@ router.get('/verify', async (req, res) => {
 
     // Get user from database
     const result = await pool.query(
-      "SELECT * FROM login WHERE id = $1",
+      "SELECT id, username, role, avatar_seed FROM login WHERE id = $1",
       [decoded.id]
     );
 
@@ -244,7 +244,8 @@ router.get('/verify', async (req, res) => {
         role: user.role,
         name: writer?.name || user.username,
         writerId: writer?.writer_id || null,
-        avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase()
+        avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase(),
+        avatarSeed: user.avatar_seed || user.username
       }
     });
   } catch (error) {
@@ -296,7 +297,7 @@ router.get('/profile', async (req, res) => {
 
     // Get user from database
     const result = await pool.query(
-      "SELECT * FROM login WHERE id = $1",
+      "SELECT id, username, role, avatar_seed FROM login WHERE id = $1",
       [decoded.id]
     );
 
@@ -326,7 +327,8 @@ router.get('/profile', async (req, res) => {
         role: user.role,
         name: writer?.name || user.username,
         writerId: writer?.writer_id || null,
-        avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase()
+        avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase(),
+        avatarSeed: user.avatar_seed || user.username
       }
     });
   } catch (error) {

@@ -12,7 +12,7 @@ import {
 import {
   Refresh as RefreshIcon
 } from '@mui/icons-material';
-import Avatar from 'boring-avatars';
+import BigHeadAvatar from './BigHeadAvatar.jsx';
 import { analyticsApi } from '../utils/simpleApi.js';
 
 const getRankStyle = (rank) => {
@@ -348,11 +348,10 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                     boxShadow: `0 0 20px ${getRankStyle(2).glowColor}`,
                     background: 'white'
                   }}>
-                    <Avatar
-                      size={80}
+                    <BigHeadAvatar
                       name={leaderboardData[1].writer_name}
-                      variant="marble"
-                      colors={['#92A1C6', '#146A7C', '#F0AB3D', '#C271B4', '#C20D90']}
+                      avatarSeed={leaderboardData[1].avatar_seed}
+                      size={72}
                     />
                   </Box>
                   <Box sx={{
@@ -409,11 +408,10 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                     boxShadow: `0 0 30px ${getRankStyle(1).glowColor}`,
                     background: 'white'
                   }}>
-                    <Avatar
-                      size={100}
+                    <BigHeadAvatar
                       name={leaderboardData[0].writer_name}
-                      variant="beam"
-                      colors={['#FFD700', '#FFA500', '#FF6347', '#FF4500', '#DC143C']}
+                      avatarSeed={leaderboardData[0].avatar_seed}
+                      size={92}
                     />
                   </Box>
                   <Box sx={{
@@ -471,11 +469,10 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                     boxShadow: `0 0 20px ${getRankStyle(3).glowColor}`,
                     background: 'white'
                   }}>
-                    <Avatar
-                      size={80}
+                    <BigHeadAvatar
                       name={leaderboardData[2].writer_name}
-                      variant="sunset"
-                      colors={['#CD7F32', '#D2691E', '#A0522D', '#8B4513', '#654321']}
+                      avatarSeed={leaderboardData[2].avatar_seed}
+                      size={72}
                     />
                   </Box>
                   <Box sx={{
@@ -575,11 +572,10 @@ const WriterLeaderboard = ({ currentWriterName }) => {
                   mr: 1.5,
                   background: 'white'
                 }}>
-                  <Avatar
-                    size={32}
+                  <BigHeadAvatar
                     name={writer.writer_name}
-                    variant="ring"
-                    colors={['#9C27B0', '#E91E63', '#F44336', '#FF9800', '#4CAF50']}
+                    avatarSeed={writer.avatar_seed}
+                    size={32}
                   />
                 </Box>
 

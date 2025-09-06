@@ -36,6 +36,7 @@ import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext.jsx';
 import { Logout as LogoutIcon } from '@mui/icons-material';
+import BigHeadAvatar from '../components/BigHeadAvatar.jsx';
 
 const drawerWidth = 280;
 
@@ -184,20 +185,22 @@ const RetentionMaster = () => {
       {/* User Profile Section */}
       <Box sx={{ p: 3, borderBottom: '1px solid rgba(255, 255, 255, 0.1)' }}>
         <Box display="flex" alignItems="center" gap={2}>
-          <Avatar
+          <Box
             sx={{
               width: 48,
               height: 48,
-              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-              color: 'white',
-              fontWeight: 'bold',
-              fontSize: '20px',
+              borderRadius: '50%',
+              overflow: 'hidden',
               boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
               border: '2px solid rgba(255, 255, 255, 0.2)',
+              background: 'white',
             }}
           >
-            R
-          </Avatar>
+            <BigHeadAvatar
+              name="Retention Master"
+              size={44}
+            />
+          </Box>
           <Box sx={{ flex: 1 }}>
             <Typography variant="body1" fontWeight="600" sx={{
               color: 'white',

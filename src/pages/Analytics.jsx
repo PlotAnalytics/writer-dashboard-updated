@@ -57,19 +57,51 @@ const shimmer = keyframes`
   }
 `;
 
-// Pulse animation for badge spotlight
-const pulse = keyframes`
-  0% {
-    transform: scale(1);
-    opacity: 0.7;
+// Advanced carousel animations
+const float = keyframes`
+  0%, 100% {
+    transform: translateY(0px);
   }
   50% {
-    transform: scale(1.1);
-    opacity: 1;
+    transform: translateY(-10px);
+  }
+`;
+
+const glow = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(102, 126, 234, 0.6), 0 0 60px rgba(118, 75, 162, 0.4);
+  }
+`;
+
+const rotate3D = keyframes`
+  0% {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+  }
+  25% {
+    transform: perspective(1000px) rotateY(5deg) rotateX(2deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateY(0deg) rotateX(-2deg);
+  }
+  75% {
+    transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
   }
   100% {
-    transform: scale(1);
-    opacity: 0.7;
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+  }
+`;
+
+const slideIn = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
   }
 `;
 
@@ -384,10 +416,10 @@ const Analytics = () => {
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      console.error('⏰ Analytics fetch timeout after 60 seconds');
       setIsChartLoading(false);
-      setError('Request timed out. Please try again.');
-    }, 30000);
+      setError('Request timed out. Please try refreshing the page.');
+    }, 60000);
 
     try {
       // Get token from localStorage
@@ -658,10 +690,10 @@ const Analytics = () => {
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      console.error('⏰ Analytics fetch timeout after 60 seconds');
       setIsChartLoading(false);
-      setError('Request timed out. Please try again.');
-    }, 30000);
+      setError('Request timed out. Please try refreshing the page.');
+    }, 60000);
 
     try {
       // Get token from localStorage
@@ -1556,7 +1588,7 @@ const Analytics = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h4" sx={{ color: 'white', fontWeight: 600 }}>
-              Channel analytics
+              Writer Analytics
             </Typography>
             {loadTime && (
               <Typography variant="caption" sx={{
@@ -3267,8 +3299,8 @@ const Analytics = () => {
                 }}>
                   {/* Badge Image - No background, bigger */}
                   <Box sx={{
-                    width: 120,
-                    height: 120,
+                    width: 220,
+                    height: 220,
                     mx: 'auto',
                     mb: 2,
                     display: 'flex',
@@ -3288,8 +3320,8 @@ const Analytics = () => {
                       })())}
                       alt="Experience Badge"
                       style={{
-                        width: '100%',
-                        height: '100%',
+                        width: '90%',
+                        height: '90%',
                         objectFit: 'contain'
                       }}
                     />
@@ -3361,18 +3393,69 @@ const Analytics = () => {
                     </Box>
                     <Box sx={{
                       width: '100%',
-                      height: 8,
-                      backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                      borderRadius: 4,
+                      height: 12,
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: 6,
                       overflow: 'hidden',
-                      position: 'relative'
+                      position: 'relative',
+                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
                     }}>
+                      {/* Background glow */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                        borderRadius: 6
+                      }} />
+
+                      {/* Main progress bar */}
                       <Box sx={{
                         width: `${Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100))}%`,
                         height: '100%',
-                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                        borderRadius: 4,
-                        transition: 'width 0.3s ease'
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                        borderRadius: 6,
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '-100%',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
+                          animation: 'shine 2s infinite',
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '50%',
+                          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
+                          borderRadius: '6px 6px 0 0'
+                        }
+                      }} />
+
+                      {/* Glowing border effect */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: -1,
+                        left: -1,
+                        width: `calc(${Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100))}% + 2px)`,
+                        height: 'calc(100% + 2px)',
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        borderRadius: 7,
+                        opacity: 0.6,
+                        filter: 'blur(1px)',
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        zIndex: -1
                       }} />
                     </Box>
                   </Box>
@@ -3394,115 +3477,262 @@ const Analytics = () => {
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
                   }
                 }}>
-                  {/* Badge Carousel */}
+                  {/* Advanced 3D Badge Carousel */}
                   <Box sx={{
-                    display: 'flex',
-                    justifyContent: 'center',
-                    alignItems: 'center',
-                    gap: 4,
-                    mb: 4,
                     position: 'relative',
-                    height: 180
+                    height: 280,
+                    mb: 4,
+                    perspective: '1200px',
+                    overflow: 'hidden'
                   }}>
-                    {(() => {
-                      const views = analyticsData?.totalViews || 0;
-                      let currentLevel = 1;
-                      if (views >= 83333333) currentLevel = 6;
-                      else if (views >= 66666666) currentLevel = 5;
-                      else if (views >= 50000000) currentLevel = 4;
-                      else if (views >= 33333333) currentLevel = 3;
-                      else if (views >= 16666666) currentLevel = 2;
 
-                      const leftLevel = currentLevel === 1 ? 6 : currentLevel - 1;
-                      const rightLevel = currentLevel === 6 ? 1 : currentLevel + 1;
 
-                      return (
-                        <>
-                          {/* Left Badge (Previous/Last level) */}
-                          <Box sx={{
-                            width: 120,
-                            height: 120,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                            zIndex: 1,
-                            transform: 'translateY(10px) scale(0.85)',
-                            opacity: 0.65
-                          }}>
-                            <img
-                              src={getBadgeImage(leftLevel)}
-                              alt={`Level ${leftLevel} Badge`}
-                              style={{
+                    {/* Floating Particles */}
+                    {[...Array(8)].map((_, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          position: 'absolute',
+                          width: 4,
+                          height: 4,
+                          background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                          borderRadius: '50%',
+                          top: `${20 + Math.random() * 60}%`,
+                          left: `${10 + Math.random() * 80}%`,
+                          animation: `${float} ${3 + Math.random() * 2}s ease-in-out infinite`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          opacity: 0.6,
+                          zIndex: 1
+                        }}
+                      />
+                    ))}
+
+                    {/* Badge Carousel Container */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      zIndex: 2
+                    }}>
+                      {(() => {
+                        const views = analyticsData?.totalViews || 0;
+                        let currentLevel = 1;
+                        if (views >= 83333333) currentLevel = 6;
+                        else if (views >= 66666666) currentLevel = 5;
+                        else if (views >= 50000000) currentLevel = 4;
+                        else if (views >= 33333333) currentLevel = 3;
+                        else if (views >= 16666666) currentLevel = 2;
+
+                        const leftLevel = currentLevel === 1 ? 6 : currentLevel - 1;
+                        const rightLevel = currentLevel === 6 ? 1 : currentLevel + 1;
+
+                        return (
+                          <>
+                            {/* Left Badge (Previous level) - 3D Perspective */}
+                            <Box sx={{
+                              width: 140,
+                              height: 140,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              transform: 'perspective(800px) rotateY(25deg) translateZ(-50px) scale(0.8)',
+                              opacity: 0.7,
+                              transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'perspective(800px) rotateY(15deg) translateZ(-30px) scale(0.9)',
+                                opacity: 0.9
+                              }
+                            }}>
+                              <Box sx={{
                                 width: '100%',
                                 height: '100%',
-                                objectFit: 'contain',
-                                filter: 'grayscale(40%)'
-                              }}
-                            />
-                          </Box>
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '2px solid rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(10px)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.2s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(leftLevel)}
+                                  alt={`Level ${leftLevel} Badge`}
+                                  style={{
+                                    width: '85%',
+                                    height: '85%',
+                                    objectFit: 'contain',
+                                    filter: 'grayscale(30%) brightness(0.9)'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
 
-                          {/* Center Badge (Current level - Highlighted & Biggest) */}
-                          <Box sx={{
-                            width: 170,
-                            height: 170,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                            zIndex: 3,
-                            '&::before': {
-                              content: '""',
-                              position: 'absolute',
-                              top: -8,
-                              left: -8,
-                              right: -8,
-                              bottom: -8,
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                            {/* Center Badge (Current level) - Main Focus with Advanced Effects */}
+                            <Box sx={{
+                              width: 220,
+                              height: 220,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              zIndex: 10,
+                              animation: `${float} 4s ease-in-out infinite, ${glow} 3s ease-in-out infinite`,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                transition: 'transform 0.3s ease'
+                              }
+                            }}>
+                              {/* Rotating Ring Effect */}
+                              <Box sx={{
+                                position: 'absolute',
+                                width: '120%',
+                                height: '120%',
+                                border: '3px solid transparent',
+                                borderTop: '3px solid rgba(102, 126, 234, 0.6)',
+                                borderRight: '3px solid rgba(118, 75, 162, 0.4)',
+                                borderRadius: '50%',
+                                animation: `${rotate3D} 8s linear infinite`,
+                                zIndex: -1
+                              }} />
+
+                              {/* Inner Glow Ring */}
+                              <Box sx={{
+                                position: 'absolute',
+                                width: '110%',
+                                height: '110%',
+                                background: 'conic-gradient(from 0deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3), rgba(102, 126, 234, 0.3))',
+                                borderRadius: '50%',
+                                animation: `${rotate3D} 12s linear infinite reverse`,
+                                zIndex: -2,
+                                filter: 'blur(8px)'
+                              }} />
+
+                              {/* Badge Container */}
+                              <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '3px solid rgba(102, 126, 234, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(15px)',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.1)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.4s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(currentLevel)}
+                                  alt={`Level ${currentLevel} Badge`}
+                                  style={{
+                                    width: '90%',
+                                    height: '90%',
+                                    objectFit: 'contain',
+                                    filter: 'drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+
+                            {/* Right Badge (Next level) - 3D Perspective */}
+                            <Box sx={{
+                              width: 140,
+                              height: 140,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              transform: 'perspective(800px) rotateY(-25deg) translateZ(-50px) scale(0.8)',
+                              opacity: 0.7,
+                              transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'perspective(800px) rotateY(-15deg) translateZ(-30px) scale(0.9)',
+                                opacity: 0.9
+                              }
+                            }}>
+                              <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '2px solid rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(10px)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.6s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(rightLevel)}
+                                  alt={`Level ${rightLevel} Badge`}
+                                  style={{
+                                    width: '85%',
+                                    height: '85%',
+                                    objectFit: 'contain',
+                                    filter: 'grayscale(30%) brightness(0.9)'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+                          </>
+                        );
+                      })()}
+                    </Box>
+
+                    {/* Level Indicators */}
+                    <Box sx={{
+                      position: 'absolute',
+                      bottom: 20,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      gap: 1,
+                      zIndex: 3
+                    }}>
+                      {[1, 2, 3, 4, 5, 6].map((level) => {
+                        const views = analyticsData?.totalViews || 0;
+                        let currentLevel = 1;
+                        if (views >= 83333333) currentLevel = 6;
+                        else if (views >= 66666666) currentLevel = 5;
+                        else if (views >= 50000000) currentLevel = 4;
+                        else if (views >= 33333333) currentLevel = 3;
+                        else if (views >= 16666666) currentLevel = 2;
+
+                        return (
+                          <Box
+                            key={level}
+                            sx={{
+                              width: level === currentLevel ? 12 : 8,
+                              height: level === currentLevel ? 12 : 8,
                               borderRadius: '50%',
-                              opacity: 0.15,
-                              animation: `${pulse} 3s ease-in-out infinite`,
-                              zIndex: -1
-                            }
-                          }}>
-                            <img
-                              src={getBadgeImage(currentLevel)}
-                              alt={`Level ${currentLevel} Badge`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
-                                filter: 'drop-shadow(0 0 15px rgba(102, 126, 234, 0.3))'
-                              }}
-                            />
-                          </Box>
-
-                          {/* Right Badge (Next level) */}
-                          <Box sx={{
-                            width: 120,
-                            height: 120,
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            position: 'relative',
-                            zIndex: 1,
-                            transform: 'translateY(10px) scale(0.85)',
-                            opacity: 0.65
-                          }}>
-                            <img
-                              src={getBadgeImage(rightLevel)}
-                              alt={`Level ${rightLevel} Badge`}
-                              style={{
-                                width: '100%',
-                                height: '100%',
-                                objectFit: 'contain',
-                                filter: 'grayscale(40%)'
-                              }}
-                            />
-                          </Box>
-                        </>
-                      );
-                    })()}
+                              background: level === currentLevel
+                                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                : 'rgba(255, 255, 255, 0.3)',
+                              transition: 'all 0.3s ease',
+                              boxShadow: level === currentLevel
+                                ? '0 0 10px rgba(102, 126, 234, 0.6)'
+                                : 'none'
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
                   </Box>
 
                   <Typography variant="h5" sx={{
@@ -3576,12 +3806,15 @@ const Analytics = () => {
 
                   {/* Bigger Radar Chart */}
                   <Box sx={{
-                    height: 240,
+                    height: 320,
                     width: '100%',
-                    mt: 3,
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'center'
+                    justifyContent: 'center',
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)'
                   }}>
                     <ReactECharts
                       option={{
@@ -3594,11 +3827,11 @@ const Analytics = () => {
                             { name: 'Discipline', max: 100 },
                             { name: 'Curiosity', max: 100 }
                           ],
-                          radius: 90,
+                          radius: 100,
                           center: ['50%', '50%'],
                           axisName: {
                             color: '#888',
-                            fontSize: 11,
+                            fontSize: 10,
                             fontWeight: 500
                           },
                           splitLine: {
@@ -3769,18 +4002,28 @@ const Analytics = () => {
                       }
                     }}>
                       <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
-                        {/* Quest Icon */}
+                        {/* Quest Icon - Trophy SVG */}
                         <Box sx={{
                           width: 40,
                           height: 40,
                           borderRadius: '10px',
-                          background: 'linear-gradient(135deg, #FF9800 0%, #F57C00 100%)',
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'center',
-                          flexShrink: 0
+                          flexShrink: 0,
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          backdropFilter: 'blur(10px)'
                         }}>
-                          <Scroll size={20} color="white" />
+                          <img
+                            src="/src/assets/trophy-dynamic-gradient.svg"
+                            alt="Trophy Icon"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
+                            }}
+                          />
                         </Box>
 
                         {/* Quest Content */}
