@@ -46,6 +46,7 @@ import level3Badge from '../assets/level_3.png';
 import level4Badge from '../assets/level_4.png';
 import level5Badge from '../assets/level_5.png';
 import level6Badge from '../assets/level_6.png';
+import trophyIcon from '../assets/trophy-dynamic-gradient.svg';
 
 // Shimmer animation for progress bar
 const shimmer = keyframes`
@@ -4016,7 +4017,7 @@ const Analytics = () => {
                           backdropFilter: 'blur(10px)'
                         }}>
                           <img
-                            src="/src/assets/trophy-dynamic-gradient.svg"
+                            src={trophyIcon}
                             alt="Trophy Icon"
                             style={{
                               width: '32px',

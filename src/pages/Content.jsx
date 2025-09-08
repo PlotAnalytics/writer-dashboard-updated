@@ -227,7 +227,7 @@ const Content = () => {
       let responseData;
       try {
         const { data } = await contentApi.getVideos({
-          writer_id: writerId,
+          writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
           range: dateRange,
           page: currentPage,
           limit: videosPerPage,
@@ -239,7 +239,7 @@ const Content = () => {
         console.log('⚠️ InfluxDB API failed, trying PostgreSQL fallback');
         const response = await axios.get(`/api/writer/analytics`, {
           params: {
-            writer_id: writerId,
+            writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
             page: currentPage,
             limit: videosPerPage,
             type: videoTypeFilter // Pass virals type directly to backend

@@ -3866,20 +3866,127 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
   }
 });
 
+// Function to get ALL viral videos across all writers (for virals tab)
+async function getAllViralVideosAcrossWriters(dateRange, page = 1, limit = 20) {
+  try {
+    console.log(`🔥 Getting ALL viral videos across all writers, range: ${dateRange}, page: ${page}`);
+
+    // Calculate date filter based on dateRange parameter
+    let dateCondition = '';
+    let queryParams = [];
+
+    if (dateRange && dateRange !== 'all') {
+      const days = parseInt(dateRange) || 28;
+      dateCondition = `AND s.posted_date >= NOW() - INTERVAL '${days} days'`;
+    }
+
+    // Query to get ALL viral videos (500k+ views) with core concept docs
+    const postgresQuery = `
+      SELECT
+        v.id,
+        v.url,
+        v.script_title AS title,
+        v.writer_id,
+        w.name as writer_name,
+        s.posted_date,
+        s.preview,
+        s.duration,
+        COALESCE(s.likes_total, 0) AS likes_total,
+        COALESCE(s.comments_total, 0) AS comments_total,
+        COALESCE(s.views_total, 0) AS views_total,
+        sc.core_concept_doc
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      LEFT JOIN writer w ON v.writer_id = w.id
+      LEFT JOIN script sc ON v.script_title = sc.title
+      WHERE (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.views_total >= 500000
+        AND sc.core_concept_doc IS NOT NULL
+        AND sc.core_concept_doc != ''
+        ${dateCondition}
+      ORDER BY s.views_total DESC
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+    `;
+
+    queryParams.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+    const { rows: postgresRows } = await pool.query(postgresQuery, queryParams);
+    console.log(`🔥 Found ${postgresRows.length} viral videos across all writers`);
+
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      LEFT JOIN script sc ON v.script_title = sc.title
+      WHERE (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.views_total >= 500000
+        AND sc.core_concept_doc IS NOT NULL
+        AND sc.core_concept_doc != ''
+        ${dateCondition}
+    `;
+
+    const { rows: countRows } = await pool.query(countQuery, queryParams.slice(0, -2));
+    const totalVideos = parseInt(countRows[0].total);
+
+    // Format videos for frontend
+    const videos = postgresRows.map(row => ({
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      writer_id: row.writer_id,
+      writer_name: row.writer_name,
+      views: parseInt(row.views_total) || 0,
+      likes: parseInt(row.likes_total) || 0,
+      comments: parseInt(row.comments_total) || 0,
+      posted_date: row.posted_date,
+      preview: row.preview,
+      duration: row.duration,
+      core_concept_doc: row.core_concept_doc,
+      type: 'viral'
+    }));
+
+    return {
+      videos,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalVideos / parseInt(limit)),
+        totalVideos,
+        hasNextPage: parseInt(page) < Math.ceil(totalVideos / parseInt(limit)),
+        hasPrevPage: parseInt(page) > 1
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ Error getting viral videos across all writers:', error);
+    throw error;
+  }
+}
+
 // Writer videos endpoint for Content page - shows ALL videos from statistics_youtube_api
 router.get('/writer/videos', async (req, res) => {
   try {
     const { writer_id, range = '28', page = '1', limit = '20', type = 'all' } = req.query;
 
-    if (!writer_id) {
-      console.log(`❌ Writer Videos API: Missing writer_id`);
+    // For virals, allow no writer_id to get ALL viral videos across all writers
+    if (!writer_id && type !== 'virals') {
+      console.log(`❌ Writer Videos API: Missing writer_id (required for non-virals)`);
       return res.status(400).json({ error: 'missing writer_id' });
     }
 
-    console.log(`🎬 Writer Videos API: Getting ALL videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
+    if (type === 'virals' && !writer_id) {
+      console.log(`🔥 Writer Videos API: Getting ALL viral videos across all writers, range: ${range}, page: ${page}`);
+    } else {
+      console.log(`🎬 Writer Videos API: Getting ALL videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
+    }
 
-    // Use the same function but modify it to show ALL videos
-    const result = await getPostgresContentVideosWithBigQueryNames(writer_id, range, page, limit, type);
+    // Use different function for virals (all writers) vs specific writer
+    let result;
+    if (type === 'virals' && !writer_id) {
+      result = await getAllViralVideosAcrossWriters(range, page, limit);
+    } else {
+      result = await getPostgresContentVideosWithBigQueryNames(writer_id, range, page, limit, type);
+    }
 
     console.log(`✅ Writer Videos: Found ${result.videos.length} videos for writer ${writer_id}`);
     console.log(`📊 Pagination: Page ${result.pagination.currentPage}/${result.pagination.totalPages}, Total: ${result.pagination.totalVideos}`);
@@ -4449,9 +4556,24 @@ router.get('/videos', authenticateToken, async (req, res) => {
   try {
     const { writer_id, range = '28', page = '1', limit = '20', type = 'all' } = req.query;
 
-    if (!writer_id) {
-      console.log(`❌ BigQuery Content API: Missing writer_id`);
+    // For virals, allow no writer_id to get ALL viral videos across all writers
+    if (!writer_id && type !== 'virals') {
+      console.log(`❌ BigQuery Content API: Missing writer_id (required for non-virals)`);
       return res.status(400).json({ error: 'missing writer_id' });
+    }
+
+    if (type === 'virals' && !writer_id) {
+      console.log(`🔥 BigQuery Content API: Getting ALL viral videos across all writers, range: ${range}, page: ${page}`);
+      // Use the viral videos function
+      const result = await getAllViralVideosAcrossWriters(range, page, limit);
+      return res.json({
+        videos: result.videos,
+        pagination: result.pagination,
+        typeCounts: {
+          all: result.pagination.totalVideos,
+          virals: result.pagination.totalVideos
+        }
+      });
     }
 
     console.log(`🎬 PostgreSQL Content API: Getting videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
