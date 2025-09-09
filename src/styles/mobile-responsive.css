@@ -1,6 +1,16 @@
 /* Mobile Responsive Styles - Only affects mobile devices */
 /* Keeps desktop version unchanged while making mobile-friendly */
 
+/* Cool progress bar animations */
+@keyframes shine {
+  0% {
+    left: -100%;
+  }
+  100% {
+    left: 100%;
+  }
+}
+
 /* Mobile breakpoints */
 @media (max-width: 768px) {
   /* Global mobile adjustments */

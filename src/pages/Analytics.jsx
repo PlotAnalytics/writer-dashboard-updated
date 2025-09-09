@@ -37,6 +37,16 @@ import VideoDetailsModal from '../components/VideoDetailsModal.jsx';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { analyticsApi } from '../utils/simpleApi.js';
+import { Scroll } from 'lucide-react';
+
+// Badge assets
+import level1Badge from '../assets/level_1.png';
+import level2Badge from '../assets/level_2.png';
+import level3Badge from '../assets/level_3.png';
+import level4Badge from '../assets/level_4.png';
+import level5Badge from '../assets/level_5.png';
+import level6Badge from '../assets/level_6.png';
+import trophyIcon from '../assets/trophy-dynamic-gradient.svg';
 
 // Shimmer animation for progress bar
 const shimmer = keyframes`
@@ -48,10 +58,71 @@ const shimmer = keyframes`
   }
 `;
 
+// Advanced carousel animations
+const float = keyframes`
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+`;
+
+const glow = keyframes`
+  0%, 100% {
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 40px rgba(102, 126, 234, 0.6), 0 0 60px rgba(118, 75, 162, 0.4);
+  }
+`;
+
+const rotate3D = keyframes`
+  0% {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+  }
+  25% {
+    transform: perspective(1000px) rotateY(5deg) rotateX(2deg);
+  }
+  50% {
+    transform: perspective(1000px) rotateY(0deg) rotateX(-2deg);
+  }
+  75% {
+    transform: perspective(1000px) rotateY(-5deg) rotateX(2deg);
+  }
+  100% {
+    transform: perspective(1000px) rotateY(0deg) rotateX(0deg);
+  }
+`;
+
+const slideIn = keyframes`
+  0% {
+    opacity: 0;
+    transform: translateX(-50px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+`;
+
 // Utility functions like WriterAnalytics.jsx
 const formatNumber = (value) => {
   if (typeof value !== "number") return "N/A";
   return Math.round(value).toLocaleString(); // Round to the nearest integer and format with commas
+};
+
+// Function to get badge image based on level
+const getBadgeImage = (level) => {
+  const badges = {
+    1: level1Badge,
+    2: level2Badge,
+    3: level3Badge,
+    4: level4Badge,
+    5: level5Badge,
+    6: level6Badge
+  };
+  return badges[level] || level1Badge;
 };
 
 
@@ -265,6 +336,23 @@ const Analytics = () => {
   const isMobile = useMediaQuery(theme.breakpoints.down('md'));
   const { user } = useAuth();
   const { checkMilestones } = useNotifications();
+
+  // Add CSS animations for gamification
+  React.useEffect(() => {
+    const style = document.createElement('style');
+    style.textContent = `
+      @keyframes pulse {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.7; }
+      }
+    `;
+    document.head.appendChild(style);
+    return () => {
+      if (document.head.contains(style)) {
+        document.head.removeChild(style);
+      }
+    };
+  }, []);
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -291,6 +379,21 @@ const Analytics = () => {
   const [modalVideos, setModalVideos] = useState([]);
   const [modalLoading, setModalLoading] = useState(false);
 
+  // Quest progress state
+  const [questProgress, setQuestProgress] = useState(0); // Track quest progress (0-2)
+
+  // Function to increment quest progress
+  const incrementQuestProgress = () => {
+    if (questProgress < 2) {
+      setQuestProgress(prev => prev + 1);
+    }
+  };
+
+  // Function to reset quest progress (for testing or daily reset)
+  const resetQuestProgress = () => {
+    setQuestProgress(0);
+  };
+
   const dateRangeOptions = [
     { value: 'last7days', label: 'Last 7 days' },
     { value: 'last30days', label: 'Last 30 days' },
@@ -314,10 +417,10 @@ const Analytics = () => {
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      console.error('⏰ Analytics fetch timeout after 60 seconds');
       setIsChartLoading(false);
-      setError('Request timed out. Please try again.');
-    }, 30000);
+      setError('Request timed out. Please try refreshing the page.');
+    }, 60000);
 
     try {
       // Get token from localStorage
@@ -588,10 +691,10 @@ const Analytics = () => {
 
     // Add timeout to prevent infinite loading
     const timeoutId = setTimeout(() => {
-      console.error('⏰ Analytics fetch timeout after 30 seconds');
+      console.error('⏰ Analytics fetch timeout after 60 seconds');
       setIsChartLoading(false);
-      setError('Request timed out. Please try again.');
-    }, 30000);
+      setError('Request timed out. Please try refreshing the page.');
+    }, 60000);
 
     try {
       // Get token from localStorage
@@ -1486,7 +1589,7 @@ const Analytics = () => {
         }}>
           <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Typography variant="h4" sx={{ color: 'white', fontWeight: 600 }}>
-              Channel analytics
+              Writer Analytics
             </Typography>
             {loadTime && (
               <Typography variant="caption" sx={{
@@ -3166,8 +3269,1221 @@ const Analytics = () => {
               </Box>
             </Box>
 
+            {/* Writer Profile Section */}
+            <Box sx={{ mt: 6, mb: 4 }}>
+              <Typography variant="h5" sx={{ color: 'white', fontWeight: 600, mb: 3 }}>
+                Writer Profile
+              </Typography>
+
+              {/* Profile Cards */}
+              <Box sx={{
+                display: 'grid',
+                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                gap: 3,
+                mb: 4
+              }}>
+                {/* Experience Level Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Badge Image - No background, bigger */}
+                  <Box sx={{
+                    width: 220,
+                    height: 220,
+                    mx: 'auto',
+                    mb: 2,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}>
+                    <img
+                      src={getBadgeImage((() => {
+                        const views = analyticsData?.totalViews || 0;
+                        // 100M split into 6 levels: 0-16.7M, 16.7-33.3M, 33.3-50M, 50-66.7M, 66.7-83.3M, 83.3M+
+                        if (views >= 83333333) return 6;
+                        if (views >= 66666666) return 5;
+                        if (views >= 50000000) return 4;
+                        if (views >= 33333333) return 3;
+                        if (views >= 16666666) return 2;
+                        return 1;
+                      })())}
+                      alt="Experience Badge"
+                      style={{
+                        width: '90%',
+                        height: '90%',
+                        objectFit: 'contain'
+                      }}
+                    />
+                  </Box>
+
+                  {/* Writer Name */}
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: 'white',
+                      fontWeight: 600,
+                      textAlign: 'center',
+                      mb: 1,
+                      fontSize: '18px'
+                    }}
+                  >
+                    {user?.username || 'Writer'}
+                  </Typography>
+
+                  {/* Level Information */}
+                  <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'center',
+                    mb: 2
+                  }}>
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                      borderRadius: '20px',
+                      px: 3,
+                      py: 1,
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: 1
+                    }}>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '14px'
+                        }}
+                      >
+                        Level {(() => {
+                          const views = analyticsData?.totalViews || 0;
+                          if (views >= 83333333) return 6;
+                          if (views >= 66666666) return 5;
+                          if (views >= 50000000) return 4;
+                          if (views >= 33333333) return 3;
+                          if (views >= 16666666) return 2;
+                          return 1;
+                        })()}
+                      </Typography>
+                    </Box>
+                  </Box>
+                  {/* Progress Bar to 100M */}
+                  <Box sx={{ mb: 2 }}>
+                    <Box sx={{
+                      display: 'flex',
+                      justifyContent: 'space-between',
+                      alignItems: 'center',
+                      mb: 1
+                    }}>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px' }}>
+                        Progress to 100M
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: 'rgba(255, 255, 255, 0.7)', fontSize: '12px' }}>
+                        {Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100)).toFixed(1)}%
+                      </Typography>
+                    </Box>
+                    <Box sx={{
+                      width: '100%',
+                      height: 12,
+                      backgroundColor: 'rgba(0, 0, 0, 0.3)',
+                      borderRadius: 6,
+                      overflow: 'hidden',
+                      position: 'relative',
+                      boxShadow: 'inset 0 2px 4px rgba(0, 0, 0, 0.3)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)'
+                    }}>
+                      {/* Background glow */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        background: 'linear-gradient(90deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%)',
+                        borderRadius: 6
+                      }} />
+
+                      {/* Main progress bar */}
+                      <Box sx={{
+                        width: `${Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100))}%`,
+                        height: '100%',
+                        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)',
+                        borderRadius: 6,
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        '&::before': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: '-100%',
+                          width: '100%',
+                          height: '100%',
+                          background: 'linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent)',
+                          animation: 'shine 2s infinite',
+                        },
+                        '&::after': {
+                          content: '""',
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          right: 0,
+                          height: '50%',
+                          background: 'linear-gradient(180deg, rgba(255, 255, 255, 0.3) 0%, transparent 100%)',
+                          borderRadius: '6px 6px 0 0'
+                        }
+                      }} />
+
+                      {/* Glowing border effect */}
+                      <Box sx={{
+                        position: 'absolute',
+                        top: -1,
+                        left: -1,
+                        width: `calc(${Math.min(100, ((analyticsData?.totalViews || 0) / 100000000 * 100))}% + 2px)`,
+                        height: 'calc(100% + 2px)',
+                        background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                        borderRadius: 7,
+                        opacity: 0.6,
+                        filter: 'blur(1px)',
+                        transition: 'width 1s cubic-bezier(0.4, 0, 0.2, 1)',
+                        zIndex: -1
+                      }} />
+                    </Box>
+                  </Box>
+                </Box>
+
+                {/* Badge Progress Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  textAlign: 'center',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Advanced 3D Badge Carousel */}
+                  <Box sx={{
+                    position: 'relative',
+                    height: 280,
+                    mb: 4,
+                    perspective: '1200px',
+                    overflow: 'hidden'
+                  }}>
+
+
+                    {/* Floating Particles */}
+                    {[...Array(8)].map((_, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          position: 'absolute',
+                          width: 4,
+                          height: 4,
+                          background: 'linear-gradient(45deg, #667eea, #764ba2)',
+                          borderRadius: '50%',
+                          top: `${20 + Math.random() * 60}%`,
+                          left: `${10 + Math.random() * 80}%`,
+                          animation: `${float} ${3 + Math.random() * 2}s ease-in-out infinite`,
+                          animationDelay: `${Math.random() * 2}s`,
+                          opacity: 0.6,
+                          zIndex: 1
+                        }}
+                      />
+                    ))}
+
+                    {/* Badge Carousel Container */}
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: 6,
+                      zIndex: 2
+                    }}>
+                      {(() => {
+                        const views = analyticsData?.totalViews || 0;
+                        let currentLevel = 1;
+                        if (views >= 83333333) currentLevel = 6;
+                        else if (views >= 66666666) currentLevel = 5;
+                        else if (views >= 50000000) currentLevel = 4;
+                        else if (views >= 33333333) currentLevel = 3;
+                        else if (views >= 16666666) currentLevel = 2;
+
+                        const leftLevel = currentLevel === 1 ? 6 : currentLevel - 1;
+                        const rightLevel = currentLevel === 6 ? 1 : currentLevel + 1;
+
+                        return (
+                          <>
+                            {/* Left Badge (Previous level) - 3D Perspective */}
+                            <Box sx={{
+                              width: 140,
+                              height: 140,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              transform: 'perspective(800px) rotateY(25deg) translateZ(-50px) scale(0.8)',
+                              opacity: 0.7,
+                              transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'perspective(800px) rotateY(15deg) translateZ(-30px) scale(0.9)',
+                                opacity: 0.9
+                              }
+                            }}>
+                              <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '2px solid rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(10px)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.2s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(leftLevel)}
+                                  alt={`Level ${leftLevel} Badge`}
+                                  style={{
+                                    width: '85%',
+                                    height: '85%',
+                                    objectFit: 'contain',
+                                    filter: 'grayscale(30%) brightness(0.9)'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+
+                            {/* Center Badge (Current level) - Main Focus with Advanced Effects */}
+                            <Box sx={{
+                              width: 220,
+                              height: 220,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              zIndex: 10,
+                              animation: `${float} 4s ease-in-out infinite, ${glow} 3s ease-in-out infinite`,
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'scale(1.05)',
+                                transition: 'transform 0.3s ease'
+                              }
+                            }}>
+                              {/* Rotating Ring Effect */}
+                              <Box sx={{
+                                position: 'absolute',
+                                width: '120%',
+                                height: '120%',
+                                border: '3px solid transparent',
+                                borderTop: '3px solid rgba(102, 126, 234, 0.6)',
+                                borderRight: '3px solid rgba(118, 75, 162, 0.4)',
+                                borderRadius: '50%',
+                                animation: `${rotate3D} 8s linear infinite`,
+                                zIndex: -1
+                              }} />
+
+                              {/* Inner Glow Ring */}
+                              <Box sx={{
+                                position: 'absolute',
+                                width: '110%',
+                                height: '110%',
+                                background: 'conic-gradient(from 0deg, rgba(102, 126, 234, 0.3), rgba(118, 75, 162, 0.3), rgba(102, 126, 234, 0.3))',
+                                borderRadius: '50%',
+                                animation: `${rotate3D} 12s linear infinite reverse`,
+                                zIndex: -2,
+                                filter: 'blur(8px)'
+                              }} />
+
+                              {/* Badge Container */}
+                              <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '3px solid rgba(102, 126, 234, 0.4)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(15px)',
+                                boxShadow: '0 20px 40px rgba(0,0,0,0.3), inset 0 2px 10px rgba(255,255,255,0.1)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.4s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(currentLevel)}
+                                  alt={`Level ${currentLevel} Badge`}
+                                  style={{
+                                    width: '90%',
+                                    height: '90%',
+                                    objectFit: 'contain',
+                                    filter: 'drop-shadow(0 0 20px rgba(102, 126, 234, 0.5))'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+
+                            {/* Right Badge (Next level) - 3D Perspective */}
+                            <Box sx={{
+                              width: 140,
+                              height: 140,
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              position: 'relative',
+                              transform: 'perspective(800px) rotateY(-25deg) translateZ(-50px) scale(0.8)',
+                              opacity: 0.7,
+                              transition: 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                transform: 'perspective(800px) rotateY(-15deg) translateZ(-30px) scale(0.9)',
+                                opacity: 0.9
+                              }
+                            }}>
+                              <Box sx={{
+                                width: '100%',
+                                height: '100%',
+                                borderRadius: '50%',
+                                background: 'linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%)',
+                                border: '2px solid rgba(255,255,255,0.2)',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backdropFilter: 'blur(10px)',
+                                animation: `${slideIn} 0.8s ease-out`,
+                                animationDelay: '0.6s',
+                                animationFillMode: 'both'
+                              }}>
+                                <img
+                                  src={getBadgeImage(rightLevel)}
+                                  alt={`Level ${rightLevel} Badge`}
+                                  style={{
+                                    width: '85%',
+                                    height: '85%',
+                                    objectFit: 'contain',
+                                    filter: 'grayscale(30%) brightness(0.9)'
+                                  }}
+                                />
+                              </Box>
+                            </Box>
+                          </>
+                        );
+                      })()}
+                    </Box>
+
+                    {/* Level Indicators */}
+                    <Box sx={{
+                      position: 'absolute',
+                      bottom: 20,
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      display: 'flex',
+                      gap: 1,
+                      zIndex: 3
+                    }}>
+                      {[1, 2, 3, 4, 5, 6].map((level) => {
+                        const views = analyticsData?.totalViews || 0;
+                        let currentLevel = 1;
+                        if (views >= 83333333) currentLevel = 6;
+                        else if (views >= 66666666) currentLevel = 5;
+                        else if (views >= 50000000) currentLevel = 4;
+                        else if (views >= 33333333) currentLevel = 3;
+                        else if (views >= 16666666) currentLevel = 2;
+
+                        return (
+                          <Box
+                            key={level}
+                            sx={{
+                              width: level === currentLevel ? 12 : 8,
+                              height: level === currentLevel ? 12 : 8,
+                              borderRadius: '50%',
+                              background: level === currentLevel
+                                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                : 'rgba(255, 255, 255, 0.3)',
+                              transition: 'all 0.3s ease',
+                              boxShadow: level === currentLevel
+                                ? '0 0 10px rgba(102, 126, 234, 0.6)'
+                                : 'none'
+                            }}
+                          />
+                        );
+                      })}
+                    </Box>
+                  </Box>
+
+                  <Typography variant="h5" sx={{
+                    color: '#FFD700',
+                    fontWeight: 800,
+                    mb: 1,
+                    textAlign: 'center',
+                    textTransform: 'uppercase',
+                    letterSpacing: '2px',
+                    textShadow: '0 0 10px rgba(255, 215, 0, 0.5)'
+                  }}>
+                    {(() => {
+                      const views = analyticsData?.totalViews || 0;
+                      let currentLevel = 1;
+                      if (views >= 83333333) currentLevel = 6;
+                      else if (views >= 66666666) currentLevel = 5;
+                      else if (views >= 50000000) currentLevel = 4;
+                      else if (views >= 33333333) currentLevel = 3;
+                      else if (views >= 16666666) currentLevel = 2;
+
+                      const badgeNames = {
+                        1: 'LEVEL 1',
+                        2: 'LEVEL 2',
+                        3: 'LEVEL 3',
+                        4: 'LEVEL 4',
+                        5: 'LEVEL 5',
+                        6: 'LEVEL 6'
+                      };
+
+                      return badgeNames[currentLevel];
+                    })()}
+                  </Typography>
+                  <Typography variant="body2" sx={{
+                    color: '#888',
+                    textAlign: 'center',
+                    fontStyle: 'italic'
+                  }}>
+                    Current Badge Level
+                  </Typography>
+                </Box>
+
+                {/* Performance Card */}
+                <Box sx={{
+                  background: 'rgba(255, 255, 255, 0.05)',
+                  border: '1px solid rgba(255, 255, 255, 0.1)',
+                  borderRadius: 2,
+                  p: 3,
+                  position: 'relative',
+                  overflow: 'hidden',
+                  transition: 'all 0.3s ease',
+                  '&:hover': {
+                    background: 'rgba(255, 255, 255, 0.08)',
+                    transform: 'translateY(-2px)',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.3)'
+                  }
+                }}>
+                  {/* Performance Title - Top Left */}
+                  <Typography variant="body1" sx={{
+                    color: 'white',
+                    fontWeight: 600,
+                    fontSize: '14px',
+                    mb: 2,
+                    textAlign: 'left',
+                    position: 'absolute',
+                    top: 16,
+                    left: 24,
+                    zIndex: 2
+                  }}>
+                    Performance
+                  </Typography>
+
+                  {/* Bigger Radar Chart */}
+                  <Box sx={{
+                    height: 320,
+                    width: '100%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    position: 'absolute',
+                    top: '50%',
+                    left: '50%',
+                    transform: 'translate(-50%, -50%)'
+                  }}>
+                    <ReactECharts
+                      option={{
+                        backgroundColor: 'transparent',
+                        radar: {
+                          indicator: [
+                            { name: 'Creativity', max: 100 },
+                            { name: 'Teamwork', max: 100 },
+                            { name: 'Problem Solving', max: 100 },
+                            { name: 'Discipline', max: 100 },
+                            { name: 'Curiosity', max: 100 }
+                          ],
+                          radius: 100,
+                          center: ['50%', '50%'],
+                          axisName: {
+                            color: '#888',
+                            fontSize: 10,
+                            fontWeight: 500
+                          },
+                          splitLine: {
+                            lineStyle: {
+                              color: 'rgba(255, 255, 255, 0.15)',
+                              width: 1
+                            }
+                          },
+                          axisLine: {
+                            lineStyle: {
+                              color: 'rgba(255, 255, 255, 0.25)',
+                              width: 1
+                            }
+                          },
+                          splitArea: {
+                            show: true,
+                            areaStyle: {
+                              color: ['rgba(255, 255, 255, 0.02)', 'rgba(255, 255, 255, 0.05)']
+                            }
+                          }
+                        },
+                        series: [{
+                          type: 'radar',
+                          data: [{
+                            value: [
+                              Math.min(100, Math.max(20, (analyticsData?.avgVideoViews || 0) / 10000)),
+                              Math.min(100, Math.max(20, (analyticsData?.totalSubmissions || 0) * 2)),
+                              Math.min(100, Math.max(20, (analyticsData?.totalViews || 0) / 100000)),
+                              Math.min(100, Math.max(20, 60 + Math.random() * 30)),
+                              Math.min(100, Math.max(20, 50 + Math.random() * 40))
+                            ],
+                            areaStyle: {
+                              color: {
+                                type: 'radial',
+                                x: 0.5,
+                                y: 0.5,
+                                r: 0.8,
+                                colorStops: [
+                                  { offset: 0, color: 'rgba(102, 126, 234, 0.3)' },
+                                  { offset: 1, color: 'rgba(118, 75, 162, 0.1)' }
+                                ]
+                              }
+                            },
+                            lineStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 1,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: '#667eea' },
+                                  { offset: 1, color: '#764ba2' }
+                                ]
+                              },
+                              width: 3
+                            },
+                            symbol: 'circle',
+                            symbolSize: 6,
+                            itemStyle: {
+                              color: {
+                                type: 'linear',
+                                x: 0,
+                                y: 0,
+                                x2: 1,
+                                y2: 1,
+                                colorStops: [
+                                  { offset: 0, color: '#667eea' },
+                                  { offset: 1, color: '#764ba2' }
+                                ]
+                              }
+                            }
+                          }]
+                        }]
+                      }}
+                      style={{ height: '100%', width: '100%' }}
+                    />
+                  </Box>
+
+
+                </Box>
+              </Box>
+            </Box>
+
+            {/* Writer Leaderboard and Right Column Section */}
+            <Box sx={{ mt: 6, mb: 4 }}>
+              <Box sx={{
+                display: 'flex',
+                gap: 4,
+                alignItems: 'flex-start',
+                '@media (max-width: 960px)': {
+                  flexDirection: 'column'
+                }
+              }}>
+                {/* Writer Leaderboard */}
+                <Box sx={{
+                  flex: '1 1 45%',
+                  '@media (max-width: 960px)': {
+                    flex: '1 1 100%'
+                  }
+                }}>
+                  <WriterLeaderboard currentWriterName={user?.name} />
+                </Box>
+
+                {/* Right Column - Daily Quest and Latest Content */}
+                <Box sx={{
+                  flex: '1 1 55%',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 3,
+                  '@media (max-width: 960px)': {
+                    flex: '1 1 100%'
+                  }
+                }}>
+                  {/* Daily Quest */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(102, 126, 234, 0.2)',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                    overflow: 'hidden',
+                    p: 2.5,
+                    flex: '0 0 auto'
+                  }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Typography variant="h6" sx={{
+                        fontWeight: 700,
+                        fontSize: '18px',
+                        color: 'white'
+                      }}>
+                        Daily Quest
+                      </Typography>
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        sx={{
+                          color: '#667eea',
+                          borderColor: '#667eea',
+                          fontSize: '11px',
+                          fontWeight: 600,
+                          textTransform: 'none',
+                          py: 0.5,
+                          px: 1.5,
+                          '&:hover': {
+                            borderColor: '#764ba2',
+                            color: '#764ba2',
+                            background: 'rgba(102, 126, 234, 0.1)'
+                          }
+                        }}
+                      >
+                        Claim all
+                      </Button>
+                    </Box>
+
+                    {/* Quest Item */}
+                    <Box sx={{
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      borderRadius: '10px',
+                      p: 2,
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      transition: 'all 0.3s ease',
+                      '&:hover': {
+                        background: 'rgba(255, 255, 255, 0.08)',
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 16px rgba(0, 0, 0, 0.2)'
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+                        {/* Quest Icon - Trophy SVG */}
+                        <Box sx={{
+                          width: 40,
+                          height: 40,
+                          borderRadius: '10px',
+                          background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          flexShrink: 0,
+                          border: '1px solid rgba(102, 126, 234, 0.3)',
+                          backdropFilter: 'blur(10px)'
+                        }}>
+                          <img
+                            src={trophyIcon}
+                            alt="Trophy Icon"
+                            style={{
+                              width: '32px',
+                              height: '32px',
+                              filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3))'
+                            }}
+                          />
+                        </Box>
+
+                        {/* Quest Content */}
+                        <Box sx={{ flex: 1 }}>
+                          <Typography variant="body1" sx={{
+                            color: 'white',
+                            fontWeight: 600,
+                            mb: 0.5,
+                            fontSize: '14px'
+                          }}>
+                            Complete 2 Scripts Today
+                          </Typography>
+
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.5 }}>
+                            <Typography variant="body2" sx={{
+                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                              backgroundClip: 'text',
+                              WebkitBackgroundClip: 'text',
+                              WebkitTextFillColor: 'transparent',
+                              fontWeight: 600,
+                              fontSize: '12px'
+                            }}>
+                              +140 Exp
+                            </Typography>
+
+                            {/* Clickable Counter */}
+                            <Button
+                              variant="outlined"
+                              size="small"
+                              onClick={incrementQuestProgress}
+                              disabled={questProgress >= 2}
+                              sx={{
+                                minWidth: '32px',
+                                width: '32px',
+                                height: '24px',
+                                borderRadius: '12px',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                color: questProgress >= 2 ? 'rgba(255, 255, 255, 0.5)' : '#667eea',
+                                borderColor: questProgress >= 2 ? 'rgba(255, 255, 255, 0.3)' : '#667eea',
+                                '&:hover': {
+                                  borderColor: questProgress >= 2 ? 'rgba(255, 255, 255, 0.3)' : '#764ba2',
+                                  color: questProgress >= 2 ? 'rgba(255, 255, 255, 0.5)' : '#764ba2',
+                                  background: questProgress >= 2 ? 'transparent' : 'rgba(102, 126, 234, 0.1)'
+                                }
+                              }}
+                            >
+                              +
+                            </Button>
+                          </Box>
+
+                          {/* Progress Bar */}
+                          <Box sx={{ mb: 1.5 }}>
+                            <Box sx={{
+                              width: '100%',
+                              height: 6,
+                              bgcolor: 'rgba(255, 255, 255, 0.1)',
+                              borderRadius: '3px',
+                              overflow: 'hidden'
+                            }}>
+                              <Box sx={{
+                                width: `${(questProgress / 2) * 100}%`, // Dynamic progress based on state
+                                height: '100%',
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '3px',
+                                transition: 'width 0.5s ease'
+                              }} />
+                            </Box>
+                          </Box>
+
+                          {/* Progress Text and Claim Button */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                              <Typography variant="body2" sx={{
+                                color: 'rgba(255, 255, 255, 0.7)',
+                                fontSize: '12px'
+                              }}>
+                                {questProgress}/2 Completed
+                              </Typography>
+
+                              {/* Reset button for testing */}
+                              <Button
+                                variant="text"
+                                size="small"
+                                onClick={resetQuestProgress}
+                                sx={{
+                                  minWidth: 'auto',
+                                  fontSize: '10px',
+                                  color: 'rgba(255, 255, 255, 0.5)',
+                                  textTransform: 'none',
+                                  p: 0.5,
+                                  '&:hover': {
+                                    color: 'rgba(255, 255, 255, 0.8)',
+                                    background: 'rgba(255, 255, 255, 0.05)'
+                                  }
+                                }}
+                              >
+                                Reset
+                              </Button>
+                            </Box>
+
+                            <Button
+                              variant="contained"
+                              size="small"
+                              disabled={questProgress < 2} // Enabled when quest is complete
+                              onClick={() => {
+                                if (questProgress >= 2) {
+                                  // Handle reward claim logic here
+                                  console.log('Reward claimed!');
+                                  // Could show notification, add to user stats, etc.
+                                }
+                              }}
+                              sx={{
+                                background: questProgress >= 2
+                                  ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+                                  : 'rgba(255, 255, 255, 0.1)',
+                                color: questProgress >= 2 ? 'white' : 'rgba(255, 255, 255, 0.5)',
+                                fontSize: '10px',
+                                fontWeight: 600,
+                                textTransform: 'none',
+                                borderRadius: '16px',
+                                px: 1.5,
+                                py: 0.5,
+                                minWidth: 'auto',
+                                '&:hover:not(:disabled)': {
+                                  background: 'linear-gradient(135deg, #5a67d8 0%, #6b46c1 100%)',
+                                  transform: 'translateY(-1px)',
+                                  boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)'
+                                },
+                                '&:disabled': {
+                                  background: 'rgba(255, 255, 255, 0.1)',
+                                  color: 'rgba(255, 255, 255, 0.5)'
+                                }
+                              }}
+                            >
+                              ⭐ Claim Reward
+                            </Button>
+                          </Box>
+                        </Box>
+                      </Box>
+                    </Box>
+                  </Box>
+
+                  {/* Latest Content */}
+                  <Box sx={{
+                    background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.08) 0%, rgba(118, 75, 162, 0.08) 100%)',
+                    backdropFilter: 'blur(12px)',
+                    border: '1px solid rgba(102, 126, 234, 0.2)',
+                    borderRadius: '16px',
+                    boxShadow: '0 8px 32px rgba(0, 0, 0, 0.12)',
+                    overflow: 'hidden',
+                    p: 2.5,
+                    flex: '1 1 auto',
+                    display: 'flex',
+                    flexDirection: 'column'
+                  }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
+                      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="h6" sx={{
+                          fontWeight: 700,
+                          fontSize: '18px',
+                          color: 'white'
+                        }}>
+                          Latest content
+                        </Typography>
+                        <Typography variant="body2" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '14px',
+                          ml: 0.5
+                        }}>
+                          ▶
+                        </Typography>
+                      </Box>
+                    </Box>
+
+                    {/* Content Area */}
+                    <Box sx={{ flex: 1, overflow: 'auto' }}>
+                    {analyticsData.latestContent ? (
+                      <>
+                        {/* Compact Video Thumbnail */}
+                        <Box sx={{ position: 'relative', mb: 2 }}>
+                          {/* Viral indicator */}
+                          {(analyticsData.latestContent.views || 0) >= 1000000 && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                top: 6,
+                                right: 6,
+                                width: 16,
+                                height: 16,
+                                borderRadius: '50%',
+                                background: 'linear-gradient(45deg, #FFD700, #FF5722)',
+                                zIndex: 10,
+                                '&:before': {
+                                  content: '"🎉"',
+                                  position: 'absolute',
+                                  top: -3,
+                                  left: -3,
+                                  fontSize: '12px'
+                                }
+                              }}
+                            />
+                          )}
+
+                          <Box
+                            component="img"
+                            src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
+                            sx={{
+                              width: '100%',
+                              height: 60,
+                              borderRadius: '8px',
+                              objectFit: 'cover',
+                              border: (analyticsData.latestContent.views || 0) >= 3000000 ? '2px solid #FFD700' :
+                                      (analyticsData.latestContent.views || 0) >= 1000000 ? '2px solid #FF5722' :
+                                      (analyticsData.latestContent.views || 0) >= 500000 ? '2px solid #FF9800' : '2px solid #333',
+                              transition: 'all 0.3s ease',
+                              cursor: 'pointer',
+                              '&:hover': {
+                                border: '2px solid #667eea',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                transform: 'scale(1.02)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                          <Box
+                            sx={{
+                              width: '100%',
+                              height: 60,
+                              bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
+                              borderRadius: '8px',
+                              border: '2px solid #333',
+                              display: 'none',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              fontSize: '30px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s ease',
+                              '&:hover': {
+                                border: '2px solid #667eea',
+                                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+                                transform: 'scale(1.02)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                          >
+                            {analyticsData.latestContent.type === 'short' ? '🎯' : '📺'}
+                          </Box>
+
+                          {/* Compact Play Button */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: '50%',
+                              left: '50%',
+                              transform: 'translate(-50%, -50%)',
+                              width: 30,
+                              height: 30,
+                              borderRadius: '50%',
+                              background: 'linear-gradient(135deg, #FFD700, #FFA000)',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              cursor: 'pointer',
+                              transition: 'all 0.3s ease',
+                              boxShadow: '0 4px 15px rgba(255, 215, 0, 0.3)',
+                              '&:hover': {
+                                background: 'linear-gradient(135deg, #FFA000, #FF8F00)',
+                                transform: 'translate(-50%, -50%) scale(1.1)'
+                              }
+                            }}
+                            onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
+                          >
+                            <Typography sx={{
+                              color: 'white',
+                              fontSize: '12px',
+                              textShadow: '0 2px 4px rgba(0,0,0,0.3)',
+                              marginLeft: '1px'
+                            }}>
+                              ▶
+                            </Typography>
+                          </Box>
+
+                          {/* Duration Badge */}
+                          {analyticsData.latestContent.duration && (
+                            <Box
+                              sx={{
+                                position: 'absolute',
+                                bottom: 4,
+                                right: 4,
+                                bgcolor: 'rgba(0,0,0,0.9)',
+                                color: 'white',
+                                px: 1,
+                                py: 0.25,
+                                borderRadius: '4px',
+                                fontSize: '10px',
+                                fontWeight: 600
+                              }}
+                            >
+                              {analyticsData.latestContent.duration}
+                            </Box>
+                          )}
+
+                          {/* Video Type Badge */}
+                          <Box
+                            sx={{
+                              position: 'absolute',
+                              top: 4,
+                              left: 4,
+                              bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
+                              color: 'white',
+                              px: 1,
+                              py: 0.25,
+                              borderRadius: '4px',
+                              fontSize: '8px',
+                              fontWeight: 600,
+                              textTransform: 'uppercase'
+                            }}
+                          >
+                            {analyticsData.latestContent.type === 'short' ? 'SHORT' : 'VIDEO'}
+                          </Box>
+                        </Box>
+
+                        {/* Compact Video Info */}
+                        <Box sx={{ mb: 1.5 }}>
+                          <Typography variant="body2" sx={{
+                            color: 'white',
+                            fontWeight: 600,
+                            mb: 1,
+                            fontSize: '12px',
+                            lineHeight: 1.2,
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden'
+                          }}>
+                            {analyticsData.latestContent.title || 'Untitled Video'}
+                          </Typography>
+
+                          {/* Compact Stats */}
+                          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
+                              👁 {(analyticsData.latestContent.views || 0).toLocaleString()}
+                            </Typography>
+                            {analyticsData.latestContent.engagement && (
+                              <Typography variant="caption" sx={{ color: '#888', fontSize: '10px' }}>
+                                💝 {analyticsData.latestContent.engagement.toFixed(1)}%
+                              </Typography>
+                            )}
+                          </Box>
+
+                          {/* Compact Achievement Badge */}
+                          {(() => {
+                            const views = analyticsData.latestContent.views || 0;
+                            let badge = null;
+
+                            if (views >= 3000000) badge = { icon: '👑', text: 'Mega Viral', color: '#FFD700' };
+                            else if (views >= 1000000) badge = { icon: '🔥', text: 'Viral', color: '#FF5722' };
+                            else if (views >= 500000) badge = { icon: '⭐', text: 'Rising', color: '#FF9800' };
+                            else if (views >= 100000) badge = { icon: '📈', text: 'Growing', color: '#4CAF50' };
+
+                            return badge ? (
+                              <Box sx={{
+                                display: 'inline-flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                bgcolor: `${badge.color}20`,
+                                border: `1px solid ${badge.color}40`,
+                                borderRadius: '12px',
+                                px: 1,
+                                py: 0.25,
+                                mb: 1
+                              }}>
+                                <Typography sx={{ fontSize: '10px' }}>{badge.icon}</Typography>
+                                <Typography variant="caption" sx={{
+                                  color: badge.color,
+                                  fontWeight: 600,
+                                  fontSize: '9px'
+                                }}>
+                                  {badge.text}
+                                </Typography>
+                              </Box>
+                            ) : null;
+                          })()}
+                        </Box>
+
+                        {/* Compact Action Buttons */}
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                          <Button
+                            variant="outlined"
+                            size="small"
+                            onClick={() => navigate(`/content/video/${analyticsData.latestContent.id}`)}
+                            sx={{
+                              color: 'white',
+                              borderColor: '#444',
+                              textTransform: 'none',
+                              flex: 1,
+                              fontSize: '10px',
+                              py: 0.5,
+                              '&:hover': {
+                                borderColor: '#667eea',
+                                bgcolor: 'rgba(102, 126, 234, 0.1)'
+                              }
+                            }}
+                          >
+                            📊 Analytics
+                          </Button>
+                          {analyticsData.latestContent.url && (
+                            <Button
+                              variant="contained"
+                              size="small"
+                              onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
+                              sx={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                color: 'white',
+                                textTransform: 'none',
+                                flex: 1,
+                                fontSize: '10px',
+                                py: 0.5,
+                                '&:hover': {
+                                  background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)'
+                                }
+                              }}
+                            >
+                              🎬 Watch
+                            </Button>
+                          )}
+                        </Box>
+                      </>
+                    ) : (
+                      <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        color: '#888'
+                      }}>
+                        <Typography variant="body2" sx={{ mb: 1 }}>
+                          No recent content found
+                        </Typography>
+                        <Typography variant="caption">
+                          Upload a video to see it here
+                        </Typography>
+                      </Box>
+                    )}
+                    </Box>
+                  </Box>
+                </Box>
+              </Box>
+            </Box>
+
             {/* Top Content Section */}
-            <Box sx={{ mt: 6 }}>
+            <Box sx={{ mt: 4 }}>
               <Box sx={{
                 display: 'flex',
                 gap: 4,
@@ -3603,318 +4919,14 @@ const Analytics = () => {
                   </Box>
                 </Box>
 
-                {/* Right Side - Podcasts and Latest Content */}
+                {/* Right Side - Empty for now */}
                 <Box sx={{
                   flex: '1 1 35%',
                   '@media (max-width: 960px)': {
                     flex: '1 1 100%'
                   }
                 }}>
-                  {/* Writer Leaderboard Section */}
-                  <Box sx={{ mb: 4 }}>
-                    <WriterLeaderboard currentWriterName={user?.name} />
-                  </Box>
-
-                  {/* Latest Content Section */}
-                  <Box>
-                    <Typography variant="h6" sx={{ color: 'white', fontWeight: 600, mb: 2 }}>
-                      Latest content
-                    </Typography>
-                    <Box
-                      sx={{
-                        bgcolor: '#2A2A2A',
-                        borderRadius: '8px',
-                        border: '1px solid #333',
-                        p: 2,
-                        height: '600px', // Fixed height to match top content section
-                        overflowY: 'auto',
-                        '&::-webkit-scrollbar': {
-                          width: '4px',
-                        },
-                        '&::-webkit-scrollbar-track': {
-                          background: 'rgba(255, 255, 255, 0.1)',
-                          borderRadius: '2px',
-                        },
-                        '&::-webkit-scrollbar-thumb': {
-                          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                          borderRadius: '2px',
-                        },
-                        '&::-webkit-scrollbar-thumb:hover': {
-                          background: 'linear-gradient(135deg, #5a6fd8 0%, #6a5d87 100%)',
-                        },
-                      }}
-                    >
-                      {analyticsData.latestContent ? (
-                        <>
-                          {/* Enhanced Video Thumbnail with Preview */}
-                          <Box sx={{ position: 'relative', mb: 3 }}>
-                            <Box
-                              className="video-thumbnail-analytics-large"
-                              component="img"
-                              src={analyticsData.latestContent.highThumbnail || analyticsData.latestContent.mediumThumbnail || analyticsData.latestContent.thumbnail || analyticsData.latestContent.preview || `https://img.youtube.com/vi/${analyticsData.latestContent.url?.split('v=')[1] || analyticsData.latestContent.url?.split('/').pop()}/maxresdefault.jpg`}
-                              sx={{
-                                width: '100%',
-                                height: 140,
-                                borderRadius: '8px',
-                                objectFit: 'cover',
-                                border: '2px solid #333',
-                                transition: 'all 0.2s ease',
-                                cursor: 'pointer',
-                                '&:hover': {
-                                  border: '2px solid #667eea',
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  transform: 'scale(1.02)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                            />
-                            <Box
-                              className="video-thumbnail-analytics-large"
-                              sx={{
-                                width: '100%',
-                                height: 140,
-                                bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
-                                borderRadius: '8px',
-                                border: '2px solid #333',
-                                display: 'none',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                fontSize: '50px',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  border: '2px solid #667eea',
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  transform: 'scale(1.02)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                            >
-                              {analyticsData.latestContent.type === 'short' ? '🎯' : '📺'}
-                            </Box>
-
-                            {/* Play Button Overlay */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                width: 50,
-                                height: 50,
-                                bgcolor: 'rgba(0,0,0,0.8)',
-                                borderRadius: '50%',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                cursor: 'pointer',
-                                transition: 'all 0.2s ease',
-                                '&:hover': {
-                                  bgcolor: 'rgba(228,184,0,0.9)',
-                                  transform: 'translate(-50%, -50%) scale(1.1)'
-                                }
-                              }}
-                              onClick={() => analyticsData.latestContent.url && window.open(analyticsData.latestContent.url, '_blank')}
-                            >
-                              <Typography sx={{ color: 'white', fontSize: '20px' }}>▶</Typography>
-                            </Box>
-
-                            {/* Duration Badge */}
-                            {analyticsData.latestContent.duration && (
-                              <Box
-                                sx={{
-                                  position: 'absolute',
-                                  bottom: 8,
-                                  right: 8,
-                                  bgcolor: 'rgba(0,0,0,0.9)',
-                                  color: 'white',
-                                  px: 1.5,
-                                  py: 0.5,
-                                  borderRadius: '6px',
-                                  fontSize: '12px',
-                                  fontWeight: 600
-                                }}
-                              >
-                                {analyticsData.latestContent.duration}
-                              </Box>
-                            )}
-
-                            {/* Video Type Badge */}
-                            <Box
-                              sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                bgcolor: analyticsData.latestContent.type === 'short' ? '#4CAF50' : '#2196F3',
-                                color: 'white',
-                                px: 1.5,
-                                py: 0.5,
-                                borderRadius: '6px',
-                                fontSize: '10px',
-                                fontWeight: 600,
-                                textTransform: 'uppercase'
-                              }}
-                            >
-                              {analyticsData.latestContent.type === 'short' ? 'SHORT' : 'VIDEO'}
-                            </Box>
-                          </Box>
-
-                          {/* Video Title */}
-                          <Typography variant="body2" sx={{
-                            color: 'white',
-                            fontWeight: 600,
-                            mb: 2,
-                            fontSize: '15px',
-                            lineHeight: 1.4
-                          }}>
-                            {analyticsData.latestContent.title || 'Untitled Video'}
-                          </Typography>
-
-                          {/* Video Stats - matching Content tab format */}
-                          <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Account</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {analyticsData.latestContent.account_name || 'Unknown Account'}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Views</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {formatNumber(analyticsData.latestContent.views || 0)}
-                              </Typography>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Engagement</Typography>
-                              <Box sx={{ textAlign: 'right' }}>
-                                <Typography variant="caption" sx={{ color: 'white', fontWeight: 600, display: 'block' }}>
-                                  {analyticsData.latestContent.likes && analyticsData.latestContent.views ?
-                                    ((analyticsData.latestContent.likes / analyticsData.latestContent.views) * 100).toFixed(1) + '%' :
-                                    'N/A'
-                                  }
-                                </Typography>
-                                <Typography variant="caption" sx={{ color: '#888' }}>
-                                  {analyticsData.latestContent.likes?.toLocaleString() || '0'} likes
-                                </Typography>
-                              </Box>
-                            </Box>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1 }}>
-                              <Typography variant="caption" sx={{ color: '#888' }}>Stayed to Watch</Typography>
-                              <Typography variant="caption" sx={{ color: 'white', fontWeight: 600 }}>
-                                {analyticsData.latestContent.stayedToWatch ?
-                                  `${analyticsData.latestContent.stayedToWatch.toFixed(1)}%` :
-                                  'N/A'
-                                }
-                              </Typography>
-                            </Box>
-                          </Box>
-
-                          {/* YouTube URL */}
-                          {analyticsData.latestContent.url && (
-                            <Box sx={{ mb: 2, p: 1.5, bgcolor: '#333', borderRadius: '6px' }}>
-                              <Typography variant="caption" sx={{ color: '#888', display: 'block', mb: 0.5 }}>
-                                YouTube URL:
-                              </Typography>
-                              <Typography
-                                variant="caption"
-                                sx={{
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  WebkitBackgroundClip: 'text',
-                                  WebkitTextFillColor: 'transparent',
-                                  fontWeight: 500,
-                                  cursor: 'pointer',
-                                  '&:hover': { textDecoration: 'underline' }
-                                }}
-                                onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
-                              >
-                                {analyticsData.latestContent.url.length > 40 ?
-                                  analyticsData.latestContent.url.substring(0, 40) + '...' :
-                                  analyticsData.latestContent.url
-                                }
-                              </Typography>
-                            </Box>
-                          )}
-
-                          {/* Publication Date */}
-                          <Typography variant="caption" sx={{ color: '#888', mb: 3, display: 'block' }}>
-                            {analyticsData.latestContent.posted_date ?
-                              `Published ${new Date(analyticsData.latestContent.posted_date).toLocaleDateString('en-US', {
-                                year: 'numeric',
-                                month: 'long',
-                                day: 'numeric'
-                              })}` :
-                              'Recently published'
-                            }
-                          </Typography>
-
-                          {/* Action Buttons */}
-                          <Box sx={{ display: 'flex', gap: 1, mb: 2 }}>
-                            <Button
-                              variant="outlined"
-                              size="small"
-                              onClick={() => navigate(`/content/video/${analyticsData.latestContent.id}`)}
-                              sx={{
-                                color: 'white',
-                                borderColor: '#444',
-                                textTransform: 'none',
-                                flex: 1,
-                                '&:hover': { borderColor: '#666', bgcolor: 'rgba(255,255,255,0.05)' }
-                              }}
-                            >
-                              Analytics
-                            </Button>
-                            {analyticsData.latestContent.url && (
-                              <Button
-                                variant="contained"
-                                size="small"
-                                onClick={() => window.open(analyticsData.latestContent.url, '_blank')}
-                                sx={{
-                                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                  color: 'white',
-                                  textTransform: 'none',
-                                  flex: 1,
-                                  boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-                                  '&:hover': { bgcolor: '#D4A600' }
-                                }}
-                              >
-                                Watch
-                              </Button>
-                            )}
-                          </Box>
-
-                          {/* Footer Info */}
-                          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="caption" sx={{ color: '#888' }}>
-                              Latest of {analyticsData.totalSubmissions || 0} videos
-                            </Typography>
-                            <Typography variant="caption" sx={{
-                              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                              WebkitBackgroundClip: 'text',
-                              WebkitTextFillColor: 'transparent',
-                              fontWeight: 600
-                            }}>
-                              LATEST
-                            </Typography>
-                          </Box>
-                        </>
-                      ) : (
-                        <Box sx={{ textAlign: 'center', py: 4 }}>
-                          <Typography variant="body2" sx={{ color: '#888', mb: 2 }}>
-                            No recent content available
-                          </Typography>
-                          <Typography variant="caption" sx={{ color: '#666' }}>
-                            Latest videos will appear here when posted
-                          </Typography>
-                        </Box>
-                      )}
-                    </Box>
-                  </Box>
-
-
+                  {/* This space can be used for other widgets in the future */}
                 </Box>
               </Box>
             </Box>

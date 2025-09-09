@@ -2,6 +2,8 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const { BigQuery } = require('@google-cloud/bigquery');
 const { Storage } = require('@google-cloud/storage');
+const { google } = require('googleapis');
+const fs = require('fs');
 const path = require('path');
 
 const router = express.Router();
@@ -170,6 +172,42 @@ const initializeBigQuery = async () => {
 
 // Initialize immediately
 initializeBigQuery();
+
+// Google Sheets API setup using the same credentials as BigQuery
+const setupGoogleSheetsClient = async () => {
+  try {
+    let credentials;
+    const credentialsPath = path.join(__dirname, '..', '..', 'admin_dashboard.json');
+
+    if (fs.existsSync(credentialsPath)) {
+      console.log(`🔍 Analytics Google Sheets: Loading credentials from admin_dashboard.json`);
+      const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+      credentials = JSON.parse(credentialsFile);
+    } else {
+      // Fallback to environment variable
+      const credentialsJson = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+
+      if (!credentialsJson) {
+        throw new Error('Neither admin_dashboard.json file nor GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable found');
+      }
+
+      console.log(`🔍 Analytics Google Sheets: Loading credentials from environment variable`);
+      credentials = JSON.parse(credentialsJson);
+    }
+
+    const auth = new google.auth.GoogleAuth({
+      credentials: credentials,
+      scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
+    });
+
+    const sheets = google.sheets({ version: 'v4', auth });
+    console.log(`✅ Analytics Google Sheets client initialized successfully`);
+    return sheets;
+  } catch (error) {
+    console.error("❌ Failed to set up Google Sheets client:", error);
+    throw error;
+  }
+};
 
 const getBigQueryClient = () => {
   // Use global client if available, otherwise try local initialization
@@ -763,6 +801,9 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
     }
 
     // Step 1: Get videos from statistics_youtube_api for the writer with date filtering
+    // Add virals filtering at database level if type is 'virals'
+    const viralsCondition = type === 'virals' ? 'AND COALESCE(s.views_total, 0) >= 1000000' : '';
+
     const postgresQuery = `
       SELECT
         v.id,
@@ -770,21 +811,27 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
         v.url,
         v.writer_id,
         v.video_cat,
+        v.trello_card_id,
         COALESCE(s.views_total, 0) as views,
         COALESCE(s.likes_total, 0) as likes,
         COALESCE(s.comments_total, 0) as comments,
         s.posted_date,
         s.duration,
         s.preview,
-        pa.account as account_name
+        pa.account as account_name,
+        sc.google_doc_link,
+        sc.ai_chat_url,
+        sc.core_concept_doc
       FROM video v
       LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
       LEFT JOIN posting_accounts pa ON v.account_id = pa.id
+      LEFT JOIN script sc ON v.trello_card_id = sc.trello_card_id
       WHERE v.writer_id = $1
         AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
         AND v.url IS NOT NULL
         AND (v.video_type IS NULL OR v.video_type != 'Archived')
         ${dateCondition}
+        ${viralsCondition}
       ORDER BY s.posted_date DESC NULLS LAST, v.id DESC
     `;
 
@@ -995,7 +1042,10 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
         engagement: engagement,
         status: "Published",
         durationSource: durationSource, // Track where duration came from for debugging
-        source: bigQueryData.account_name || bigQueryData.channel_title ? 'postgres_with_bigquery_duration' : 'postgres_only'
+        source: bigQueryData.account_name || bigQueryData.channel_title ? 'postgres_with_bigquery_duration' : 'postgres_only',
+        google_doc_link: row.google_doc_link,
+        ai_chat_url: row.ai_chat_url,
+        core_concept_doc: row.core_concept_doc
       };
     }); // Show ALL videos from PostgreSQL statistics_youtube_api table
 
@@ -3816,20 +3866,127 @@ router.get('/writer/views', authenticateToken, async (req, res) => {
   }
 });
 
+// Function to get ALL viral videos across all writers (for virals tab)
+async function getAllViralVideosAcrossWriters(dateRange, page = 1, limit = 20) {
+  try {
+    console.log(`🔥 Getting ALL viral videos across all writers, range: ${dateRange}, page: ${page}`);
+
+    // Calculate date filter based on dateRange parameter
+    let dateCondition = '';
+    let queryParams = [];
+
+    if (dateRange && dateRange !== 'all') {
+      const days = parseInt(dateRange) || 28;
+      dateCondition = `AND s.posted_date >= NOW() - INTERVAL '${days} days'`;
+    }
+
+    // Query to get ALL viral videos (500k+ views) with core concept docs
+    const postgresQuery = `
+      SELECT
+        v.id,
+        v.url,
+        v.script_title AS title,
+        v.writer_id,
+        w.name as writer_name,
+        s.posted_date,
+        s.preview,
+        s.duration,
+        COALESCE(s.likes_total, 0) AS likes_total,
+        COALESCE(s.comments_total, 0) AS comments_total,
+        COALESCE(s.views_total, 0) AS views_total,
+        sc.core_concept_doc
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      LEFT JOIN writer w ON v.writer_id = w.id
+      LEFT JOIN script sc ON v.script_title = sc.title
+      WHERE (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.views_total >= 500000
+        AND sc.core_concept_doc IS NOT NULL
+        AND sc.core_concept_doc != ''
+        ${dateCondition}
+      ORDER BY s.views_total DESC
+      LIMIT $${queryParams.length + 1} OFFSET $${queryParams.length + 2}
+    `;
+
+    queryParams.push(parseInt(limit), (parseInt(page) - 1) * parseInt(limit));
+
+    const { rows: postgresRows } = await pool.query(postgresQuery, queryParams);
+    console.log(`🔥 Found ${postgresRows.length} viral videos across all writers`);
+
+    // Get total count for pagination
+    const countQuery = `
+      SELECT COUNT(*) as total
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      LEFT JOIN script sc ON v.script_title = sc.title
+      WHERE (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.views_total >= 500000
+        AND sc.core_concept_doc IS NOT NULL
+        AND sc.core_concept_doc != ''
+        ${dateCondition}
+    `;
+
+    const { rows: countRows } = await pool.query(countQuery, queryParams.slice(0, -2));
+    const totalVideos = parseInt(countRows[0].total);
+
+    // Format videos for frontend
+    const videos = postgresRows.map(row => ({
+      id: row.id,
+      title: row.title,
+      url: row.url,
+      writer_id: row.writer_id,
+      writer_name: row.writer_name,
+      views: parseInt(row.views_total) || 0,
+      likes: parseInt(row.likes_total) || 0,
+      comments: parseInt(row.comments_total) || 0,
+      posted_date: row.posted_date,
+      preview: row.preview,
+      duration: row.duration,
+      core_concept_doc: row.core_concept_doc,
+      type: 'viral'
+    }));
+
+    return {
+      videos,
+      pagination: {
+        currentPage: parseInt(page),
+        totalPages: Math.ceil(totalVideos / parseInt(limit)),
+        totalVideos,
+        hasNextPage: parseInt(page) < Math.ceil(totalVideos / parseInt(limit)),
+        hasPrevPage: parseInt(page) > 1
+      }
+    };
+
+  } catch (error) {
+    console.error('❌ Error getting viral videos across all writers:', error);
+    throw error;
+  }
+}
+
 // Writer videos endpoint for Content page - shows ALL videos from statistics_youtube_api
 router.get('/writer/videos', async (req, res) => {
   try {
     const { writer_id, range = '28', page = '1', limit = '20', type = 'all' } = req.query;
 
-    if (!writer_id) {
-      console.log(`❌ Writer Videos API: Missing writer_id`);
+    // For virals, allow no writer_id to get ALL viral videos across all writers
+    if (!writer_id && type !== 'virals') {
+      console.log(`❌ Writer Videos API: Missing writer_id (required for non-virals)`);
       return res.status(400).json({ error: 'missing writer_id' });
     }
 
-    console.log(`🎬 Writer Videos API: Getting ALL videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
+    if (type === 'virals' && !writer_id) {
+      console.log(`🔥 Writer Videos API: Getting ALL viral videos across all writers, range: ${range}, page: ${page}`);
+    } else {
+      console.log(`🎬 Writer Videos API: Getting ALL videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
+    }
 
-    // Use the same function but modify it to show ALL videos
-    const result = await getPostgresContentVideosWithBigQueryNames(writer_id, range, page, limit, type);
+    // Use different function for virals (all writers) vs specific writer
+    let result;
+    if (type === 'virals' && !writer_id) {
+      result = await getAllViralVideosAcrossWriters(range, page, limit);
+    } else {
+      result = await getPostgresContentVideosWithBigQueryNames(writer_id, range, page, limit, type);
+    }
 
     console.log(`✅ Writer Videos: Found ${result.videos.length} videos for writer ${writer_id}`);
     console.log(`📊 Pagination: Page ${result.pagination.currentPage}/${result.pagination.totalPages}, Total: ${result.pagination.totalVideos}`);
@@ -4399,9 +4556,24 @@ router.get('/videos', authenticateToken, async (req, res) => {
   try {
     const { writer_id, range = '28', page = '1', limit = '20', type = 'all' } = req.query;
 
-    if (!writer_id) {
-      console.log(`❌ BigQuery Content API: Missing writer_id`);
+    // For virals, allow no writer_id to get ALL viral videos across all writers
+    if (!writer_id && type !== 'virals') {
+      console.log(`❌ BigQuery Content API: Missing writer_id (required for non-virals)`);
       return res.status(400).json({ error: 'missing writer_id' });
+    }
+
+    if (type === 'virals' && !writer_id) {
+      console.log(`🔥 BigQuery Content API: Getting ALL viral videos across all writers, range: ${range}, page: ${page}`);
+      // Use the viral videos function
+      const result = await getAllViralVideosAcrossWriters(range, page, limit);
+      return res.json({
+        videos: result.videos,
+        pagination: result.pagination,
+        typeCounts: {
+          all: result.pagination.totalVideos,
+          virals: result.pagination.totalVideos
+        }
+      });
     }
 
     console.log(`🎬 PostgreSQL Content API: Getting videos for writer ${writer_id}, range: ${range}, page: ${page}, type: ${type}`);
@@ -4524,6 +4696,203 @@ router.get('/videos', authenticateToken, async (req, res) => {
     console.error('❌ Error stack:', error.stack);
     console.error('❌ Error message:', error.message);
     res.status(500).json({ error: 'Failed to fetch content data', details: error.message });
+  }
+});
+
+// Get viral videos (1M+ views) with core concept docs
+router.get('/virals', authenticateToken, async (req, res) => {
+  console.log(`🔥 VIRAL VIDEOS ENDPOINT CALLED! Query params:`, req.query);
+
+  try {
+    const { writer_id, range = '28', page = '1', limit = '20' } = req.query;
+
+    if (!writer_id) {
+      console.log(`❌ Viral Videos API: Missing writer_id`);
+      return res.status(400).json({ error: 'missing writer_id' });
+    }
+
+    console.log(`🔥 Viral Videos API: Getting viral videos for writer ${writer_id}, range: ${range}`);
+
+    // Get writer name from PostgreSQL
+    const writerQuery = `SELECT name FROM writer WHERE id = $1`;
+    const { rows: writerRows } = await pool.query(writerQuery, [parseInt(writer_id)]);
+
+    if (writerRows.length === 0) {
+      throw new Error(`Writer with ID ${writer_id} not found`);
+    }
+
+    const writerName = writerRows[0].name;
+    console.log(`🔥 Found writer: ${writerName}`);
+
+    // Calculate date range
+    let dateCondition = '';
+    let queryParams = [parseInt(writer_id)];
+
+    if (range !== 'lifetime') {
+      const daysAgo = parseInt(range);
+      const startDate = new Date();
+      startDate.setDate(startDate.getDate() - daysAgo);
+      dateCondition = `AND (video.upload_date >= $2 OR video.upload_date IS NULL)`;
+      queryParams.push(startDate.toISOString().split('T')[0]);
+    }
+
+    // First, get total count for pagination
+    const countQuery = `
+      SELECT COUNT(DISTINCT video.id) as total
+      FROM video
+      LEFT JOIN script ON video.trello_card_id = script.trello_card_id
+      WHERE video.writer_id = $1
+        AND video.url IS NOT NULL
+        AND video.url != ''
+        ${dateCondition}
+    `;
+
+    const { rows: countRows } = await pool.query(countQuery, dateCondition ? [parseInt(writer_id), dateValue] : [parseInt(writer_id)]);
+    const totalVideos = parseInt(countRows[0].total);
+
+    // Calculate pagination
+    const pageNum = parseInt(page);
+    const limitNum = parseInt(limit);
+    const offset = (pageNum - 1) * limitNum;
+    const totalPages = Math.ceil(totalVideos / limitNum);
+
+    // Query PostgreSQL for videos with script data including core_concept_doc
+    const viralQuery = `
+      SELECT DISTINCT
+        video.id,
+        video.url,
+        video.script_title as title,
+        video.created as posted_date,
+        video.writer_id,
+        video.account_id,
+        video.trello_card_id,
+        script.core_concept_doc,
+        script.google_doc_link,
+        script.ai_chat_url,
+        script.title as script_original_title
+      FROM video
+      LEFT JOIN script ON video.trello_card_id = script.trello_card_id
+      WHERE video.writer_id = $1
+        AND video.url IS NOT NULL
+        AND video.url != ''
+        ${dateCondition}
+      ORDER BY video.created DESC
+      LIMIT ${limitNum} OFFSET ${offset}
+    `;
+
+    console.log(`🔍 Viral Videos Query:`, viralQuery);
+    console.log(`🔍 Query params:`, queryParams);
+
+    const { rows: videoRows } = await pool.query(viralQuery, queryParams);
+    console.log(`📊 Found ${videoRows.length} videos from PostgreSQL`);
+
+    // Enhance with BigQuery data for views and thumbnails
+    const enhancedVideos = [];
+
+    for (const video of videoRows) {
+      try {
+        // Extract video ID from URL for BigQuery lookup
+        let videoId = null;
+        if (video.url) {
+          const urlMatch = video.url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/);
+          if (urlMatch) {
+            videoId = urlMatch[1];
+          }
+        }
+
+        let views = 0;
+        let thumbnail = null;
+
+        if (videoId && global.bigqueryClient) {
+          try {
+            // Query BigQuery for view count and thumbnail
+            const bigQueryQuery = `
+              SELECT
+                statistics_view_count as views,
+                snippet_thumbnails
+              FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+              WHERE video_id = @video_id
+                AND writer_name = @writer_name
+                AND statistics_view_count IS NOT NULL
+              ORDER BY snapshot_date DESC
+              LIMIT 1
+            `;
+
+            const [rows] = await global.bigqueryClient.query({
+              query: bigQueryQuery,
+              params: {
+                video_id: videoId,
+                writer_name: writerName
+              }
+            });
+
+            if (rows.length > 0) {
+              views = parseInt(rows[0].views) || 0;
+              thumbnail = rows[0].snippet_thumbnails;
+            }
+          } catch (bqError) {
+            console.log(`⚠️ BigQuery lookup failed for video ${videoId}:`, bqError.message);
+          }
+        }
+
+        // Only include videos with 1M+ views
+        if (views > 999999) {
+          enhancedVideos.push({
+            id: video.id,
+            url: video.url,
+            title: video.title || video.script_original_title || 'Untitled',
+            views: views,
+            preview: thumbnail,
+            posted_date: video.posted_date,
+            writer_id: video.writer_id,
+            account_id: video.account_id,
+            trello_card_id: video.trello_card_id,
+            core_concept_doc: video.core_concept_doc,
+            google_doc_link: video.google_doc_link,
+            ai_chat_url: video.ai_chat_url,
+            type: video.url && video.url.includes('/shorts/') ? 'short' : 'video'
+          });
+        }
+      } catch (videoError) {
+        console.log(`⚠️ Error processing video ${video.id}:`, videoError.message);
+      }
+    }
+
+    console.log(`🔥 Found ${enhancedVideos.length} viral videos (1M+ views) on page ${pageNum}`);
+
+    // Sort by views descending (but keep date ordering as primary)
+    enhancedVideos.sort((a, b) => {
+      // First sort by posted_date (newest first)
+      const dateA = new Date(a.posted_date || 0);
+      const dateB = new Date(b.posted_date || 0);
+      if (dateB.getTime() !== dateA.getTime()) {
+        return dateB.getTime() - dateA.getTime();
+      }
+      // Then by views (highest first) as secondary sort
+      return (b.views || 0) - (a.views || 0);
+    });
+
+    // Count how many are actually viral (1M+ views)
+    const viralCount = enhancedVideos.filter(video => (video.views || 0) >= 1000000).length;
+
+    res.json({
+      success: true,
+      videos: enhancedVideos,
+      pagination: {
+        currentPage: pageNum,
+        totalPages: totalPages,
+        totalVideos: viralCount, // Only count actual viral videos
+        videosPerPage: limitNum,
+        hasNextPage: pageNum < totalPages,
+        hasPrevPage: pageNum > 1
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    console.error('❌ Viral Videos endpoint error:', error);
+    console.error('❌ Error stack:', error.stack);
+    res.status(500).json({ error: 'Failed to fetch viral videos', details: error.message });
   }
 });
 
@@ -6321,6 +6690,33 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       leaderboardRows.push(...fallbackRows);
     }
 
+    // Get avatar seeds for all writers in the leaderboard
+    const writerNames = leaderboardRows.map(row => row.writer_name);
+    let avatarSeeds = {};
+
+    if (writerNames.length > 0) {
+      try {
+        const avatarQuery = `
+          SELECT w.name, l.avatar_seed, l.username
+          FROM writer w
+          JOIN login l ON w.login_id = l.id
+          WHERE w.name = ANY($1)
+        `;
+
+        const avatarResult = await pool.query(avatarQuery, [writerNames]);
+
+        // Create a map of writer_name -> avatar_seed
+        avatarResult.rows.forEach(row => {
+          avatarSeeds[row.name] = row.avatar_seed || row.username;
+        });
+
+        console.log('🎭 Avatar seeds fetched for leaderboard:', avatarSeeds);
+      } catch (error) {
+        console.error('❌ Error fetching avatar seeds:', error);
+        // Continue without avatar seeds if there's an error
+      }
+    }
+
     const leaderboardData = leaderboardRows.map(row => ({
       rank: parseInt(row.rank),
       writer_name: row.writer_name,
@@ -6333,7 +6729,8 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       last_active_date: null, // Not stored in cache
       progress_to_1b_percent: parseFloat(((parseInt(row.total_views) / 1000000000.0) * 100).toFixed(2)),
       views_per_million: (parseInt(row.total_views) / 1000000).toFixed(1),
-      is_active: true // All cached entries are considered active
+      is_active: true, // All cached entries are considered active
+      avatar_seed: avatarSeeds[row.writer_name] || row.writer_name // Add avatar seed
     }));
 
     console.log(`✅ Fast leaderboard retrieved: ${leaderboardData.length} writers`);
@@ -6909,7 +7306,67 @@ router.get('/video-details', authenticateToken, async (req, res) => {
   }
 });
 
+// Endpoint to fetch core concept titles from Google Sheets
+router.get('/core-concept-titles', async (req, res) => {
+  try {
+    console.log('📊 Fetching core concept titles from Google Sheets...');
 
+    const sheets = await setupGoogleSheetsClient();
+    const spreadsheetId = '1rQ5POXEqdguOQ-91IcFXbRr62UoyPWT4vzILPeujNZs';
+    const range = 'Sheet1!B:C'; // Column B (Core Concept Doc URLs) and Column C (Titles)
+
+    const response = await sheets.spreadsheets.values.get({
+      spreadsheetId,
+      range,
+    });
+
+    const rows = response.data.values;
+    if (!rows || rows.length === 0) {
+      console.log('❌ No data found in Google Sheets');
+      return res.status(404).json({
+        success: false,
+        message: 'No data found in Google Sheets'
+      });
+    }
+
+    // Create a mapping of document ID to title
+    const titleMapping = {};
+
+    // Skip header row (index 0) and process data rows
+    for (let i = 1; i < rows.length; i++) {
+      const row = rows[i];
+      if (row && row.length >= 2) {
+        const docUrl = row[0]; // Column B - Core Concept Doc URL
+        const title = row[1]; // Column C - Title
+
+        if (docUrl && title) {
+          // Extract document ID from Google Docs URL
+          const docIdMatch = docUrl.match(/\/document\/d\/([a-zA-Z0-9-_]+)/);
+          if (docIdMatch) {
+            const docId = docIdMatch[1];
+            titleMapping[docId] = title;
+          }
+        }
+      }
+    }
+
+    console.log(`✅ Successfully mapped ${Object.keys(titleMapping).length} core concept titles`);
+
+    res.json({
+      success: true,
+      titleMapping: titleMapping,
+      count: Object.keys(titleMapping).length
+    });
+
+  } catch (error) {
+    console.error('❌ Error fetching core concept titles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch core concept titles',
+      error: error.message
+    });
+  }
+});
 
 module.exports = router;
 module.exports.bigquery = bigquery;

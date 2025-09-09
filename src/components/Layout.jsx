@@ -21,6 +21,7 @@ import {
   useMediaQuery,
   useTheme,
 } from "@mui/material";
+import BigHeadAvatar from "./BigHeadAvatar.jsx";
 import {
   Dashboard as DashboardIcon,
   Analytics as AnalyticsIcon,
@@ -197,21 +198,23 @@ const Layout = ({
           {/* User Profile Section */}
           <Box display="flex" alignItems="center" gap={2}>
             <Box sx={{ position: "relative" }}>
-              <Avatar
+              <Box
                 sx={{
                   width: isMobile ? 40 : 48,
                   height: isMobile ? 40 : 48,
-                  background:
-                    "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                  color: "white",
-                  fontWeight: "bold",
-                  fontSize: isMobile ? "16px" : "20px",
+                  borderRadius: "50%",
+                  overflow: "hidden",
                   boxShadow: "0 4px 15px rgba(102, 126, 234, 0.3)",
                   border: "2px solid rgba(255, 255, 255, 0.2)",
+                  background: "white",
                 }}
               >
-                {user?.avatar || user?.name?.charAt(0) || "U"}
-              </Avatar>
+                <BigHeadAvatar
+                  name={user?.name || "User"}
+                  avatarSeed={user?.avatarSeed}
+                  size={isMobile ? 36 : 44}
+                />
+              </Box>
               <Box
                 sx={{
                   position: "absolute",
@@ -680,15 +683,19 @@ const Layout = ({
               borderRight: "none",
               boxShadow: "4px 0 20px rgba(0, 0, 0, 0.3)",
               "&::-webkit-scrollbar": {
-                width: "6px",
+                width: "0px",
+                background: "transparent",
               },
               "&::-webkit-scrollbar-track": {
-                background: "rgba(255, 255, 255, 0.1)",
+                background: "transparent",
               },
               "&::-webkit-scrollbar-thumb": {
-                background: "rgba(255, 255, 255, 0.3)",
-                borderRadius: "3px",
+                background: "transparent",
               },
+              // For Firefox
+              scrollbarWidth: "none",
+              // For IE and Edge
+              msOverflowStyle: "none",
             },
           }}
           variant="permanent"
@@ -716,6 +723,20 @@ const Layout = ({
                 "linear-gradient(180deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%)",
               borderRight: "none",
               boxShadow: "4px 0 20px rgba(0, 0, 0, 0.3)",
+              "&::-webkit-scrollbar": {
+                width: "0px",
+                background: "transparent",
+              },
+              "&::-webkit-scrollbar-track": {
+                background: "transparent",
+              },
+              "&::-webkit-scrollbar-thumb": {
+                background: "transparent",
+              },
+              // For Firefox
+              scrollbarWidth: "none",
+              // For IE and Edge
+              msOverflowStyle: "none",
             },
           }}
         >

@@ -86,7 +86,10 @@ export const analyticsApi = {
 
 export const contentApi = {
   getVideos: (params = {}) =>
-    simpleApi.get('/api/writer/videos', { params })
+    simpleApi.get('/api/writer/videos', { params }),
+
+  getVirals: (params = {}) =>
+    simpleApi.get('/api/analytics/virals', { params })
 };
 
 export const staticDataApi = {

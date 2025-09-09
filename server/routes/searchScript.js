@@ -48,14 +48,15 @@ router.get('/search-script', async (req, res) => {
 
     console.log(`📋 Found Trello card ID: ${trelloCardId}`);
 
-    // Search for the script in the script table using the trello_card_id
+    // Search for the script in the script table using the trello_card_id and get writer name
     const scriptQuery = `
-      SELECT google_doc_link 
-      FROM script 
-      WHERE trello_card_id = $1 
+      SELECT s.google_doc_link, w.name as writer_name
+      FROM script s
+      LEFT JOIN writer w ON s.writer_id = w.id
+      WHERE s.trello_card_id = $1
       LIMIT 1
     `;
-    
+
     const { rows: scriptRows } = await pool.query(scriptQuery, [trelloCardId]);
 
     if (scriptRows.length === 0) {
@@ -67,23 +68,26 @@ router.get('/search-script', async (req, res) => {
     }
 
     const googleDocLink = scriptRows[0].google_doc_link;
+    const writerName = scriptRows[0].writer_name;
 
     if (!googleDocLink) {
       console.log(`❌ No Google Doc link for Trello card ID: ${trelloCardId}`);
-      return res.status(404).json({ 
-        success: false, 
-        error: 'Script found but no Google Doc link available' 
+      return res.status(404).json({
+        success: false,
+        error: 'Script found but no Google Doc link available'
       });
     }
 
     console.log(`✅ Found Google Doc link: ${googleDocLink}`);
+    console.log(`✅ Found writer: ${writerName || 'Unknown'}`);
 
     // Return the successful result
     return res.status(200).json({
       success: true,
       videoId: videoId,
       trelloCardId: trelloCardId,
-      googleDocLink: googleDocLink
+      googleDocLink: googleDocLink,
+      writerName: writerName || 'Unknown Writer'
     });
 
   } catch (error) {

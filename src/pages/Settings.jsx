@@ -14,6 +14,9 @@ import {
   useMediaQuery,
   Chip,
   Stack,
+  Modal,
+  Backdrop,
+  Fade,
 } from "@mui/material";
 import {
   Settings as SettingsIcon,
@@ -23,17 +26,25 @@ import {
   Language as LanguageIcon,
   Save as SaveIcon,
   Palette as PaletteIcon,
+  AccountCircle as AvatarIcon,
 } from "@mui/icons-material";
 import Layout from "../components/Layout.jsx";
+import AvatarSelector from "../components/AvatarSelector.jsx";
+import { useAuth } from "../contexts/AuthContext.jsx";
+import axios from "axios";
+import { buildApiUrl, API_CONFIG } from "../config/api.js";
 
 const Settings = () => {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { user } = useAuth();
 
   const [darkMode, setDarkMode] = useState(true);
   const [notifications, setNotifications] = useState(true);
   const [autoSave, setAutoSave] = useState(false);
+  const [avatarModalOpen, setAvatarModalOpen] = useState(false);
+  const [currentAvatarSeed, setCurrentAvatarSeed] = useState(user?.avatarSeed || user?.username || 'User');
 
   const handleClose = () => {
     navigate(-1); // Go back to previous page
@@ -55,6 +66,29 @@ const Settings = () => {
 
   const handleAutoSaveChange = (event) => {
     setAutoSave(event.target.checked);
+  };
+
+  const handleAvatarChange = async (newSeed) => {
+    try {
+      console.log('🎭 Updating avatar seed to:', newSeed);
+
+      // Call API to update avatar seed
+      const response = await axios.put(buildApiUrl(API_CONFIG.ENDPOINTS.USER.PROFILE), {
+        avatarSeed: newSeed
+      });
+
+      if (response.data.success) {
+        setCurrentAvatarSeed(newSeed);
+        setAvatarModalOpen(false);
+        console.log('✅ Avatar updated successfully');
+
+        // Optionally refresh the page to update all avatars
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('❌ Failed to update avatar:', error);
+      // You could add a toast notification here
+    }
   };
 
   return (
@@ -318,6 +352,79 @@ const Settings = () => {
               </CardContent>
             </Card>
 
+            {/* Avatar Settings Card */}
+            <Card
+              sx={{
+                background: "rgba(255, 255, 255, 0.05)",
+                backdropFilter: "blur(10px)",
+                border: "1px solid rgba(255, 255, 255, 0.1)",
+                borderRadius: "16px",
+                boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              <CardContent sx={{ p: 3 }}>
+                <Box
+                  sx={{ display: "flex", alignItems: "center", gap: 2, mb: 3 }}
+                >
+                  <AvatarIcon sx={{ color: "#ff6b6b", fontSize: 20 }} />
+                  <Typography
+                    variant="h6"
+                    sx={{ color: "white", fontWeight: 600 }}
+                  >
+                    Avatar
+                  </Typography>
+                </Box>
+
+                {/* Avatar Setting */}
+                <Box
+                  sx={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    py: 2,
+                    px: 1,
+                    borderRadius: "12px",
+                    mb: 2,
+                  }}
+                >
+                  <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+                    <AvatarIcon sx={{ color: "#ff6b6b", fontSize: 20 }} />
+                    <Box>
+                      <Typography
+                        variant="body1"
+                        sx={{ color: "white", fontWeight: 500 }}
+                      >
+                        Profile Avatar
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{ color: "rgba(255, 255, 255, 0.6)" }}
+                      >
+                        Choose your unique avatar
+                      </Typography>
+                    </Box>
+                  </Box>
+                  <Button
+                    variant="outlined"
+                    size="small"
+                    onClick={() => setAvatarModalOpen(true)}
+                    sx={{
+                      borderColor: "#ff6b6b",
+                      color: "#ff6b6b",
+                      fontWeight: 600,
+                      textTransform: "none",
+                      "&:hover": {
+                        borderColor: "#ff5252",
+                        bgcolor: "rgba(255, 107, 107, 0.1)",
+                      },
+                    }}
+                  >
+                    Change Avatar
+                  </Button>
+                </Box>
+              </CardContent>
+            </Card>
+
             {/* Preferences Settings Card */}
             <Card
               sx={{
@@ -519,6 +626,78 @@ const Settings = () => {
           </Stack>
         </Box>
       </Box>
+
+      {/* Avatar Selection Modal */}
+      <Modal
+        open={avatarModalOpen}
+        onClose={() => setAvatarModalOpen(false)}
+        closeAfterTransition
+        BackdropComponent={Backdrop}
+        BackdropProps={{
+          timeout: 500,
+          sx: { backgroundColor: 'rgba(0, 0, 0, 0.8)' }
+        }}
+      >
+        <Fade in={avatarModalOpen}>
+          <Box
+            sx={{
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              width: isMobile ? '95%' : '600px',
+              maxHeight: '90vh',
+              overflow: 'auto',
+              background: 'linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%)',
+              border: '1px solid rgba(255, 255, 255, 0.1)',
+              borderRadius: '20px',
+              boxShadow: '0 20px 60px rgba(0, 0, 0, 0.5)',
+              p: 4,
+            }}
+          >
+            <Box
+              sx={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                mb: 3,
+              }}
+            >
+              <Typography
+                variant="h5"
+                sx={{
+                  color: 'white',
+                  fontWeight: 600,
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                  backgroundClip: 'text',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                }}
+              >
+                Avatar Settings
+              </Typography>
+              <IconButton
+                onClick={() => setAvatarModalOpen(false)}
+                sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  '&:hover': {
+                    color: 'white',
+                    bgcolor: 'rgba(255, 255, 255, 0.1)',
+                  },
+                }}
+              >
+                <CloseIcon />
+              </IconButton>
+            </Box>
+
+            <AvatarSelector
+              currentSeed={currentAvatarSeed}
+              onSeedChange={handleAvatarChange}
+              userName={user?.username || 'User'}
+            />
+          </Box>
+        </Fade>
+      </Modal>
     </Layout>
   );
 };
