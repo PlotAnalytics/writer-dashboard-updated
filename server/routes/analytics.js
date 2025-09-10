@@ -3875,7 +3875,7 @@ async function getAllViralVideosAcrossWriters(dateRange, page = 1, limit = 20) {
     let dateCondition = '';
     let queryParams = [];
 
-    if (dateRange && dateRange !== 'all') {
+    if (dateRange && dateRange !== 'all' && dateRange !== 'lifetime') {
       const days = parseInt(dateRange) || 28;
       dateCondition = `AND s.posted_date >= NOW() - INTERVAL '${days} days'`;
     }
