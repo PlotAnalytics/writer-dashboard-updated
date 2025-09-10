@@ -113,29 +113,24 @@ const ChatWidget = () => {
         timestamp: userMessage.timestamp.toISOString()
       });
 
-      // Add timeout to prevent hanging requests
-      const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+      // Use our own API endpoint to proxy to n8n (avoids CORS issues)
+      const apiUrl = '/api/chat';
+      console.log('🌐 Chat API URL:', apiUrl);
 
-      const webhookUrl = 'https://plotpointe-ai.app.n8n.cloud/webhook/1c0d0-8f0-abd0-4bdc-beef-370c27aae1a0';
-      console.log('🌐 Webhook URL:', webhookUrl);
-
-      const response = await fetch(webhookUrl, {
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}` // Include auth token
         },
         body: JSON.stringify({
           message: userMessage.text,
           userId: user.id || user.writerId,
-          userName: user.name || user.username,
-          timestamp: userMessage.timestamp.toISOString()
-        }),
-        signal: controller.signal
+          userName: user.name || user.username
+        })
       });
 
-      clearTimeout(timeoutId);
       console.log('📡 Response status:', response.status);
       console.log('📡 Response headers:', Object.fromEntries(response.headers.entries()));
 

@@ -7005,6 +7005,52 @@ app.post('/api/test-structure-migration', async (req, res) => {
   }
 });
 
+// Chat proxy endpoint to avoid CORS issues with n8n
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message, userId, userName } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Forward request to n8n webhook
+    const n8nResponse = await axios.post(
+      'https://plotpointe-ai.app.n8n.cloud/webhook/1c0d0-8f0-abd0-4bdc-beef-370c27aae1a0',
+      {
+        message,
+        userId: userId || 'anonymous',
+        userName: userName || 'User',
+        timestamp: new Date().toISOString()
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      }
+    );
+
+    // Return the response from n8n
+    res.json(n8nResponse.data);
+
+  } catch (error) {
+    console.error('Chat proxy error:', error.message);
+
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({ error: "Request timeout" });
+    }
+
+    if (error.response) {
+      return res.status(error.response.status).json({
+        error: error.response.data || "Error from chat service"
+      });
+    }
+
+    res.status(500).json({ error: "Internal server error" });
+  }
+});
+
 // Health check
 app.get("/api/health", (req, res) => {
   res.json({ status: "OK", message: "Writer Dashboard API is running" });
