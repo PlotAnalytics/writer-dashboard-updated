@@ -7014,14 +7014,18 @@ app.post("/api/chat", async (req, res) => {
       return res.status(400).json({ error: "Message is required" });
     }
 
-    // Forward request to n8n webhook
+    // Forward request to n8n webhook (Chat Trigger format)
     const n8nResponse = await axios.post(
-      'https://plotpointe-ai.app.n8n.cloud/webhook/1c0d0-8f0-abd0-4bdc-beef-370c27aae1a0',
+      'https://plotpointe-ai.app.n8n.cloud/webhook/1c0d08f0-abd0-4bdc-beef-370c27aae1a0/chat',
       {
-        message,
-        userId: userId || 'anonymous',
-        userName: userName || 'User',
-        timestamp: new Date().toISOString()
+        action: "sendMessage",
+        sessionId: `${userId || 'anonymous'}-${Date.now()}`,
+        chatInput: message,
+        metadata: {
+          userId: userId || 'anonymous',
+          userName: userName || 'User',
+          timestamp: new Date().toISOString()
+        }
       },
       {
         headers: {
