@@ -2,27 +2,31 @@ import { useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
 
 const useSocket = (serverUrl) => {
+  const socketRef = useRef(null);
+
   // Auto-detect server URL based on environment
   if (!serverUrl) {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
 
-      // Production: use same domain with different port or relative
+      // Production: Vercel doesn't support WebSockets with serverless functions
       if (hostname.includes('vercel.app') || hostname.includes('plotpointedashboard.com')) {
-        serverUrl = `https://${hostname}`;
+        console.log('🚫 WebSocket disabled in production (Vercel limitation)');
+        return { socketRef };
       } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Development: use localhost with port 5001
         serverUrl = 'http://localhost:5001';
+        console.log('🏠 Development WebSocket URL:', serverUrl);
       } else {
         // Fallback: use current domain
         serverUrl = `${window.location.protocol}//${window.location.host}`;
+        console.log('🔄 Fallback WebSocket URL:', serverUrl);
       }
     } else {
       // Server-side fallback
       serverUrl = 'http://localhost:5001';
     }
   }
-  const socketRef = useRef(null);
 
   useEffect(() => {
     // Initialize socket connection
