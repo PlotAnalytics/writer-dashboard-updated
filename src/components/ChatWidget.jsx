@@ -148,7 +148,7 @@ const ChatWidget = () => {
 
       const botMessage = {
         id: Date.now() + 1,
-        text: data.response || data.message || 'I received your message!',
+        text: data.output || data.response || data.message || 'I received your message!',
         sender: 'bot',
         timestamp: new Date()
       };
