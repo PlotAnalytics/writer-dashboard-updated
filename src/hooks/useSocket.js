@@ -4,16 +4,17 @@ import { io } from 'socket.io-client';
 const useSocket = (serverUrl) => {
   const socketRef = useRef(null);
 
+  // Check if WebSocket should be disabled in production
+  const isProduction = typeof window !== 'undefined' &&
+    (window.location.hostname.includes('vercel.app') ||
+     window.location.hostname.includes('plotpointedashboard.com'));
+
   // Auto-detect server URL based on environment
-  if (!serverUrl) {
+  if (!serverUrl && !isProduction) {
     if (typeof window !== 'undefined') {
       const hostname = window.location.hostname;
 
-      // Production: Vercel doesn't support WebSockets with serverless functions
-      if (hostname.includes('vercel.app') || hostname.includes('plotpointedashboard.com')) {
-        console.log('🚫 WebSocket disabled in production (Vercel limitation)');
-        return { socketRef };
-      } else if (hostname === 'localhost' || hostname === '127.0.0.1') {
+      if (hostname === 'localhost' || hostname === '127.0.0.1') {
         // Development: use localhost with port 5001
         serverUrl = 'http://localhost:5001';
         console.log('🏠 Development WebSocket URL:', serverUrl);
@@ -29,6 +30,16 @@ const useSocket = (serverUrl) => {
   }
 
   useEffect(() => {
+    // Skip WebSocket initialization in production
+    if (isProduction) {
+      console.log('🚫 WebSocket disabled in production (Vercel limitation)');
+      return;
+    }
+
+    if (!serverUrl) {
+      return;
+    }
+
     // Initialize socket connection
     socketRef.current = io(serverUrl, {
       transports: ['websocket', 'polling'],
@@ -55,10 +66,14 @@ const useSocket = (serverUrl) => {
         socket.disconnect();
       }
     };
-  }, [serverUrl]);
+  }, [serverUrl, isProduction]);
 
   // Function to listen for status updates
   const onStatusUpdate = (callback) => {
+    if (isProduction) {
+      // No-op in production
+      return;
+    }
     if (socketRef.current) {
       socketRef.current.on('statusUpdate', callback);
     }
@@ -66,6 +81,10 @@ const useSocket = (serverUrl) => {
 
   // Function to remove status update listener
   const offStatusUpdate = (callback) => {
+    if (isProduction) {
+      // No-op in production
+      return;
+    }
     if (socketRef.current) {
       socketRef.current.off('statusUpdate', callback);
     }
