@@ -230,7 +230,7 @@ const Content = () => {
           writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
           range: dateRange,
           page: currentPage,
-          limit: videosPerPage,
+          limit: videoTypeFilter === 'virals' ? 100 : videosPerPage, // Show 100 virals per page
           type: videoTypeFilter // Pass virals type directly to backend
         });
         responseData = data;
@@ -241,7 +241,7 @@ const Content = () => {
           params: {
             writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
             page: currentPage,
-            limit: videosPerPage,
+            limit: videoTypeFilter === 'virals' ? 100 : videosPerPage, // Show 100 virals per page
             type: videoTypeFilter // Pass virals type directly to backend
           }
         });
