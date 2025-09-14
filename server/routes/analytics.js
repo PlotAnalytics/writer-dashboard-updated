@@ -7514,5 +7514,67 @@ router.get('/core-concept-titles', async (req, res) => {
   }
 });
 
+// Script submissions endpoint for tooltip data
+router.post('/script-submissions', async (req, res) => {
+  try {
+    const { writerId, startDate, endDate } = req.body;
+
+    if (!writerId || !startDate || !endDate) {
+      return res.status(400).json({ error: 'Missing required parameters: writerId, startDate, endDate' });
+    }
+
+    console.log('🔍 Fetching script submissions for tooltip:', { writerId, startDate, endDate });
+
+    // Query script table for daily submission counts
+    const query = `
+      SELECT
+        DATE(created_at) as date,
+        COUNT(*) as count,
+        array_agg(id) as script_ids,
+        array_agg(created_at) as timestamps
+      FROM script
+      WHERE writer_id = $1
+        AND DATE(created_at) >= $2
+        AND DATE(created_at) <= $3
+      GROUP BY DATE(created_at)
+      ORDER BY date ASC
+    `;
+
+    const result = await pool.query(query, [writerId, startDate, endDate]);
+
+    console.log('✅ Script submissions fetched:', result.rows.length, 'days with data');
+
+    // Debug: Log detailed results with timezone info
+    result.rows.forEach(row => {
+      console.log(`📅 Raw Date: ${row.date}, ISO: ${row.date.toISOString().split('T')[0]}, Count: ${row.count}`);
+      console.log(`📅 Sample timestamps: ${row.timestamps?.slice(0, 2)}`);
+    });
+
+    // Format the response - avoid timezone conversion by using local date formatting
+    const formattedData = result.rows.map(row => {
+      // Use local date formatting to avoid UTC conversion
+      const year = row.date.getFullYear();
+      const month = String(row.date.getMonth() + 1).padStart(2, '0');
+      const day = String(row.date.getDate()).padStart(2, '0');
+      const localDateStr = `${year}-${month}-${day}`;
+
+      console.log(`📅 Date conversion: ${row.date} -> ${localDateStr} (count: ${row.count})`);
+
+      return {
+        date: localDateStr,
+        count: parseInt(row.count)
+      };
+    });
+
+    console.log('📊 Formatted response:', formattedData);
+
+    res.json(formattedData);
+
+  } catch (error) {
+    console.error('❌ Error fetching script submissions:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 module.exports.bigquery = bigquery;

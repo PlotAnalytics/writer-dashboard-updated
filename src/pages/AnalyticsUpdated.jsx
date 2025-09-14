@@ -313,6 +313,7 @@ const AnalyticsUpdated = () => {
     }
   }, [loading, pageFullyLoaded]);
   const [monthlyBonusData, setMonthlyBonusData] = useState({ totalBonus: 0, progress: 0, nextMilestone: 55 });
+  const [scriptSubmissionData, setScriptSubmissionData] = useState({});
 
 
 
@@ -795,6 +796,69 @@ const AnalyticsUpdated = () => {
     }
   };
 
+  // Fetch script submission data for tooltip
+  const fetchScriptSubmissionData = async () => {
+    try {
+      if (!user?.writerId) return;
+
+      let startDate, endDate;
+
+      // Handle custom date ranges
+      if (dateRange.startsWith('custom_')) {
+        const parts = dateRange.split('_');
+        if (parts.length === 3) {
+          startDate = parts[1];
+          endDate = parts[2];
+        }
+      } else {
+        // For non-custom ranges, calculate the date range
+        endDate = new Date().toISOString().split('T')[0];
+
+        switch (dateRange) {
+          case 'last7days':
+            startDate = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            break;
+          case 'last30days':
+            startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            break;
+          case 'last90days':
+            startDate = new Date(Date.now() - 90 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            break;
+          case 'last365days':
+            startDate = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            break;
+          default:
+            startDate = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+        }
+      }
+
+      const response = await fetch(buildApiUrl('/api/analytics/script-submissions'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify({
+          writerId: user.writerId,
+          startDate,
+          endDate
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        // Convert array to object with date as key for easy lookup
+        const submissionsByDate = {};
+        data.forEach(item => {
+          submissionsByDate[item.date] = item.count;
+        });
+        setScriptSubmissionData(submissionsByDate);
+      }
+    } catch (error) {
+      console.error('Error fetching script submission data:', error);
+    }
+  };
+
   // Format date for display
   const formatDate = (dateStr) => {
     const date = new Date(dateStr);
@@ -1118,6 +1182,7 @@ const AnalyticsUpdated = () => {
     }
     fetchRealtimeData();
     fetchMonthlyBonusData(); // Always fetch current calendar month for bonus (independent of date filter)
+    fetchScriptSubmissionData(); // Fetch script submission data for tooltip
 
     // Fetch streak stats with date filtering for script count
     if (dateRange.startsWith('custom_')) {
@@ -1548,6 +1613,9 @@ const AnalyticsUpdated = () => {
 
                     // Fetch streak stats with custom date range
                     fetchStreakStats(start, end);
+
+                    // Fetch script submission data for tooltip with custom date range
+                    fetchScriptSubmissionData();
                   } catch (error) {
                     console.error('Error fetching analytics for custom date range:', error);
                     setError('Failed to load analytics data. Please try again.');
@@ -1803,7 +1871,29 @@ const AnalyticsUpdated = () => {
                               if (!params || params.length === 0) return '';
                               const date = params[0]?.axisValue || 'N/A';
                               const views = params[0]?.value || 0;
-                              return `${date}<br/>Views: ${formatNumber(views)}`;
+
+                              // Get the original date from the chart data to match with script submission data
+                              const dataIndex = params[0]?.dataIndex;
+                              let submissions = 0;
+                              if (dataIndex !== undefined && analyticsData?.aggregatedViewsData?.[dataIndex]) {
+                                const originalDate = analyticsData.aggregatedViewsData[dataIndex].time;
+                                // Convert to YYYY-MM-DD format WITHOUT timezone conversion
+                                let dateKey;
+                                if (typeof originalDate === 'string' && originalDate.includes('-')) {
+                                  // If it's already in YYYY-MM-DD format, use as-is
+                                  dateKey = originalDate.split('T')[0];
+                                } else {
+                                  // Create date in local timezone to avoid UTC conversion
+                                  const date = new Date(originalDate);
+                                  const year = date.getFullYear();
+                                  const month = String(date.getMonth() + 1).padStart(2, '0');
+                                  const day = String(date.getDate()).padStart(2, '0');
+                                  dateKey = `${year}-${month}-${day}`;
+                                }
+                                submissions = scriptSubmissionData[dateKey] || 0;
+                              }
+
+                              return `${date}<br/>Views: ${formatNumber(views)}<br/>Script Submissions: ${submissions}`;
                             }
                           },
                           grid: {
