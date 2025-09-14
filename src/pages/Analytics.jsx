@@ -24,7 +24,8 @@ import {
   Whatshot as WhatshotIcon,
   FlashOn as FlashOnIcon,
   ThumbUp as ThumbUpIcon,
-  SentimentDissatisfied as SentimentDissatisfiedIcon
+  SentimentDissatisfied as SentimentDissatisfiedIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
 import ReactECharts from 'echarts-for-react';
@@ -1640,7 +1641,7 @@ const Analytics = () => {
                   }
                 }}
               >
-                <Box sx={{ fontSize: '16px' }}>📅</Box>
+                <CalendarIcon sx={{ fontSize: '18px', opacity: 0.8 }} />
                 <Box sx={{ flex: 1, textAlign: 'left' }}>
                   {customStartDate === customEndDate ?
                     new Date(customStartDate).toLocaleDateString('en-US', {
@@ -2417,14 +2418,14 @@ const Analytics = () => {
 
                 </Box>
 
-                {/* Bottom Row: 4 cards side by side */}
+                {/* Bottom Row: 5 cards side by side */}
                 <Box sx={{
                   display: 'flex',
                   gap: 0.75,
                   '& > *': {
                     flex: '1 1 0',
                     minWidth: 0,
-                    maxWidth: 'calc(25% - 4.5px)'
+                    maxWidth: 'calc(20% - 3.6px)'
                   }
                 }}>
 
@@ -2432,7 +2433,7 @@ const Analytics = () => {
 
 
                   {/* Decent Videos Card */}
-                  {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
+                  {analyticsData && analyticsData.decentVideosCount !== undefined && (
                     <Box
                       onClick={() => handleOpenVideoModal('decentVideos')}
                       sx={{
@@ -2549,7 +2550,7 @@ const Analytics = () => {
                   )}
 
                   {/* Flops Card */}
-                  {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
+                  {analyticsData && analyticsData.flopsCount !== undefined && (
                     <Box
                       onClick={() => handleOpenVideoModal('flops')}
                       sx={{

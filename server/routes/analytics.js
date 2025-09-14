@@ -4324,6 +4324,140 @@ router.get('/debug-writer-121-videos', async (req, res) => {
   }
 });
 
+// Get writer streak and script stats
+router.get('/writer/streak-stats', authenticateToken, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { start_date, end_date } = req.query;
+
+    console.log('📊 Getting streak and script stats for user:', userId);
+
+    // Get writer ID from login ID (same pattern as other endpoints)
+    let writerId = null;
+    try {
+      const writerQuery = `
+        SELECT w.id as writer_id, w.name as writer_name
+        FROM writer w
+        WHERE w.login_id = $1
+      `;
+      const writerResult = await pool.query(writerQuery, [userId]);
+      if (writerResult.rows.length > 0) {
+        writerId = writerResult.rows[0].writer_id;
+        console.log('✅ Found writer ID:', writerId, 'for user:', userId);
+      } else {
+        console.log('⚠️ No writer found for user:', userId);
+        return res.status(404).json({ error: 'Writer not found for this user' });
+      }
+    } catch (dbError) {
+      console.error('❌ Error getting writer ID:', dbError);
+      return res.status(500).json({ error: 'Database error getting writer info' });
+    }
+
+    // Calculate submission streak (consecutive days with submissions, not affected by date picker)
+    const streakQuery = `
+      WITH daily_submissions AS (
+        SELECT DISTINCT DATE(created_at) as submission_date
+        FROM script
+        WHERE writer_id = $1
+        ORDER BY DATE(created_at) DESC
+      )
+      SELECT submission_date
+      FROM daily_submissions
+      ORDER BY submission_date DESC
+    `;
+
+    // Count posted scripts (filtered by date range if provided)
+    let scriptsQuery = `
+      SELECT COUNT(*) as posted_scripts
+      FROM script
+      WHERE writer_id = $1 AND approval_status = 'Posted'
+    `;
+
+    const queryParams = [writerId];
+
+    if (start_date && end_date) {
+      scriptsQuery += ` AND created_at BETWEEN $2 AND $3`;
+      queryParams.push(start_date, end_date);
+    }
+
+    // Add debugging - check if writer has any scripts at all
+    const debugQuery = `SELECT COUNT(*) as total_scripts, COUNT(CASE WHEN approval_status = 'Posted' THEN 1 END) as posted_scripts FROM script WHERE writer_id = $1`;
+    const debugResult = await pool.query(debugQuery, [writerId]);
+    console.log('📊 Debug - Writer has:', debugResult.rows[0], 'scripts total');
+
+    // Add debugging for the queries
+    console.log('📊 Executing streak query for writer:', writerId);
+    console.log('📊 Executing scripts query with params:', queryParams);
+
+    const [streakResult, scriptsResult] = await Promise.all([
+      pool.query(streakQuery, [writerId]),
+      pool.query(scriptsQuery, queryParams)
+    ]);
+
+    console.log('📊 Streak query returned:', streakResult.rows.length, 'submission dates');
+    console.log('📊 Scripts query returned:', scriptsResult.rows[0]);
+
+    // Calculate streak from the submission dates
+    let streak = 0;
+    if (streakResult.rows.length > 0) {
+      console.log('📊 Submission dates found:', streakResult.rows.map(r => r.submission_date));
+
+      const submissionDates = streakResult.rows.map(row => {
+        const date = new Date(row.submission_date);
+        date.setHours(0, 0, 0, 0);
+        return date;
+      }).sort((a, b) => b.getTime() - a.getTime()); // Sort descending (most recent first)
+
+      console.log('📊 Sorted submission dates:', submissionDates.map(d => d.toISOString().split('T')[0]));
+
+      // Calculate consecutive days streak from the most recent submission backwards
+      if (submissionDates.length > 0) {
+        streak = 1; // Start with the most recent submission
+
+        // Start from the most recent submission and work backwards
+        for (let i = 1; i < submissionDates.length; i++) {
+          const currentDate = submissionDates[i];
+          const previousDate = submissionDates[i - 1];
+
+          // Calculate the difference in days
+          const diffTime = previousDate.getTime() - currentDate.getTime();
+          const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+
+          console.log(`📊 Checking consecutive days: ${previousDate.toISOString().split('T')[0]} -> ${currentDate.toISOString().split('T')[0]}, diff=${diffDays} days`);
+
+          // If the difference is exactly 1 day, continue the streak
+          if (diffDays === 1) {
+            streak++;
+            console.log(`📊 Streak continues: ${streak} days`);
+          } else {
+            // Streak is broken
+            console.log(`📊 Streak broken at ${diffDays} day gap`);
+            break;
+          }
+        }
+
+        console.log(`📊 Final calculated streak: ${streak} consecutive days ending on ${submissionDates[0].toISOString().split('T')[0]}`);
+      }
+    } else {
+      console.log('📊 No submission dates found for writer:', writerId);
+    }
+
+    const postedScripts = parseInt(scriptsResult.rows[0]?.posted_scripts || 0);
+
+    console.log('📊 Final streak and script stats:', { streak, postedScripts });
+
+    res.json({
+      success: true,
+      streak: streak,
+      postedScripts: postedScripts
+    });
+
+  } catch (error) {
+    console.error('❌ Error getting streak and script stats:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Simple test endpoint to verify frontend connectivity
 router.get('/test-simple', authenticateToken, async (req, res) => {
   console.log('🧪 Simple test endpoint called');
@@ -5017,15 +5151,27 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
 
       if (duration) {
         const parts = duration.split(':');
-        if (parts.length >= 2) {
+        let totalSeconds = 0;
+
+        if (parts.length === 3) {
+          // Format: "HH:MM:SS"
+          const hours = parseInt(parts[0]) || 0;
+          const minutes = parseInt(parts[1]) || 0;
+          const seconds = parseInt(parts[2]) || 0;
+          totalSeconds = (hours * 3600) + (minutes * 60) + seconds;
+        } else if (parts.length === 2) {
+          // Format: "MM:SS"
           const minutes = parseInt(parts[0]) || 0;
           const seconds = parseInt(parts[1]) || 0;
-          const totalSeconds = minutes * 60 + seconds;
+          totalSeconds = (minutes * 60) + seconds;
+        }
 
-          if (totalSeconds < 183) { // Less than 3 minutes 3 seconds (183 seconds)
-            videoType = 'short';
-            isShort = true;
-          }
+        if (totalSeconds > 0 && totalSeconds < 183) { // Less than 3 minutes 3 seconds (183 seconds)
+          videoType = 'short';
+          isShort = true;
+        } else if (totalSeconds >= 183) {
+          videoType = 'video';
+          isShort = false;
         }
       }
 

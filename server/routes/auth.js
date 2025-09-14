@@ -214,7 +214,7 @@ router.get('/verify', async (req, res) => {
 
     // Get user from database
     const result = await pool.query(
-      "SELECT id, username, role, avatar_seed FROM login WHERE id = $1",
+      "SELECT id, username, role, avatar_seed, secondary_role FROM login WHERE id = $1",
       [decoded.id]
     );
 
@@ -242,6 +242,7 @@ router.get('/verify', async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role,
+        secondaryRole: user.secondary_role,
         name: writer?.name || user.username,
         writerId: writer?.writer_id || null,
         avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase(),
@@ -297,7 +298,7 @@ router.get('/profile', async (req, res) => {
 
     // Get user from database
     const result = await pool.query(
-      "SELECT id, username, role, avatar_seed FROM login WHERE id = $1",
+      "SELECT id, username, role, avatar_seed, secondary_role FROM login WHERE id = $1",
       [decoded.id]
     );
 
@@ -325,6 +326,7 @@ router.get('/profile', async (req, res) => {
         id: user.id,
         username: user.username,
         role: user.role,
+        secondaryRole: user.secondary_role,
         name: writer?.name || user.username,
         writerId: writer?.writer_id || null,
         avatar: writer?.name?.charAt(0)?.toUpperCase() || user.username.charAt(0).toUpperCase(),

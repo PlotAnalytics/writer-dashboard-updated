@@ -13,6 +13,7 @@ import Login from "./pages/Login.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import WriterDashboard from "./pages/WriterDashboard.jsx";
 import Analytics from "./pages/Analytics.jsx";
+import AnalyticsUpdated from "./pages/AnalyticsUpdated.jsx";
 import Content from "./pages/Content.jsx";
 import VideoAnalytics from "./pages/VideoAnalytics.jsx";
 import Settings from "./pages/Settings.jsx";
@@ -225,6 +226,14 @@ function App() {
                   </ProtectedRoute>
                 }
               />
+            <Route
+              path="/analytics-updated"
+              element={
+                <ProtectedRoute>
+                  <AnalyticsUpdated />
+                </ProtectedRoute>
+              }
+            />
               <Route
                 path="/content"
                 element={
