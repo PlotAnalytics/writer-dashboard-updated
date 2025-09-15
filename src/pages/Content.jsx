@@ -223,30 +223,61 @@ const Content = () => {
 
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 
-      // Use same data source for all tabs (including virals)
+      // Use different endpoints for virals vs regular content
       let responseData;
       try {
-        const { data } = await contentApi.getVideos({
-          writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
-          range: dateRange,
-          page: currentPage,
-          limit: videoTypeFilter === 'virals' ? 100 : videosPerPage, // Show 100 virals per page
-          type: videoTypeFilter // Pass virals type directly to backend
-        });
-        responseData = data;
-        console.log('✅ Got response from /api/writer/videos:', data);
-      } catch (influxError) {
-        console.log('⚠️ InfluxDB API failed, trying PostgreSQL fallback');
-        const response = await axios.get(`/api/writer/analytics`, {
-          params: {
-            writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
+        if (videoTypeFilter === 'virals') {
+          // Use BigQuery endpoint for virals
+          const response = await axios.get('/api/analytics/videos', {
+            params: {
+              writer_id: null, // No writer filter for virals
+              range: dateRange,
+              page: currentPage,
+              limit: 100, // Show 100 virals per page
+              type: 'virals'
+            }
+          });
+          responseData = response.data;
+          console.log('✅ Got response from /api/analytics/videos (BigQuery):', responseData);
+        } else {
+          // Use regular endpoint for other content
+          const { data } = await contentApi.getVideos({
+            writer_id: writerId,
+            range: dateRange,
             page: currentPage,
-            limit: videoTypeFilter === 'virals' ? 100 : videosPerPage, // Show 100 virals per page
-            type: videoTypeFilter // Pass virals type directly to backend
-          }
-        });
-        responseData = response.data;
-        console.log('✅ Got response from PostgreSQL fallback:', response.data);
+            limit: videosPerPage,
+            type: videoTypeFilter
+          });
+          responseData = data;
+          console.log('✅ Got response from /api/writer/videos:', data);
+        }
+      } catch (influxError) {
+        console.log('⚠️ Primary API failed, trying fallback');
+        if (videoTypeFilter === 'virals') {
+          // For virals, try the writer/videos endpoint as fallback
+          const response = await axios.get('/api/writer/videos', {
+            params: {
+              writer_id: null,
+              page: currentPage,
+              limit: 100,
+              type: 'virals'
+            }
+          });
+          responseData = response.data;
+          console.log('✅ Got response from virals fallback:', responseData);
+        } else {
+          // For regular content, use analytics fallback
+          const response = await axios.get(`/api/writer/analytics`, {
+            params: {
+              writer_id: writerId,
+              page: currentPage,
+              limit: videosPerPage,
+              type: videoTypeFilter
+            }
+          });
+          responseData = response.data;
+          console.log('✅ Got response from analytics fallback:', responseData);
+        }
       }
 
       // Handle paginated response
