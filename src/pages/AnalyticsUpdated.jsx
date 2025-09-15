@@ -504,6 +504,40 @@ const AnalyticsUpdated = () => {
     return { totalBonus, progress, nextMilestone, currentViews: viewsInMillions };
   };
 
+  // Calculate target average daily views needed for next bonus tier
+  const calculateTargetDailyViews = () => {
+    if (!monthlyBonusData?.nextMilestone) return 0;
+
+    // Get current date and calculate days remaining in month
+    const now = new Date();
+    const daysInMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+    const currentDay = now.getDate();
+    const daysRemaining = daysInMonth - currentDay + 1; // Include today
+
+    // Convert next milestone from millions to actual views
+    const targetMonthlyViews = monthlyBonusData.nextMilestone * 1000000;
+
+    // Calculate current monthly views (from bonus data)
+    const currentMonthlyViews = (monthlyBonusData.currentViews || 0) * 1000000;
+
+    // Calculate remaining views needed
+    const remainingViewsNeeded = Math.max(0, targetMonthlyViews - currentMonthlyViews);
+
+    // Calculate target daily average for remaining days
+    const targetDailyViews = daysRemaining > 0 ? remainingViewsNeeded / daysRemaining : 0;
+
+    console.log('🎯 Target calculation:', {
+      nextMilestone: monthlyBonusData.nextMilestone,
+      targetMonthlyViews,
+      currentMonthlyViews,
+      remainingViewsNeeded,
+      daysRemaining,
+      targetDailyViews
+    });
+
+    return targetDailyViews;
+  };
+
   // Fetch monthly bonus data (always current calendar month, independent of date filter)
   const fetchMonthlyBonusData = async () => {
     try {
@@ -1861,6 +1895,27 @@ const AnalyticsUpdated = () => {
                       <ReactECharts
                         option={{
                           backgroundColor: 'transparent',
+                          legend: {
+                            show: true,
+                            top: '0%',
+                            right: '2%',
+                            textStyle: {
+                              color: '#9e9e9e',
+                              fontSize: 11
+                            },
+                            itemWidth: 20,
+                            itemHeight: 12,
+                            data: [
+                              {
+                                name: 'Daily Views',
+                                icon: 'circle'
+                              },
+                              ...(calculateTargetDailyViews() > 0 ? [{
+                                name: 'Next Bonus Target',
+                                icon: 'rect'
+                              }] : [])
+                            ]
+                          },
                           tooltip: {
                             trigger: 'axis',
                             backgroundColor: 'rgba(50, 50, 50, 0.9)',
@@ -1869,31 +1924,42 @@ const AnalyticsUpdated = () => {
                             textStyle: { color: '#fff' },
                             formatter: (params) => {
                               if (!params || params.length === 0) return '';
+
+                              let tooltipContent = '';
                               const date = params[0]?.axisValue || 'N/A';
-                              const views = params[0]?.value || 0;
 
-                              // Get the original date from the chart data to match with script submission data
-                              const dataIndex = params[0]?.dataIndex;
-                              let submissions = 0;
-                              if (dataIndex !== undefined && analyticsData?.aggregatedViewsData?.[dataIndex]) {
-                                const originalDate = analyticsData.aggregatedViewsData[dataIndex].time;
-                                // Convert to YYYY-MM-DD format WITHOUT timezone conversion
-                                let dateKey;
-                                if (typeof originalDate === 'string' && originalDate.includes('-')) {
-                                  // If it's already in YYYY-MM-DD format, use as-is
-                                  dateKey = originalDate.split('T')[0];
-                                } else {
-                                  // Create date in local timezone to avoid UTC conversion
-                                  const date = new Date(originalDate);
-                                  const year = date.getFullYear();
-                                  const month = String(date.getMonth() + 1).padStart(2, '0');
-                                  const day = String(date.getDate()).padStart(2, '0');
-                                  dateKey = `${year}-${month}-${day}`;
+                              // Process each series in the tooltip
+                              params.forEach((param, index) => {
+                                if (param.seriesName === 'Daily Views') {
+                                  const views = param.value || 0;
+
+                                  // Get script submission data
+                                  const dataIndex = param.dataIndex;
+                                  let submissions = 0;
+                                  if (dataIndex !== undefined && analyticsData?.aggregatedViewsData?.[dataIndex]) {
+                                    const originalDate = analyticsData.aggregatedViewsData[dataIndex].time;
+                                    // Convert to YYYY-MM-DD format WITHOUT timezone conversion
+                                    let dateKey;
+                                    if (typeof originalDate === 'string' && originalDate.includes('-')) {
+                                      dateKey = originalDate.split('T')[0];
+                                    } else {
+                                      const date = new Date(originalDate);
+                                      const year = date.getFullYear();
+                                      const month = String(date.getMonth() + 1).padStart(2, '0');
+                                      const day = String(date.getDate()).padStart(2, '0');
+                                      dateKey = `${year}-${month}-${day}`;
+                                    }
+                                    submissions = scriptSubmissionData[dateKey] || 0;
+                                  }
+
+                                  tooltipContent = `${date}<br/>Views: ${formatNumber(views)}<br/>Script Submissions: ${submissions}`;
+                                } else if (param.seriesName === 'Next Bonus Target') {
+                                  const targetViews = param.value || 0;
+                                  tooltipContent += `<br/><span style="color: #FFA726;">Target: ${formatNumber(targetViews)}/day for next bonus tier</span>`;
                                 }
-                                submissions = scriptSubmissionData[dateKey] || 0;
-                              }
+                              });
 
-                              return `${date}<br/>Views: ${formatNumber(views)}<br/>Script Submissions: ${submissions}`;
+                              return tooltipContent;
                             }
                           },
                           grid: {
@@ -1937,36 +2003,73 @@ const AnalyticsUpdated = () => {
                               lineStyle: { color: 'rgba(66, 66, 66, 0.3)', type: 'dashed' }
                             }
                           },
-                          series: [{
-                            data: analyticsData.aggregatedViewsData.map(item => item.views),
-                            type: 'line',
-                            smooth: true,
-                            lineStyle: {
-                              color: '#4fc3f7',
-                              width: 3
-                            },
-                            areaStyle: {
-                              color: {
-                                type: 'linear',
-                                x: 0,
-                                y: 0,
-                                x2: 0,
-                                y2: 1,
-                                colorStops: [
-                                  { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
-                                  { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
-                                ],
+                          series: [
+                            // Main views line chart
+                            {
+                              name: 'Daily Views',
+                              data: analyticsData.aggregatedViewsData.map(item => item.views),
+                              type: 'line',
+                              smooth: true,
+                              lineStyle: {
+                                color: '#4fc3f7',
+                                width: 3
                               },
+                              areaStyle: {
+                                color: {
+                                  type: 'linear',
+                                  x: 0,
+                                  y: 0,
+                                  x2: 0,
+                                  y2: 1,
+                                  colorStops: [
+                                    { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                    { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                                  ],
+                                },
+                              },
+                              symbol: 'circle',
+                              symbolSize: 6,
+                              itemStyle: {
+                                color: '#4fc3f7',
+                                borderColor: '#fff',
+                                borderWidth: 2
+                              },
+                              connectNulls: false
                             },
-                            symbol: 'circle',
-                            symbolSize: 6,
-                            itemStyle: {
-                              color: '#4fc3f7',
-                              borderColor: '#fff',
-                              borderWidth: 2
-                            },
-                            connectNulls: false
-                          }]
+                            // Bonus target trend line
+                            ...((() => {
+                              const targetDailyViews = calculateTargetDailyViews();
+                              if (targetDailyViews > 0) {
+                                return [{
+                                  name: 'Next Bonus Target',
+                                  data: analyticsData.aggregatedViewsData.map(() => targetDailyViews),
+                                  type: 'line',
+                                  smooth: false,
+                                  lineStyle: {
+                                    color: '#FFA726', // Orange color for contrast
+                                    width: 2,
+                                    type: 'dashed'
+                                  },
+                                  symbol: 'none', // No symbols on the trend line
+                                  itemStyle: {
+                                    color: '#FFA726'
+                                  },
+                                  markLine: {
+                                    silent: true,
+                                    label: {
+                                      show: true,
+                                      position: 'end',
+                                      formatter: `Target: ${formatNumber(targetDailyViews)}/day`,
+                                      color: '#FFA726',
+                                      fontSize: 11,
+                                      fontWeight: 'bold'
+                                    }
+                                  }
+                                }];
+                              }
+                              return [];
+                            })())
+                          ]
                         }}
                         style={{ height: '100%', width: '100%' }}
                       />
