@@ -8235,6 +8235,136 @@ router.get('/debug/test-virals', async (req, res) => {
   }
 });
 
+// DEBUG: Check recent viral videos and BigQuery data freshness
+router.get('/debug/recent-virals', async (req, res) => {
+  try {
+    console.log('🔍 Checking recent viral videos and BigQuery data freshness...');
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: 'BigQuery client not available' });
+    }
+
+    // Check latest data in BigQuery metadata table
+    const latestDataQuery = `
+      SELECT
+        MAX(snapshot_date) as latest_snapshot,
+        COUNT(DISTINCT video_id) as total_videos,
+        COUNT(DISTINCT CASE WHEN DATE(snapshot_date) >= '2024-09-12' THEN video_id END) as videos_since_sept12,
+        COUNT(DISTINCT CASE WHEN CAST(statistics_view_count AS INT64) >= 500000 THEN video_id END) as viral_videos_500k,
+        COUNT(DISTINCT CASE WHEN CAST(statistics_view_count AS INT64) >= 500000 AND DATE(snippet_published_at) >= '2024-09-12' THEN video_id END) as viral_videos_500k_since_sept12
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+      WHERE statistics_view_count IS NOT NULL
+    `;
+
+    const [latestDataResult] = await global.bigqueryClient.query({
+      query: latestDataQuery
+    });
+
+    // Check recent videos with high views (might be viral soon)
+    const recentHighViewsQuery = `
+      WITH latest_metadata AS (
+        SELECT
+          video_id,
+          snippet_published_at,
+          statistics_view_count,
+          snippet_title,
+          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE statistics_view_count IS NOT NULL
+          AND snippet_published_at IS NOT NULL
+      )
+      SELECT
+        video_id,
+        snippet_published_at,
+        CAST(statistics_view_count AS INT64) as views,
+        snippet_title
+      FROM latest_metadata
+      WHERE rn = 1
+        AND DATE(snippet_published_at) >= '2024-09-12'
+        AND CAST(statistics_view_count AS INT64) >= 100000
+      ORDER BY CAST(statistics_view_count AS INT64) DESC
+      LIMIT 20
+    `;
+
+    const [recentHighViewsResult] = await global.bigqueryClient.query({
+      query: recentHighViewsQuery
+    });
+
+    // Check if any recent videos have core concept docs
+    const recentWithDocsQuery = `
+      WITH recent_videos AS (
+        SELECT DISTINCT
+          v.url,
+          REGEXP_EXTRACT(v.url, r'(?:youtu\\.be/|youtube\\.com/(?:shorts/|watch\\\\?v=))([A-Za-z0-9_-]{6,})') AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      recent_metadata AS (
+        SELECT
+          m.video_id,
+          m.snippet_published_at,
+          CAST(m.statistics_view_count AS INT64) as views,
+          m.snippet_title,
+          ROW_NUMBER() OVER (PARTITION BY m.video_id ORDER BY m.snapshot_date DESC) as rn
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+        WHERE m.statistics_view_count IS NOT NULL
+          AND DATE(m.snippet_published_at) >= '2024-09-12'
+      )
+      SELECT
+        rv.video_id,
+        rm.snippet_published_at,
+        rm.views,
+        rm.snippet_title,
+        s.core_concept_doc
+      FROM recent_videos rv
+      JOIN recent_metadata rm ON rv.video_id = rm.video_id AND rm.rn = 1
+      JOIN \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s ON rv.trello_card_id = s.trello_card_id
+      WHERE s.core_concept_doc IS NOT NULL
+        AND s.core_concept_doc != ''
+        AND rm.views >= 100000
+      ORDER BY rm.views DESC
+      LIMIT 15
+    `;
+
+    const [recentWithDocsResult] = await global.bigqueryClient.query({
+      query: recentWithDocsQuery
+    });
+
+    res.json({
+      success: true,
+      latest_data_info: latestDataResult[0],
+      recent_high_views_videos: recentHighViewsResult.map(row => ({
+        video_id: row.video_id,
+        published_at: row.snippet_published_at,
+        views: row.views,
+        title: row.snippet_title?.substring(0, 80),
+        is_viral: row.views >= 500000
+      })),
+      recent_videos_with_docs: recentWithDocsResult.map(row => ({
+        video_id: row.video_id,
+        published_at: row.snippet_published_at,
+        views: row.views,
+        title: row.snippet_title?.substring(0, 80),
+        core_concept_doc: row.core_concept_doc?.substring(0, 50),
+        is_viral: row.views >= 500000
+      })),
+      analysis: {
+        bigquery_data_freshness: latestDataResult[0]?.latest_snapshot,
+        videos_since_sept12: latestDataResult[0]?.videos_since_sept12,
+        viral_videos_since_sept12: latestDataResult[0]?.viral_videos_500k_since_sept12,
+        potential_issue: latestDataResult[0]?.viral_videos_500k_since_sept12 === 0 ?
+          "No viral videos (500k+) found since Sept 12th in BigQuery" :
+          "Recent viral videos exist in BigQuery"
+      }
+    });
+
+  } catch (error) {
+    console.error('❌ Recent virals debug error:', error);
+    res.status(500).json({ error: 'Failed to debug recent virals', details: error.message });
+  }
+});
+
 // DEBUG: Endpoint to analyze viral videos data discrepancy
 router.get('/debug/virals-analysis', async (req, res) => {
   try {
