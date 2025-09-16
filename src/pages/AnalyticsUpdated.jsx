@@ -791,7 +791,23 @@ const AnalyticsUpdated = () => {
       const leaderboardArray = data.data || data || [];
       console.log('🏆 Leaderboard Array:', leaderboardArray);
 
-      setLeaderboardData(leaderboardArray);
+      // Filter out excluded writers
+      const excludedWriters = [
+        "Jamez Garcia",
+        "Alexander 'the' Kazarian",
+        "Steven Abreu",
+        "A/B testing writer",
+        "ludo",
+        "gianmarco"
+      ];
+
+      const filteredLeaderboard = leaderboardArray.filter(writer =>
+        !excludedWriters.includes(writer.writer_name)
+      );
+
+      console.log('🏆 Filtered Leaderboard (excluded writers removed):', filteredLeaderboard);
+
+      setLeaderboardData(filteredLeaderboard);
     } catch (err) {
       console.error('❌ Error fetching leaderboard data:', err);
       setLeaderboardData([]); // Set empty array on error
