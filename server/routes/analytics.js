@@ -880,35 +880,59 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
     const debugDateResult = await pool.query(debugDateQuery, [parseInt(writerId)]);
     console.log(`🔍 DEBUG: Writer ${writerId} video dates: earliest=${debugDateResult.rows[0].earliest_date}, latest=${debugDateResult.rows[0].latest_date}, total_with_dates=${debugDateResult.rows[0].total_with_dates}`);
 
-    // DEBUG: Check for recent videos (last 3 days) to troubleshoot missing recent content
+    // DEBUG: Check for recent videos and sync status
     const recentDebugQuery = `
       SELECT
         v.id,
         v.script_title,
-        s.posted_date,
+        s.posted_date as youtube_publish_date,
+        s.updated_at as last_sync_time,
         s.views_total,
         CASE
-          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 'Today'
-          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 'Yesterday'
-          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '3 days' THEN '2 days ago'
-          ELSE 'Older'
-        END as relative_date
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 'Published Today'
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 'Published Yesterday'
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '3 days' THEN 'Published 2 days ago'
+          ELSE 'Published Earlier'
+        END as youtube_publish_relative,
+        CASE
+          WHEN s.updated_at >= CURRENT_DATE - INTERVAL '1 day' THEN 'Synced Today'
+          WHEN s.updated_at >= CURRENT_DATE - INTERVAL '2 days' THEN 'Synced Yesterday'
+          WHEN s.updated_at >= CURRENT_DATE - INTERVAL '3 days' THEN 'Synced 2 days ago'
+          ELSE 'Synced Earlier'
+        END as sync_relative
       FROM video v
       LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
       WHERE v.writer_id = $1
         AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
-        AND s.posted_date >= CURRENT_DATE - INTERVAL '3 days'
-      ORDER BY s.posted_date DESC
-      LIMIT 10
+        AND (s.posted_date >= CURRENT_DATE - INTERVAL '5 days' OR s.updated_at >= CURRENT_DATE - INTERVAL '2 days')
+      ORDER BY s.posted_date DESC NULLS LAST, s.updated_at DESC NULLS LAST
+      LIMIT 15
     `;
     const recentDebugResult = await pool.query(recentDebugQuery, [parseInt(writerId)]);
-    console.log(`🔍 DEBUG: Writer ${writerId} recent videos (last 3 days):`, recentDebugResult.rows.map(row => ({
+    console.log(`🔍 DEBUG: Writer ${writerId} recent videos and sync status:`, recentDebugResult.rows.map(row => ({
       id: row.id,
       title: row.script_title?.substring(0, 50),
-      posted_date: row.posted_date,
-      relative_date: row.relative_date,
+      youtube_publish_date: row.youtube_publish_date,
+      last_sync_time: row.last_sync_time,
+      youtube_publish_relative: row.youtube_publish_relative,
+      sync_relative: row.sync_relative,
       views: row.views_total
     })));
+
+    // DEBUG: Check overall sync status
+    const syncStatusQuery = `
+      SELECT
+        COUNT(*) as total_videos_with_stats,
+        MAX(updated_at) as last_sync_time,
+        COUNT(CASE WHEN updated_at >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as synced_today,
+        COUNT(CASE WHEN posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as published_today,
+        COUNT(CASE WHEN posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 1 END) as published_last_2_days
+      FROM statistics_youtube_api s
+      INNER JOIN video v ON CAST(v.id AS VARCHAR) = s.video_id
+      WHERE v.writer_id = $1
+    `;
+    const syncStatusResult = await pool.query(syncStatusQuery, [parseInt(writerId)]);
+    console.log(`🔍 DEBUG: Writer ${writerId} sync status:`, syncStatusResult.rows[0]);
 
     // Step 2: Get duration data from BigQuery for accurate video type determination
     let bigQueryDurationMap = new Map();
