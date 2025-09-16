@@ -798,7 +798,8 @@ const AnalyticsUpdated = () => {
         "Steven Abreu",
         "A/B testing writer",
         "ludo",
-        "gianmarco"
+        "gianmarco",
+        "AIwriter"
       ];
 
       const filteredLeaderboard = leaderboardArray.filter(writer =>
