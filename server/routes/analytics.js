@@ -790,12 +790,19 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
 
     if (dateRange !== 'lifetime') {
       const rangeNum = parseInt(dateRange) || 28;
-      const dateFilter = new Date();
-      dateFilter.setDate(dateFilter.getDate() - rangeNum);
+
+      // Create date filter with timezone consideration
+      // Use current date in UTC but subtract an extra day to be more inclusive
+      const now = new Date();
+      const dateFilter = new Date(now.getTime() - (rangeNum + 1) * 24 * 60 * 60 * 1000);
       const dateFilterStr = dateFilter.toISOString().split('T')[0]; // YYYY-MM-DD format
+
+      // Also log current date for debugging
+      const currentDateStr = now.toISOString().split('T')[0];
+
       dateCondition = 'AND (s.posted_date >= $2 OR s.posted_date IS NULL)';
       queryParams.push(dateFilterStr);
-      console.log(`📅 Date filter: Last ${rangeNum} days (since ${dateFilterStr})`);
+      console.log(`📅 Date filter: Last ${rangeNum} days (since ${dateFilterStr}) - Current date: ${currentDateStr}, includes extra day for timezone safety`);
     } else {
       console.log(`📅 Date filter: Lifetime (no date restriction)`);
     }
@@ -872,6 +879,36 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
     `;
     const debugDateResult = await pool.query(debugDateQuery, [parseInt(writerId)]);
     console.log(`🔍 DEBUG: Writer ${writerId} video dates: earliest=${debugDateResult.rows[0].earliest_date}, latest=${debugDateResult.rows[0].latest_date}, total_with_dates=${debugDateResult.rows[0].total_with_dates}`);
+
+    // DEBUG: Check for recent videos (last 3 days) to troubleshoot missing recent content
+    const recentDebugQuery = `
+      SELECT
+        v.id,
+        v.script_title,
+        s.posted_date,
+        s.views_total,
+        CASE
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 'Today'
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 'Yesterday'
+          WHEN s.posted_date >= CURRENT_DATE - INTERVAL '3 days' THEN '2 days ago'
+          ELSE 'Older'
+        END as relative_date
+      FROM video v
+      LEFT JOIN statistics_youtube_api s ON CAST(v.id AS VARCHAR) = s.video_id
+      WHERE v.writer_id = $1
+        AND (v.url LIKE '%youtube.com%' OR v.url LIKE '%youtu.be%')
+        AND s.posted_date >= CURRENT_DATE - INTERVAL '3 days'
+      ORDER BY s.posted_date DESC
+      LIMIT 10
+    `;
+    const recentDebugResult = await pool.query(recentDebugQuery, [parseInt(writerId)]);
+    console.log(`🔍 DEBUG: Writer ${writerId} recent videos (last 3 days):`, recentDebugResult.rows.map(row => ({
+      id: row.id,
+      title: row.script_title?.substring(0, 50),
+      posted_date: row.posted_date,
+      relative_date: row.relative_date,
+      views: row.views_total
+    })));
 
     // Step 2: Get duration data from BigQuery for accurate video type determination
     let bigQueryDurationMap = new Map();
