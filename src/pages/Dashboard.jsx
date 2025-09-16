@@ -371,14 +371,9 @@ const Dashboard = () => {
     }
     console.log('✅ Type validation passed');
 
-    // Validate Structure selection (skip for intern writers)
+    // Structure validation removed - no longer used
     const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
-    console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure, 'isIntern:', isIntern);
-    if (!isIntern && (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --')) {
-      console.log('❌ Structure validation failed - must select a valid structure');
-      setError('Please select a Structure from the dropdown options.');
-      return;
-    }
+    console.log('🏗️ Structure validation skipped - structures no longer used');
     console.log('✅ Structure validation passed');
 
     // Validate Script (Google Doc Link)
@@ -399,11 +394,7 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate Structure Explanation when "No Structure" is selected (skip for intern writers)
-    if (!isIntern && selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
-      setError("Structure explanation must be at least 50 characters when 'No Structure' is selected.");
-      return;
-    }
+    // Structure explanation validation removed - no longer used
 
     // Validate Inspiration Link for Remix and Re-write
     if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
@@ -444,10 +435,10 @@ const Dashboard = () => {
         title: fullTitle,
         googleDocLink: googleDocLink,
         aiChatUrl: aiChatUrlsString,
-        structure_explanation: (!isIntern && selectedStructure === "No Structure") ? structureExplanation : null,
+        structure_explanation: null, // No longer used
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
         core_concept_doc: prefixType === 'Remix' ? coreConceptDoc : null,
-        structure: (!isIntern && selectedStructure) ? selectedStructure : null,
+        structure: null, // No longer used
       });
 
       // Refresh the scripts list to get the latest data
@@ -873,8 +864,8 @@ const Dashboard = () => {
                   </Box>
                 </Box>
 
-                {/* Structure Selection - Hidden for intern writers */}
-                {!['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase()) && (
+                {/* Structure Selection - Hidden for all writers (no longer used) */}
+                {false && (
                   <>
                     <Box sx={{ mb: 2.5 }}>
                       <Typography variant="body2" sx={{
@@ -954,57 +945,7 @@ const Dashboard = () => {
                   </FormControl>
                 </Box>
 
-                {/* Structure Explanation (conditional) */}
-                {selectedStructure === "No Structure" && (
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="body2" sx={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      mb: 1.2,
-                      fontWeight: '700',
-                      fontSize: '13px'
-                    }}>
-                      Please explain your approach <span style={{ color: '#ff4444' }}>*</span>
-                    </Typography>
-
-                    {/* Container box for explanation */}
-                    <Box sx={{
-                      border: '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      padding: '20px',
-                      background: 'rgba(255, 255, 255, 0.02)'
-                    }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        value={structureExplanation}
-                        onChange={(e) => setStructureExplanation(e.target.value)}
-                        placeholder="Explain your structure approach (minimum 50 characters)..."
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            background: 'transparent',
-                            border: 'none',
-                            '& fieldset': { border: 'none' },
-                          },
-                          '& .MuiInputBase-input': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            fontSize: '14px',
-                            '&::placeholder': {
-                              color: 'rgba(255, 255, 255, 0.4)',
-                            }
-                          },
-                        }}
-                      />
-                      <Typography variant="body2" sx={{
-                        mt: 1,
-                        fontSize: '14px',
-                        color: structureExplanation.length >= 50 ? '#4CAF50' : 'rgba(255, 255, 255, 0.6)'
-                      }}>
-                        {structureExplanation.length}/50 characters
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
+                {/* Structure Explanation (conditional) - Hidden */}
                   </>
                 )}
 

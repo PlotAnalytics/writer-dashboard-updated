@@ -77,7 +77,7 @@ const WriterDashboard = () => {
       try {
         const response = await axios.get(`/api/getWriter?username=${username}`);
         setWriter(response.data);
-        fetchStructures(response.data.id);
+        // fetchStructures removed - no longer used
         fetchScripts(response.data.id);
       } catch (error) {
         console.error("Error fetching writer data:", error);
@@ -152,9 +152,9 @@ const WriterDashboard = () => {
     setIsSubmitting(true);
 
     try {
-      // Check if user is an intern (no structure prefix for interns)
+      // Structure prefix removed - no longer used
       const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase());
-      const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : "";
+      const structurePrefix = ""; // No longer used
 
       const fullTitle =
         structurePrefix +
@@ -402,24 +402,7 @@ const WriterDashboard = () => {
                       </Form.Group>
                     )}
                   </div>
-                  {/* Hide structure dropdown for intern writers */}
-                  {!['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase()) && (
-                    <Form.Group style={{ marginBottom: "25px" }}>
-                      <Form.Label>Structure</Form.Label>
-                      <Form.Control
-                        as="select"
-                        value={selectedStructure || ""}
-                        onChange={(e) => setSelectedStructure(e.target.value)}
-                      >
-                        <option value="">-- No structure selected --</option>
-                        {structureList.map((structure) => (
-                          <option key={structure.structure_id || structure.id} value={structure.name}>
-                            {structure.name}
-                          </option>
-                        ))}
-                      </Form.Control>
-                    </Form.Group>
-                  )}
+                  {/* Structure dropdown hidden - no longer used */}
 
                   <Form.Group>
                     <Form.Label>Google Doc Link</Form.Label>
