@@ -4013,9 +4013,7 @@ async function getAllViralVideosAcrossWriters(dateRange, page = 1, limit = 20) {
       LEFT JOIN \`speedy-web-461014-g3.postgres.writer\` w
         ON v.writer_id = w.id
       WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
-        AND s.core_concept_doc IS NOT NULL
-        AND s.core_concept_doc != ''
-      ORDER BY CAST(meta.statistics_view_count AS INT64) DESC
+      ORDER BY meta.snippet_published_at DESC, CAST(meta.statistics_view_count AS INT64) DESC
       LIMIT @limit OFFSET @offset
     `;
 
@@ -4072,8 +4070,6 @@ async function getAllViralVideosAcrossWriters(dateRange, page = 1, limit = 20) {
       JOIN script_base s ON v.trello_card_id = s.trello_card_id
       LEFT JOIN latest_metadata meta ON v.video_id = meta.video_id
       WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
-        AND s.core_concept_doc IS NOT NULL
-        AND s.core_concept_doc != ''
     `;
 
     const [countRows] = await global.bigqueryClient.query({
@@ -8235,10 +8231,482 @@ router.get('/debug/test-virals', async (req, res) => {
   }
 });
 
+// DEBUG: Test September virals with different JOIN strategies
+router.get('/debug/september-virals-joins', async (req, res) => {
+  try {
+    console.log('🔍 Testing September virals with different JOIN strategies...');
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: 'BigQuery client not available' });
+    }
+
+    // Query 1: INNER JOIN (like our main query)
+    const innerJoinQuery = `
+      WITH video_base AS (
+        SELECT
+          v.url,
+          v.writer_id,
+          REGEXP_EXTRACT(v.url, r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\\?v=))([A-Za-z0-9_-]{6,})') AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      script_base AS (
+        SELECT s.trello_card_id, s.core_concept_doc
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+      ),
+      latest_metadata AS (
+        SELECT m.video_id, m.statistics_view_count, m.snippet_published_at
+        FROM (
+          SELECT m.*, ROW_NUMBER() OVER (PARTITION BY m.video_id ORDER BY m.snapshot_date DESC) AS rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+          WHERE m.statistics_view_count IS NOT NULL
+        ) m
+        WHERE rn = 1
+      )
+      SELECT COUNT(*) as count_inner_join
+      FROM video_base v
+      JOIN script_base s ON v.trello_card_id = s.trello_card_id
+      LEFT JOIN latest_metadata meta ON v.video_id = meta.video_id
+      WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
+        AND meta.snippet_published_at >= '2025-09-12'
+    `;
+
+    // Query 2: LEFT JOIN (more inclusive)
+    const leftJoinQuery = `
+      WITH video_base AS (
+        SELECT
+          v.url,
+          v.writer_id,
+          REGEXP_EXTRACT(v.url, r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\\?v=))([A-Za-z0-9_-]{6,})') AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      script_base AS (
+        SELECT s.trello_card_id, s.core_concept_doc
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+      ),
+      latest_metadata AS (
+        SELECT m.video_id, m.statistics_view_count, m.snippet_published_at
+        FROM (
+          SELECT m.*, ROW_NUMBER() OVER (PARTITION BY m.video_id ORDER BY m.snapshot_date DESC) AS rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+          WHERE m.statistics_view_count IS NOT NULL
+        ) m
+        WHERE rn = 1
+      )
+      SELECT COUNT(*) as count_left_join
+      FROM video_base v
+      LEFT JOIN script_base s ON v.trello_card_id = s.trello_card_id
+      LEFT JOIN latest_metadata meta ON v.video_id = meta.video_id
+      WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
+        AND meta.snippet_published_at >= '2025-09-12'
+    `;
+
+    const [innerResult] = await global.bigqueryClient.query({ query: innerJoinQuery });
+    const [leftResult] = await global.bigqueryClient.query({ query: leftJoinQuery });
+
+    res.json({
+      success: true,
+      join_comparison: {
+        inner_join_count: innerResult[0].count_inner_join,
+        left_join_count: leftResult[0].count_left_join,
+        missing_due_to_script_join: leftResult[0].count_left_join - innerResult[0].count_inner_join
+      },
+      analysis: {
+        user_found: 22,
+        our_inner_join: innerResult[0].count_inner_join,
+        our_left_join: leftResult[0].count_left_join,
+        conclusion: innerResult[0].count_inner_join === 22 ? "INNER JOIN is correct" : "INNER JOIN is excluding videos"
+      }
+    });
+  } catch (error) {
+    console.error('❌ September virals JOIN analysis error:', error);
+    res.status(500).json({ error: 'Failed to analyze JOINs', details: error.message });
+  }
+});
+
+// NEW: Dynamic virals endpoint with sorting and filtering
+router.get('/public/virals-dynamic', async (req, res) => {
+  try {
+    const { sortBy = 'title', sortOrder = 'asc', limit = '35' } = req.query;
+    console.log(`🔥 DYNAMIC VIRALS: sortBy: ${sortBy}, sortOrder: ${sortOrder}, limit: ${limit}`);
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: 'BigQuery client not available' });
+    }
+
+    // Get ALL viral videos first (no pagination limit in BigQuery)
+    const allViralQuery = `
+      WITH video_base AS (
+        SELECT
+          v.url,
+          v.writer_id,
+          REGEXP_EXTRACT(
+            v.url,
+            r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\\?v=))([A-Za-z0-9_-]{6,})'
+          ) AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      script_base AS (
+        SELECT
+          s.trello_card_id,
+          s.google_doc_link,
+          s.approval_status,
+          s.created_at,
+          s.ai_chat_url,
+          s.inspiration_link,
+          s.core_concept_doc
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+      ),
+      latest_metadata AS (
+        SELECT
+          m.video_id,
+          m.snippet_title,
+          m.snippet_channel_title,
+          m.content_details_duration,
+          m.statistics_view_count,
+          m.snippet_published_at,
+          COALESCE(
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.maxres.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.standard.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.high.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.medium.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.default.url")
+          ) AS thumbnail_url
+        FROM (
+          SELECT m.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY m.video_id
+              ORDER BY m.snapshot_date DESC
+            ) AS rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+          WHERE m.statistics_view_count IS NOT NULL
+        ) m
+        WHERE rn = 1
+      )
+      SELECT
+        s.google_doc_link,
+        s.approval_status,
+        s.created_at,
+        s.ai_chat_url,
+        s.inspiration_link,
+        s.core_concept_doc,
+        v.url,
+        v.writer_id,
+        w.name as writer_name,
+        meta.snippet_title,
+        meta.snippet_channel_title,
+        meta.content_details_duration,
+        meta.statistics_view_count,
+        meta.snippet_published_at,
+        meta.thumbnail_url
+      FROM video_base v
+      JOIN script_base s
+        ON v.trello_card_id = s.trello_card_id
+      LEFT JOIN latest_metadata meta
+        ON v.video_id = meta.video_id
+      LEFT JOIN \`speedy-web-461014-g3.postgres.writer\` w
+        ON v.writer_id = w.id
+      WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
+    `;
+
+    const [rows] = await global.bigqueryClient.query({
+      query: allViralQuery
+    });
+
+    console.log(`📊 BigQuery returned ${rows.length} total viral videos`);
+
+    // Transform data
+    const transformedVideos = rows.map(row => {
+      let formattedDate = null;
+      if (row.snippet_published_at && row.snippet_published_at.value) {
+        formattedDate = new Date(row.snippet_published_at.value).toISOString();
+      } else if (row.snippet_published_at) {
+        formattedDate = new Date(row.snippet_published_at).toISOString();
+      }
+
+      return {
+        id: parseInt(row.writer_id) || Math.floor(Math.random() * 1000000),
+        title: row.snippet_title,
+        url: row.url,
+        writer_id: parseInt(row.writer_id),
+        writer_name: row.writer_name,
+        views: parseInt(row.statistics_view_count) || 0,
+        posted_date: formattedDate,
+        core_concept_doc: row.core_concept_doc,
+        preview: row.thumbnail_url, // Use BigQuery thumbnail
+        duration: row.content_details_duration, // Use BigQuery duration
+        type: 'viral'
+      };
+    }).filter(video => video.posted_date !== null);
+
+    console.log(`📊 After transformation: ${transformedVideos.length} videos`);
+
+    res.json({
+      success: true,
+      videos: transformedVideos,
+      totalVideos: transformedVideos.length,
+      sortBy,
+      sortOrder,
+      limit: parseInt(limit)
+    });
+  } catch (error) {
+    console.error('❌ Dynamic virals error:', error);
+    res.status(500).json({ error: 'Failed to fetch dynamic virals', details: error.message });
+  }
+});
+
+// DEBUG: Test exact query from getAllViralVideosAcrossWriters for September
+router.get('/debug/september-exact-query', async (req, res) => {
+  try {
+    console.log('🔍 Testing exact getAllViralVideosAcrossWriters query for September...');
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: 'BigQuery client not available' });
+    }
+
+    // EXACT query from getAllViralVideosAcrossWriters with September filter
+    const exactQuery = `
+      WITH video_base AS (
+        SELECT
+          v.url,
+          v.writer_id,
+          REGEXP_EXTRACT(
+            v.url,
+            r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\\?v=))([A-Za-z0-9_-]{6,})'
+          ) AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      script_base AS (
+        SELECT
+          s.trello_card_id,
+          s.google_doc_link,
+          s.approval_status,
+          s.created_at,
+          s.ai_chat_url,
+          s.inspiration_link,
+          s.core_concept_doc
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+      ),
+      latest_metadata AS (
+        SELECT
+          m.video_id,
+          m.snippet_title,
+          m.snippet_channel_title,
+          m.content_details_duration,
+          m.statistics_view_count,
+          m.snippet_published_at,
+          COALESCE(
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.maxres.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.standard.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.high.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.medium.url"),
+            JSON_EXTRACT_SCALAR(m.snippet_thumbnails, "$.default.url")
+          ) AS thumbnail_url
+        FROM (
+          SELECT m.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY m.video_id
+              ORDER BY m.snapshot_date DESC
+            ) AS rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+          WHERE m.statistics_view_count IS NOT NULL
+        ) m
+        WHERE rn = 1
+      )
+      SELECT
+        s.google_doc_link,
+        s.approval_status,
+        s.created_at,
+        s.ai_chat_url,
+        s.inspiration_link,
+        s.core_concept_doc,
+        v.url,
+        v.writer_id,
+        w.name as writer_name,
+        meta.snippet_title,
+        meta.snippet_channel_title,
+        meta.content_details_duration,
+        meta.statistics_view_count,
+        meta.snippet_published_at,
+        meta.thumbnail_url
+      FROM video_base v
+      JOIN script_base s
+        ON v.trello_card_id = s.trello_card_id
+      LEFT JOIN latest_metadata meta
+        ON v.video_id = meta.video_id
+      LEFT JOIN \`speedy-web-461014-g3.postgres.writer\` w
+        ON v.writer_id = w.id
+      WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
+        AND meta.snippet_published_at >= '2025-09-12'
+      ORDER BY CAST(meta.statistics_view_count AS INT64) DESC
+    `;
+
+    const [rows] = await global.bigqueryClient.query({
+      query: exactQuery
+    });
+
+    console.log(`📊 Exact query found ${rows.length} September viral videos`);
+
+    // Apply the same data transformation as getAllViralVideosAcrossWriters
+    const transformedVideos = rows.map(row => {
+      let formattedDate = null;
+      if (row.snippet_published_at && row.snippet_published_at.value) {
+        formattedDate = new Date(row.snippet_published_at.value).toISOString();
+      } else if (row.snippet_published_at) {
+        formattedDate = new Date(row.snippet_published_at).toISOString();
+      }
+
+      return {
+        id: parseInt(row.writer_id) || Math.floor(Math.random() * 1000000),
+        title: row.snippet_title,
+        url: row.url,
+        writer_id: parseInt(row.writer_id),
+        writer_name: row.writer_name,
+        views: parseInt(row.statistics_view_count) || 0,
+        posted_date: formattedDate,
+        core_concept_doc: row.core_concept_doc,
+        type: 'viral'
+      };
+    }).filter(video => video.posted_date !== null); // Filter out videos with null dates
+
+    res.json({
+      success: true,
+      raw_bigquery_count: rows.length,
+      transformed_count: transformedVideos.length,
+      videos: transformedVideos.slice(0, 10), // Show first 10
+      comparison: {
+        user_analysis: 22,
+        exact_bigquery: rows.length,
+        after_transformation: transformedVideos.length,
+        api_endpoint: 6
+      }
+    });
+  } catch (error) {
+    console.error('❌ September exact query error:', error);
+    res.status(500).json({ error: 'Failed to run exact query', details: error.message });
+  }
+});
+
+// DEBUG: Test September virals specifically to match user's BigQuery analysis
+router.get('/debug/september-virals-bigquery', async (req, res) => {
+  try {
+    console.log('🔍 Testing September virals with direct BigQuery...');
+
+    if (!global.bigqueryClient) {
+      return res.status(500).json({ error: 'BigQuery client not available' });
+    }
+
+    // Direct BigQuery query to match user's analysis
+    const septemberQuery = `
+      WITH video_base AS (
+        SELECT
+          v.url,
+          v.writer_id,
+          REGEXP_EXTRACT(
+            v.url,
+            r'(?:youtu\.be/|youtube\.com/(?:shorts/|watch\\?v=))([A-Za-z0-9_-]{6,})'
+          ) AS video_id,
+          v.trello_card_id
+        FROM \`speedy-web-461014-g3.postgres.video\` v
+        WHERE v.url IS NOT NULL
+      ),
+      script_base AS (
+        SELECT
+          s.trello_card_id,
+          s.core_concept_doc
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.script\` s
+      ),
+      latest_metadata AS (
+        SELECT
+          m.video_id,
+          m.statistics_view_count,
+          m.snippet_published_at
+        FROM (
+          SELECT m.*,
+            ROW_NUMBER() OVER (
+              PARTITION BY m.video_id
+              ORDER BY m.snapshot_date DESC
+            ) AS rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\` m
+          WHERE m.statistics_view_count IS NOT NULL
+        ) m
+        WHERE rn = 1
+      )
+      SELECT
+        s.core_concept_doc,
+        CAST(meta.statistics_view_count AS INT64) as statistics_view_count,
+        meta.snippet_published_at,
+        v.writer_id,
+        w.name as writer_name
+      FROM video_base v
+      JOIN script_base s ON v.trello_card_id = s.trello_card_id
+      LEFT JOIN latest_metadata meta ON v.video_id = meta.video_id
+      LEFT JOIN \`speedy-web-461014-g3.postgres.writer\` w ON v.writer_id = w.id
+      WHERE CAST(meta.statistics_view_count AS INT64) >= 500000
+        AND meta.snippet_published_at >= '2025-09-12'
+      ORDER BY meta.snippet_published_at DESC
+    `;
+
+    const [rows] = await global.bigqueryClient.query({
+      query: septemberQuery
+    });
+
+    console.log(`📊 Direct BigQuery found ${rows.length} September viral videos`);
+
+    // Test the same data transformation logic as getAllViralVideosAcrossWriters
+    const transformedVideos = rows.map(row => {
+      let formattedDate = null;
+      if (row.snippet_published_at && row.snippet_published_at.value) {
+        formattedDate = new Date(row.snippet_published_at.value).toISOString();
+      } else if (row.snippet_published_at) {
+        formattedDate = new Date(row.snippet_published_at).toISOString();
+      }
+
+      return {
+        core_concept_doc: row.core_concept_doc,
+        views: row.statistics_view_count,
+        published_at: row.snippet_published_at?.value || row.snippet_published_at,
+        formatted_date: formattedDate,
+        writer_id: row.writer_id,
+        writer_name: row.writer_name,
+        date_parsing_success: formattedDate !== null
+      };
+    });
+
+    const videosWithNullDates = transformedVideos.filter(v => !v.date_parsing_success);
+
+    res.json({
+      success: true,
+      total_september_virals: rows.length,
+      videos: transformedVideos,
+      videos_with_null_dates: {
+        count: videosWithNullDates.length,
+        videos: videosWithNullDates
+      },
+      comparison: {
+        user_analysis: 22,
+        our_bigquery: rows.length,
+        api_endpoint: 6,
+        discrepancy: 22 - rows.length
+      }
+    });
+  } catch (error) {
+    console.error('❌ September virals BigQuery error:', error);
+    res.status(500).json({ error: 'Failed to query September virals', details: error.message });
+  }
+});
+
 // PUBLIC: Get all viral videos across all writers (for virals tab) - NO AUTH REQUIRED
 router.get('/public/virals', async (req, res) => {
   try {
-    const { page = '1', limit = '100' } = req.query;
+    const { page = '1', limit = '50' } = req.query;
     console.log(`🔥 PUBLIC VIRALS: Getting all viral videos, page: ${page}, limit: ${limit}`);
 
     // Always use lifetime range for virals tab - no date filtering
