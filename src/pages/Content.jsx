@@ -227,18 +227,15 @@ const Content = () => {
       let responseData;
       try {
         if (videoTypeFilter === 'virals') {
-          // Use BigQuery endpoint for virals
-          const response = await axios.get('/api/analytics/videos', {
+          // Use public virals endpoint - NO AUTH REQUIRED, NO DATE FILTERING
+          const response = await axios.get('/api/analytics/public/virals', {
             params: {
-              writer_id: null, // No writer filter for virals
-              range: dateRange,
               page: currentPage,
-              limit: 100, // Show 100 virals per page
-              type: 'virals'
+              limit: 100 // Show 100 virals per page
             }
           });
           responseData = response.data;
-          console.log('✅ Got response from /api/analytics/videos (BigQuery):', responseData);
+          console.log('✅ Got response from /api/analytics/public/virals (all viral videos):', responseData);
         } else {
           // Use regular endpoint for other content
           const { data } = await contentApi.getVideos({
@@ -252,19 +249,11 @@ const Content = () => {
           console.log('✅ Got response from /api/writer/videos:', data);
         }
       } catch (influxError) {
-        console.log('⚠️ Primary API failed, trying fallback');
+        console.log('⚠️ Primary API failed');
         if (videoTypeFilter === 'virals') {
-          // For virals, try the writer/videos endpoint as fallback
-          const response = await axios.get('/api/writer/videos', {
-            params: {
-              writer_id: null,
-              page: currentPage,
-              limit: 100,
-              type: 'virals'
-            }
-          });
-          responseData = response.data;
-          console.log('✅ Got response from virals fallback:', responseData);
+          // NO FALLBACK for virals tab - fail cleanly
+          console.error('❌ Virals API failed, no fallback available');
+          throw new Error('Failed to load viral videos');
         } else {
           // For regular content, use analytics fallback
           const response = await axios.get(`/api/writer/analytics`, {
@@ -335,19 +324,28 @@ const Content = () => {
           });
         }
 
-        // Apply virals-specific filtering: only show videos with 500k+ views and core concept titles
+        // Apply virals-specific filtering: only show videos with 500k+ views and core concept docs
         if (videoTypeFilter === 'virals') {
           videos = videos.filter(video => {
             // Must have views over 500,000
             const views = video.views || 0;
             if (views <= 500000) return false;
 
-            // Must have a core concept title
+            // Must have a core concept doc AND a title mapping from Google Sheets
             if (!video.core_concept_doc) return false;
-            const title = getCoreConceptTitle(video.core_concept_doc);
-            if (!title) return false;
 
-            return true;
+            const title = getCoreConceptTitle(video.core_concept_doc);
+            if (!title) {
+              console.log('🔍 Video with core concept doc but no title mapping (filtered out):', {
+                title: video.title,
+                views: video.views,
+                posted_date: video.posted_date,
+                core_concept_doc: video.core_concept_doc
+              });
+              return false; // Filter out videos without Google Sheets title mapping
+            }
+
+            return true; // Show only videos with both core concept docs AND title mapping
           });
           console.log('🔥 Virals filtered: showing', videos.length, 'videos with 500k+ views and core concepts');
         }
@@ -412,22 +410,49 @@ const Content = () => {
           });
         }
       } else {
-        console.log('⚠️ No video data received, using mock data');
-        setContentData(getMockData());
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          totalVideos: 2,
-          videosPerPage: 2,
-          hasNextPage: false,
-          hasPrevPage: false
-        });
+        if (videoTypeFilter === 'virals') {
+          // NO FALLBACK for virals tab - show empty state
+          console.log('⚠️ No viral video data received, showing empty state');
+          setContentData([]);
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalVideos: 0,
+            videosPerPage: 0,
+            hasNextPage: false,
+            hasPrevPage: false
+          });
+        } else {
+          console.log('⚠️ No video data received, using mock data');
+          setContentData(getMockData());
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalVideos: 2,
+            videosPerPage: 2,
+            hasNextPage: false,
+            hasPrevPage: false
+          });
+        }
       }
     } catch (err) {
       console.error('❌ Error fetching writer videos:', err);
       setError(err.message);
-      // Fallback to mock data
-      setContentData(getMockData());
+      if (videoTypeFilter === 'virals') {
+        // NO FALLBACK for virals tab - show empty state with error
+        setContentData([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalVideos: 0,
+          videosPerPage: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
+      } else {
+        // Fallback to mock data for other tabs
+        setContentData(getMockData());
+      }
     } finally {
       setLoading(false);
     }

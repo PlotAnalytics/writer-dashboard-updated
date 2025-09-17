@@ -345,14 +345,21 @@ const AnalyticsUpdated = () => {
       if (parts.length === 3) {
         const startDate = parts[1];
         const endDate = parts[2];
-        // Format dates nicely
+        // Format dates nicely - USE UTC TO AVOID TIMEZONE ISSUES
         const formatDate = (dateStr) => {
-          const date = new Date(dateStr);
-          return date.toLocaleDateString('en-US', {
-            month: 'short',
-            day: 'numeric',
-            year: 'numeric'
-          });
+          // Parse date string as UTC to ensure consistency across timezones
+          const parts = dateStr.split('-');
+          const date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+
+          // Use UTC methods to avoid timezone conversion
+          const month = date.getUTCMonth();
+          const day = date.getUTCDate();
+          const year = date.getUTCFullYear();
+
+          const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                             'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+          return `${monthNames[month]} ${day}, ${year}`;
         };
         return `${formatDate(startDate)} - ${formatDate(endDate)}`;
       }
@@ -832,16 +839,18 @@ const AnalyticsUpdated = () => {
     return views?.toString() || '0';
   };
 
-  // Format time for tooltip
+  // Format time for tooltip - USE UTC TO AVOID TIMEZONE ISSUES
   const formatTimeForTooltip = (timeString) => {
     if (!timeString) return '';
     try {
       const date = new Date(timeString);
-      return date.toLocaleTimeString('en-US', {
-        hour: 'numeric',
-        minute: '2-digit',
-        hour12: true
-      });
+      // Use UTC methods to avoid timezone conversion
+      let hours = date.getUTCHours();
+      const minutes = String(date.getUTCMinutes()).padStart(2, '0');
+      const ampm = hours >= 12 ? 'PM' : 'AM';
+      hours = hours % 12;
+      hours = hours ? hours : 12; // 0 should be 12
+      return `${hours}:${minutes} ${ampm}`;
     } catch (e) {
       return timeString;
     }
@@ -910,10 +919,26 @@ const AnalyticsUpdated = () => {
     }
   };
 
-  // Format date for display
+  // Format date for display - USE UTC TO AVOID TIMEZONE ISSUES
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    // Parse date string and format using UTC to ensure consistency across timezones
+    let date;
+    if (typeof dateStr === 'string' && dateStr.includes('-')) {
+      // If it's already in YYYY-MM-DD format, parse it as UTC
+      const parts = dateStr.split('T')[0].split('-');
+      date = new Date(Date.UTC(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])));
+    } else {
+      date = new Date(dateStr);
+    }
+
+    // Use UTC methods to avoid timezone conversion
+    const month = date.getUTCMonth();
+    const day = date.getUTCDate();
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                       'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+    return `${monthNames[month]} ${day}`;
   };
 
 
@@ -1950,20 +1975,21 @@ const AnalyticsUpdated = () => {
                                 if (param.seriesName === 'Daily Views') {
                                   const views = param.value || 0;
 
-                                  // Get script submission data
+                                  // Get script submission data using UTC date processing
                                   const dataIndex = param.dataIndex;
                                   let submissions = 0;
                                   if (dataIndex !== undefined && analyticsData?.aggregatedViewsData?.[dataIndex]) {
                                     const originalDate = analyticsData.aggregatedViewsData[dataIndex].time;
-                                    // Convert to YYYY-MM-DD format WITHOUT timezone conversion
+                                    // Convert to YYYY-MM-DD format using UTC to avoid timezone issues
                                     let dateKey;
                                     if (typeof originalDate === 'string' && originalDate.includes('-')) {
                                       dateKey = originalDate.split('T')[0];
                                     } else {
                                       const date = new Date(originalDate);
-                                      const year = date.getFullYear();
-                                      const month = String(date.getMonth() + 1).padStart(2, '0');
-                                      const day = String(date.getDate()).padStart(2, '0');
+                                      // Use UTC methods to ensure consistent date formatting across timezones
+                                      const year = date.getUTCFullYear();
+                                      const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+                                      const day = String(date.getUTCDate()).padStart(2, '0');
                                       dateKey = `${year}-${month}-${day}`;
                                     }
                                     submissions = scriptSubmissionData[dateKey] || 0;
