@@ -418,6 +418,17 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Core Concept Doc for STL only
+    if (prefixType === 'STL' && !coreConceptDoc.trim()) {
+      setError("Core Concept Doc is required for STL scripts.");
+      return;
+    }
+
+    if (prefixType === 'STL' && !coreConceptDoc.includes('docs.google.com')) {
+      setError("Core Concept Doc must contain 'docs.google.com'.");
+      return;
+    }
+
     setError(''); // Clear previous errors
     setIsSubmitting(true);
 
@@ -437,7 +448,7 @@ const Dashboard = () => {
         aiChatUrl: aiChatUrlsString,
         structure_explanation: null, // No longer used
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
-        core_concept_doc: prefixType === 'Remix' ? coreConceptDoc : null,
+        core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
         structure: null, // No longer used
       });
 
@@ -496,8 +507,8 @@ const Dashboard = () => {
     if (e.target.value !== 'Remix' && e.target.value !== 'Re-write') {
       setInspirationLink('');
     }
-    // Clear core concept doc if not Remix
-    if (e.target.value !== 'Remix') {
+    // Clear core concept doc if not Remix or STL
+    if (e.target.value !== 'Remix' && e.target.value !== 'STL') {
       setCoreConceptDoc('');
     }
   };
@@ -1078,6 +1089,56 @@ const Dashboard = () => {
 
                 {/* Core Concept Doc (conditional - Remix only) */}
                 {prefixType === 'Remix' && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Core Concept Doc <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      type="url"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={coreConceptDoc}
+                      onChange={(e) => setCoreConceptDoc(e.target.value)}
+                      required
+                      size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '& fieldset': { border: 'none' },
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                          },
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '10px 12px',
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Core Concept Doc (conditional - STL only) */}
+                {prefixType === 'STL' && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
