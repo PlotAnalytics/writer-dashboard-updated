@@ -890,7 +890,19 @@ app.post("/api/updateStatus", async (req, res) => {
     console.log(`:white_check_mark: Status movement logged: ${trello_card_id} -> ${normalizedStatus}`);
 
     // If the status is "Posted", insert into the video table
-    if (normalizedStatus === "posted" && (short_video_url || (long_video_url && timestamp))) {
+    const isPosted = normalizedStatus.toLowerCase() === "posted";
+    const hasVideoUrls = short_video_url || (long_video_url && timestamp);
+    
+    console.log(`🎬 Video insertion check:`, {
+      normalizedStatus,
+      isPosted,
+      hasVideoUrls,
+      short_video_url: !!short_video_url,
+      long_video_url: !!long_video_url,
+      timestamp: !!timestamp
+    });
+
+    if (isPosted && hasVideoUrls) {
       console.log(`🎬 Proceeding with video table insertion...`);
       
       const urlsToInsert = [];
@@ -899,27 +911,6 @@ app.post("/api/updateStatus", async (req, res) => {
       
       console.log(`📋 URLs to insert: ${urlsToInsert.length}`, urlsToInsert.map(u => `${u.type}: ${u.url}`));
       
-      // Check if long video record exists
-      const checkLongVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'long';
-      `;
-      const longVideoExistsResult = await pool.query(checkLongVideoExist, [trello_card_id]);
-
-      // Check if short video record exists
-      const checkShortVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'short';
-      `;
-      const shortVideoExistsResult = await pool.query(checkShortVideoExist, [trello_card_id]);
-
-      // Fetch writer_id, title, account_id
-      const writerQuery = `
-        SELECT writer_id, title, account_id FROM script WHERE trello_card_id = $1;
-      `;
-      const writerResult = await pool.query(writerQuery, [trello_card_id]);
-      const writer_id = writerResult.rows[0]?.writer_id;
-      const script_title = writerResult.rows[0]?.title;
-      let account_id = writerResult.rows[0]?.account_id;
-
       for (const videoData of urlsToInsert) {
         try {
           console.log(`🔍 Checking if ${videoData.type} URL exists: ${videoData.url}`);
@@ -930,41 +921,21 @@ app.post("/api/updateStatus", async (req, res) => {
           if (urlExistsResult.rows.length === 0) {
             console.log(`✅ Inserting ${videoData.type} video: ${videoData.url}`);
             
-            const existsResult = videoData.type === 'long' ? longVideoExistsResult : shortVideoExistsResult;
-            
-            let videoQuery;
-            if (!existsResult.rows.length) {
-              videoQuery = `
-                INSERT INTO video
-                (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING *;
-              `;
-            } else {
-              videoQuery = `
-                UPDATE video
-                SET url = $1,
-                    created = $2,
-                    writer_id = $3,
-                    script_title = $4,
-                    account_id = $6,
-                    video_cat = $7
-                WHERE trello_card_id = $5 AND video_cat = $7
-                RETURNING *;
-              `;
-            }
-            
-            const videoResult = await pool.query(videoQuery, [
+            const videoResult = await pool.query(`
+              INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *;
+            `, [
               videoData.url,
-              timestamp,
-              writer_id,
-              script_title,
+              timestamp || new Date().toISOString(),
+              script.writer_id,
+              script.title,
               trello_card_id,
-              account_id,
+              script.account_id,
               videoData.type
             ]);
             
-            console.log(`🎬 ${videoData.type} video record created/updated: ${videoResult.rows[0].id}`);
+            console.log(`🎬 ${videoData.type} video record created: ${videoResult.rows[0].id}`);
           } else {
             console.log(`⚠️ ${videoData.type} video URL already exists: ${urlExistsResult.rows[0].id}`);
           }
