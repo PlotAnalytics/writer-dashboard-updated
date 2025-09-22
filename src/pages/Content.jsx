@@ -33,7 +33,8 @@ import {
   Search as SearchIcon,
   Description as DescriptionIcon,
   Chat as ChatIcon,
-  Article as ArticleIcon
+  Article as ArticleIcon,
+  ContentCopy as CopyIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -188,6 +189,24 @@ const Content = () => {
     if (!coreConceptUrl) return null;
     const docId = extractDocumentId(coreConceptUrl);
     return docId ? coreConceptTitles[docId] : null;
+  };
+
+  // Function to copy title to clipboard
+  const copyTitleToClipboard = async (title) => {
+    try {
+      await navigator.clipboard.writeText(title);
+      console.log('✅ Title copied to clipboard:', title);
+      // You could add a toast notification here if needed
+    } catch (error) {
+      console.error('❌ Failed to copy title to clipboard:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = title;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
   };
 
   // Fetch writer-specific videos from InfluxDB and PostgreSQL
@@ -1352,7 +1371,7 @@ const Content = () => {
                               sx={{
                                 color: 'white',
                                 fontWeight: 500,
-                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
+                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '320px' : '470px',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1362,6 +1381,24 @@ const Content = () => {
                             >
                               {item.title}
                             </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                copyTitleToClipboard(item.title);
+                              }}
+                              sx={{
+                                color: '#888',
+                                padding: '2px',
+                                '&:hover': {
+                                  color: '#667eea',
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                                }
+                              }}
+                              title="Copy title to clipboard"
+                            >
+                              <CopyIcon fontSize="small" />
+                            </IconButton>
                             {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                               <Typography
                                 variant="caption"
@@ -2116,7 +2153,7 @@ const Content = () => {
                             sx={{
                               color: 'white',
                               fontWeight: 500,
-                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
+                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '320px' : '470px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -2126,6 +2163,24 @@ const Content = () => {
                           >
                             {item.title}
                           </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              copyTitleToClipboard(item.title);
+                            }}
+                            sx={{
+                              color: '#888',
+                              padding: '2px',
+                              '&:hover': {
+                                color: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                              }
+                            }}
+                            title="Copy title to clipboard"
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
                           {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                             <Typography
                               variant="caption"
