@@ -890,253 +890,58 @@ app.post("/api/updateStatus", async (req, res) => {
     console.log(`:white_check_mark: Status movement logged: ${trello_card_id} -> ${normalizedStatus}`);
 
     // If the status is "Posted", insert into the video table
-    if (normalizedStatus === "posted" && (short_video_url || (long_video_url && timestamp))) {
-      // Check if long video record exists
-      const checkLongVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'long';
-      `;
-      const longVideoExistsResult = await pool.query(checkLongVideoExist, [trello_card_id]);
+    const isPosted = normalizedStatus.toLowerCase() === "posted";
+    const hasVideoUrls = short_video_url || (long_video_url && timestamp);
+    
+    console.log(`🎬 Video insertion check:`, {
+      normalizedStatus,
+      isPosted,
+      hasVideoUrls,
+      short_video_url: !!short_video_url,
+      long_video_url: !!long_video_url,
+      timestamp: !!timestamp
+    });
 
-      // Check if short video record exists
-      const checkShortVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'short';
-      `;
-      const shortVideoExistsResult = await pool.query(checkShortVideoExist, [trello_card_id]);
-
-      const checkUrlQuery = `
-            SELECT id FROM video WHERE url = $1;
-        `;
-      const urlExistsResult = await pool.query(checkUrlQuery, [long_video_url]);
-      const shortUrlCheck = `
-            SELECT id FROM video WHERE url = $1;
-        `;
-      const shortUrlExistsResult = await pool.query(shortUrlCheck, [
-        short_video_url,
-      ]);
-      // Fetch writer_id, title, account_id
-      const writerQuery = `
-            SELECT writer_id, title, account_id FROM script WHERE trello_card_id = $1;
-        `;
-      const writerResult = await pool.query(writerQuery, [trello_card_id]);
-      const writer_id = writerResult.rows[0]?.writer_id;
-      const script_title = writerResult.rows[0]?.title;
-      let account_id = writerResult.rows[0]?.account_id;
-
-      // If account_id is null, get it from Trello posting account field
-      if (!account_id) {
-        console.log(`🔍 No account_id in script table (value: ${account_id}), reading from Trello posting account field...`);
+    if (isPosted && hasVideoUrls) {
+      console.log(`🎬 Proceeding with video table insertion...`);
+      
+      const urlsToInsert = [];
+      if (short_video_url) urlsToInsert.push({ url: short_video_url, type: 'short' });
+      if (long_video_url) urlsToInsert.push({ url: long_video_url, type: 'long' });
+      
+      console.log(`📋 URLs to insert: ${urlsToInsert.length}`, urlsToInsert.map(u => `${u.type}: ${u.url}`));
+      
+      for (const videoData of urlsToInsert) {
         try {
-          const settingsResult = await pool.query(
-            "SELECT api_key, token FROM settings ORDER BY id DESC LIMIT 1"
-          );
-
-          if (settingsResult.rows.length > 0) {
-            const { api_key, token } = settingsResult.rows[0];
-
-            // Get card and board info
-            const cardResponse = await axios.get(
-              `https://api.trello.com/1/cards/${trello_card_id}?key=${api_key}&token=${token}&customFieldItems=true`
-            );
-            const boardId = cardResponse.data.idBoard;
-            console.log(`🔧 Card board ID: ${boardId}`);
-            console.log(`🔧 Custom field items on card:`, JSON.stringify(cardResponse.data.customFieldItems, null, 2));
-
-            // Get custom fields on board
-            const customFieldsResponse = await axios.get(
-              `https://api.trello.com/1/boards/${boardId}/customFields?key=${api_key}&token=${token}`
-            );
-            console.log(`🔧 Available custom fields on board:`, customFieldsResponse.data.map(f => ({ name: f.name, id: f.id, type: f.type })));
-
-            // Find "Posting Account" field
-            const postingAccountFieldDef = customFieldsResponse.data.find(
-              field => field.name === "Posting Account"
-            );
-
-            if (postingAccountFieldDef) {
-              console.log(`✅ Found "Posting Account" field definition:`, {
-                id: postingAccountFieldDef.id,
-                name: postingAccountFieldDef.name,
-                type: postingAccountFieldDef.type,
-                options: postingAccountFieldDef.options?.map(opt => ({ id: opt.id, text: opt.value.text }))
-              });
-
-              // Find value for this field on the card
-              const customFields = cardResponse.data.customFieldItems || [];
-              const postingAccountField = customFields.find(field =>
-                field.idCustomField === postingAccountFieldDef.id
-              );
-
-              console.log(`🔧 Posting account field value on card:`, postingAccountField);
-
-              if (postingAccountField && (postingAccountField.value || postingAccountField.idValue)) {
-                let accountName = null;
-
-                console.log(`🔧 Raw posting account field:`, JSON.stringify(postingAccountField, null, 2));
-
-                // Handle dropdown value (idValue) - check the field directly, not the value property
-                if (postingAccountField.idValue) {
-                  console.log(`🔧 Found idValue: ${postingAccountField.idValue}`);
-                  const selectedOption = postingAccountFieldDef.options?.find(
-                    option => option.id === postingAccountField.idValue
-                  );
-                  if (selectedOption) {
-                    accountName = selectedOption.value.text;
-                    console.log(`🔧 Mapped idValue to text: "${accountName}"`);
-                  } else {
-                    console.log(`⚠️ Could not find option for idValue: ${postingAccountField.idValue}`);
-                  }
-                }
-                // Handle text value
-                else if (postingAccountField.value && postingAccountField.value.text) {
-                  accountName = postingAccountField.value.text;
-                  console.log(`🔧 Found direct text value: "${accountName}"`);
-                }
-                // Handle number value (if account_id is passed directly)
-                else if (postingAccountField.value && postingAccountField.value.number) {
-                  console.log(`🔧 Found number value: ${postingAccountField.value.number}`);
-                  account_id = postingAccountField.value.number;
-                  console.log(`✅ Using direct account_id: ${account_id}`);
-                }
-
-                // If we got an account name, look it up in the database
-                if (accountName) {
-                  console.log(`📋 Looking up posting account in database: "${accountName}"`);
-
-                  // Look up account_id from posting_accounts table
-                  const accountQuery = await pool.query(
-                    `SELECT id, account FROM posting_accounts WHERE account = $1`,
-                    [accountName]
-                  );
-
-                  console.log(`🔍 Database lookup result:`, accountQuery.rows);
-
-                  if (accountQuery.rows.length > 0) {
-                    account_id = accountQuery.rows[0].id;
-                    console.log(`✅ Using account_id: ${account_id} for "${accountName}"`);
-                  } else {
-                    console.warn(`⚠️ Account "${accountName}" not found in posting_accounts table`);
-
-                    // Show available accounts for debugging
-                    const allAccountsQuery = await pool.query(`SELECT id, account FROM posting_accounts LIMIT 10`);
-                    console.log(`🔍 Available accounts in database:`, allAccountsQuery.rows);
-
-                    account_id = 1; // Default
-                  }
-                } else if (!account_id) {
-                  console.log(`📋 No posting account value found in any format`);
-                  account_id = 1; // Default
-                }
-              } else {
-                console.log(`📋 No posting account selected in Trello`);
-                account_id = 1; // Default
-              }
-            } else {
-              console.log(`⚠️ "Posting Account" custom field not found`);
-              account_id = 1; // Default
-            }
+          console.log(`🔍 Checking if ${videoData.type} URL exists: ${videoData.url}`);
+          
+          // Check if URL already exists
+          const urlExistsResult = await pool.query(`SELECT id FROM video WHERE url = $1`, [videoData.url]);
+          
+          if (urlExistsResult.rows.length === 0) {
+            console.log(`✅ Inserting ${videoData.type} video: ${videoData.url}`);
+            
+            const videoResult = await pool.query(`
+              INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *;
+            `, [
+              videoData.url,
+              timestamp || new Date().toISOString(),
+              script.writer_id,
+              script.title,
+              trello_card_id,
+              script.account_id,
+              videoData.type
+            ]);
+            
+            console.log(`🎬 ${videoData.type} video record created: ${videoResult.rows[0].id}`);
           } else {
-            console.log(`⚠️ No Trello settings found`);
-            account_id = 1; // Default
+            console.log(`⚠️ ${videoData.type} video URL already exists: ${urlExistsResult.rows[0].id}`);
           }
-        } catch (error) {
-          console.error("Error reading posting account from Trello:", error.message);
-          account_id = 1; // Default
+        } catch (videoError) {
+          console.error(`❌ Error inserting ${videoData.type} video:`, videoError);
         }
-      }
-      if (!writer_id) {
-        return res.status(404).json({
-          error: "Writer ID not found for the given Trello card.",
-        });
-      }
-      // :one: Handle full video_url
-      if (urlExistsResult.rows.length === 0) {
-        let videoQuery;
-        if (!longVideoExistsResult.rows.length) {
-          videoQuery = `
-                    INSERT INTO video
-                    (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-                    VALUES ($1, $2, $3, $4, $5, $6, 'long')
-                `;
-        } else {
-          videoQuery = `
-                    UPDATE video
-                    SET url = $1,
-                        created = $2,
-                        writer_id = $3,
-                        script_title = $4,
-                        account_id = $6,
-                        video_cat = 'long'
-                    WHERE trello_card_id = $5 AND video_cat = 'long'
-                `;
-        }
-        await pool.query(videoQuery, [
-          long_video_url,
-          timestamp,
-          writer_id,
-          script_title,
-          trello_card_id,
-          account_id,
-        ]);
-      } else {
-        console.log(
-          ":white_check_mark: Full video URL already exists, skipping insert/update."
-        );
-      }
-      // :two: Handle short_video_url
-      if (
-        short_video_url &&
-        short_video_url !== long_video_url &&
-        shortUrlExistsResult.rows.length === 0
-      ) {
-        let shortVideoQuery;
-        if (!shortVideoExistsResult.rows.length) {
-          shortVideoQuery = `
-                    INSERT INTO video
-                    (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-                    VALUES ($1, $2, $3, $4, $5, $6, 'short')
-                `;
-        } else {
-          shortVideoQuery = `
-                    UPDATE video
-                    SET url = $1,
-                        created = $2,
-                        writer_id = $3,
-                        script_title = $4,
-                        account_id = $6,
-                        video_cat = 'short'
-                    WHERE trello_card_id = $5 AND video_cat = 'short'
-                `;
-        }
-        await pool.query(shortVideoQuery, [
-          short_video_url,
-          timestamp,
-          writer_id,
-          script_title,
-          trello_card_id,
-          account_id,
-        ]);
-      } else {
-        console.log(
-          ":white_check_mark: Short video URL already exists or matches full, skipping."
-        );
-      }
-      // Send update to Google Sheets
-      const appsScriptUrl =
-        "https://script.google.com/macros/s/AKfycbxexwK5QwIwgYlFGRu7yg33pl46FLDDRyz9e0Z_lkcMYQ-pD8Q8UjZ3fGnEG6-LMSbK/exec";
-      const data = {
-        trello_card_id,
-        approval_status: normalizedStatus,
-      };
-      try {
-        await axios.post(appsScriptUrl, data);
-        console.log(
-          ":white_check_mark: Approval status updated in Google Sheets."
-        );
-      } catch (err) {
-        console.error(
-          ":x: Error sending approval status to Google Sheets:",
-          err
-        );
       }
     }
     // Broadcast and return success
