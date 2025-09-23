@@ -34,7 +34,8 @@ import {
   Description as DescriptionIcon,
   Chat as ChatIcon,
   Article as ArticleIcon,
-  ContentCopy as CopyIcon
+  ContentCopy as CopyIcon,
+  InsertDriveFile as GoogleDocIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -1892,7 +1893,7 @@ const Content = () => {
                     )}
                   </Button>
                 </TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>Account</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, maxWidth: '120px' }}>Account</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
                   <Button
                     onClick={() => handleSort('date')}
@@ -1962,13 +1963,14 @@ const Content = () => {
                     )}
                   </Button>
                 </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, width: '60px', textAlign: 'center' }}>Script</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1 }}></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <CircularProgress sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       borderRadius: '50%',
@@ -2001,7 +2003,7 @@ const Content = () => {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <Typography variant="body2" sx={{ color: '#ff6b6b', mb: 1 }}>
                       Error loading content: {error}
                     </Typography>
@@ -2015,7 +2017,7 @@ const Content = () => {
                 </TableRow>
               ) : currentContent.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <Typography variant="body2" sx={{ color: '#888' }}>
                       No content found for this writer
                     </Typography>
@@ -2153,7 +2155,7 @@ const Content = () => {
                             sx={{
                               color: 'white',
                               fontWeight: 500,
-                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '320px' : '470px',
+                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '250px' : '350px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -2207,45 +2209,76 @@ const Content = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, maxWidth: '120px' }}>
                     <Typography
                       variant="body2"
                       sx={{
                         color: item.account_name ? 'white' : '#888',
-                        fontStyle: item.account_name ? 'normal' : 'italic'
+                        fontStyle: item.account_name ? 'normal' : 'italic',
+                        fontSize: '0.8rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}
+                      title={item.account_name || `[No Account] ${item.writer_name || 'Writer'}`}
                     >
-                      {item.account_name || `[No Account] ${item.writer_name || 'Writer'}`}
+                      {item.account_name || `No Account`}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '100px' }}>
                     <Box>
-                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5, fontSize: '0.8rem' }}>
                         {formatDate(item.posted_date)}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#888' }}>
+                      <Typography variant="caption" sx={{ color: '#888', fontSize: '0.7rem' }}>
                         {item.status || 'Published'}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'white' }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '80px' }}>
+                    <Typography variant="body2" sx={{ color: 'white', fontSize: '0.8rem' }}>
                       {formatViews(item.views)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '90px' }}>
                     <Box>
-                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5, fontSize: '0.8rem' }}>
                         {calculateEngagement(item.likes, item.views)}%
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#888' }}>
+                      <Typography variant="caption" sx={{ color: '#888', fontSize: '0.7rem' }}>
                         {item.likes?.toLocaleString() || '0'} likes
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <IconButton sx={{ color: '#888' }}>
-                      <MoreVertIcon />
+                  <TableCell sx={{ border: 'none', py: 2, width: '60px', textAlign: 'center' }}>
+                    {item.google_doc_link ? (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          window.open(item.google_doc_link, '_blank');
+                        }}
+                        sx={{
+                          color: '#888',
+                          padding: '4px',
+                          '&:hover': {
+                            color: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                          }
+                        }}
+                        title="Open Google Doc"
+                      >
+                        <GoogleDocIcon fontSize="small" />
+                      </IconButton>
+                    ) : (
+                      <Typography variant="caption" sx={{ color: '#555', fontSize: '10px' }}>
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2, width: '50px' }}>
+                    <IconButton size="small" sx={{ color: '#888', padding: '4px' }}>
+                      <MoreVertIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>
