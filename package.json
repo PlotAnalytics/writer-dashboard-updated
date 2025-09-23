@@ -1,7 +1,7 @@
 {
   "name": "writer_dashboard_new",
   "private": true,
-  "version": "0.0.5",
+  "version": "1.0.0",
   "scripts": {
     "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
     "dev:frontend": "vite",
