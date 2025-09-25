@@ -600,7 +600,7 @@ app.post("/api/scripts", async (req, res) => {
     const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
 
     // Check if title contains "STL" keyword
-    const isSTL = title.includes("STL");
+    const isSTL = title.includes("[STL]");
 
     let targetListId;
     let trelloStatus;
