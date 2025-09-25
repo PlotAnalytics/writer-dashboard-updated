@@ -192,17 +192,45 @@ const Content = () => {
     return docId ? coreConceptTitles[docId] : null;
   };
 
+  // Function to extract title text after first square brackets
+  const extractTitleAfterBrackets = (title) => {
+    if (!title) return '';
+
+    // Find the first closing bracket ]
+    const firstClosingBracket = title.indexOf(']');
+    if (firstClosingBracket === -1) {
+      // No brackets found, return the whole title
+      return title;
+    }
+
+    // Get text after the first ] and trim whitespace
+    const textAfterBrackets = title.substring(firstClosingBracket + 1).trim();
+
+    // If there are additional brackets (like [Core Concept 3]), remove them too
+    const secondOpeningBracket = textAfterBrackets.indexOf('[');
+    if (secondOpeningBracket !== -1) {
+      const secondClosingBracket = textAfterBrackets.indexOf(']', secondOpeningBracket);
+      if (secondClosingBracket !== -1) {
+        return textAfterBrackets.substring(secondClosingBracket + 1).trim();
+      }
+    }
+
+    return textAfterBrackets;
+  };
+
   // Function to copy title to clipboard
   const copyTitleToClipboard = async (title) => {
+    const cleanTitle = extractTitleAfterBrackets(title);
     try {
-      await navigator.clipboard.writeText(title);
-      console.log('✅ Title copied to clipboard:', title);
+      await navigator.clipboard.writeText(cleanTitle);
+      console.log('✅ Title copied to clipboard:', cleanTitle);
+      console.log('📋 Original title:', title);
       // You could add a toast notification here if needed
     } catch (error) {
       console.error('❌ Failed to copy title to clipboard:', error);
       // Fallback for older browsers
       const textArea = document.createElement('textarea');
-      textArea.value = title;
+      textArea.value = cleanTitle;
       document.body.appendChild(textArea);
       textArea.select();
       document.execCommand('copy');
