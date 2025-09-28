@@ -33,6 +33,7 @@ const Dashboard = () => {
   const [googleDocLink, setGoogleDocLink] = useState('');
   const [inspirationLink, setInspirationLink] = useState('');
   const [coreConceptDoc, setCoreConceptDoc] = useState(''); // New field for Remix only
+  const [viewerRetentionReason, setViewerRetentionReason] = useState(''); // New field for Remix only
   const [aiChatUrls, setAiChatUrls] = useState(['']); // Array to handle multiple URLs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -418,6 +419,17 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Viewer Retention Reason for Remix only
+    if (prefixType === 'Remix' && !viewerRetentionReason.trim()) {
+      setError("Please explain why the viewer will watch till the end (required for Remix scripts).");
+      return;
+    }
+
+    if (prefixType === 'Remix' && viewerRetentionReason.length > 50) {
+      setError("Viewer retention reason must be 50 characters or less.");
+      return;
+    }
+
     // Validate Core Concept Doc for STL only
     if (prefixType === 'STL' && !coreConceptDoc.trim()) {
       setError("Core Concept Doc is required for STL scripts.");
@@ -449,6 +461,7 @@ const Dashboard = () => {
         structure_explanation: null, // No longer used
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
         core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
+        viewer_retention_reason: (prefixType === 'Remix') ? viewerRetentionReason : null,
         structure: null, // No longer used
       });
 
@@ -492,6 +505,7 @@ const Dashboard = () => {
       setAiChatUrls(['']);
       setInspirationLink('');
       setCoreConceptDoc('');
+      setViewerRetentionReason('');
 
       setError(null);
       alert('Script submitted successfully! (Demo mode - API not available)');
@@ -1132,6 +1146,56 @@ const Dashboard = () => {
                             color: 'rgba(255, 255, 255, 0.4)',
                           }
                         },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Viewer Retention Reason (conditional - Remix only) */}
+                {prefixType === 'Remix' && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Why will the viewer watch till the end? <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      value={viewerRetentionReason}
+                      onChange={(e) => setViewerRetentionReason(e.target.value)}
+                      placeholder="Explain what keeps viewers engaged (max 50 characters)"
+                      required
+                      inputProps={{ maxLength: 50 }}
+                      helperText={`${viewerRetentionReason.length}/50 characters`}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                          borderRadius: '8px',
+                          '& fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#667eea',
+                          },
+                          '& input': {
+                            color: 'white',
+                            fontSize: '14px',
+                          },
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          fontSize: '12px',
+                          marginTop: '4px'
+                        }
                       }}
                     />
                   </Box>
