@@ -594,13 +594,19 @@ app.post("/api/scripts", async (req, res) => {
     // 9. Scheduled Posting(ID: 686caf7d7a0bd42abaa86496)
     // 10. Posted(ID: 66982a7f45ab869b054bdd24)
     // 11. Trash(ID: 678588525730a636c0e25347)
+    // 12. AI Submissions(ID: 68d98dcf1469947d64157067)
 
     const defaultListID = "66982a7f16eca6024cd863cc";
     const stlDestinationListID = "6898270f55dc602c1b578c98";
     const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
+    const aiSubmissionsListID = "68d98dcf1469947d64157067";
 
     // Check if title contains "STL" keyword
     const isSTL = title.includes("STL");
+
+    // CHeck if writer is AI
+    const isAI = writer_id == 1010;
+
 
     let targetListId;
     let trelloStatus;
@@ -610,6 +616,11 @@ app.post("/api/scripts", async (req, res) => {
       // If it's a story line (contains STL), use story continuation list and status
       targetListId = stlDestinationListID;
       trelloStatus = "STL Writer Submissions (QA)";
+    
+    // Handle AI submissions separately from skipQA logic
+    } else if (isAI) {
+      targetListId = aiSubmissionsListID;
+      trelloStatus = "AI Submissions";
     } else {
       // If it's not a story line, apply the skipQA logic
       targetListId = skipQA ? autoApprovedListID : defaultListID;
