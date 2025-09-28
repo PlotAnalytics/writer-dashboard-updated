@@ -341,6 +341,13 @@ const Dashboard = () => {
     };
   }, [onStatusUpdate, offStatusUpdate]);
 
+  // Check if current user should be excluded from viewer retention field
+  const isExcludedFromRetentionField = [
+    'sabreu8590', 'alex \'the\' kazarian', 'aironas liucvaikis', 'aironasliu',
+    'lucislust', 'lucisstl', 'jamez.garcia', 'monicastl', 'aiwriter',
+    'helinm', 'trentstride'
+  ].includes(user?.username?.toLowerCase());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -419,13 +426,13 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate Viewer Retention Reason for Remix only
-    if (prefixType === 'Remix' && !viewerRetentionReason.trim()) {
+    // Validate Viewer Retention Reason for Remix only (skip for excluded users)
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && !viewerRetentionReason.trim()) {
       setError("Please explain why the viewer will watch till the end (required for Remix scripts).");
       return;
     }
 
-    if (prefixType === 'Remix' && viewerRetentionReason.length > 50) {
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 50) {
       setError("Viewer retention reason must be 50 characters or less.");
       return;
     }
@@ -461,7 +468,7 @@ const Dashboard = () => {
         structure_explanation: null, // No longer used
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
         core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
-        viewer_retention_reason: (prefixType === 'Remix') ? viewerRetentionReason : null,
+        viewer_retention_reason: (prefixType === 'Remix' && !isExcludedFromRetentionField) ? viewerRetentionReason : null,
         structure: null, // No longer used
       });
 
@@ -1151,8 +1158,8 @@ const Dashboard = () => {
                   </Box>
                 )}
 
-                {/* Viewer Retention Reason (conditional - Remix only) */}
-                {prefixType === 'Remix' && (
+                {/* Viewer Retention Reason (conditional - Remix only, excluded users don't see this) */}
+                {prefixType === 'Remix' && !isExcludedFromRetentionField && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
