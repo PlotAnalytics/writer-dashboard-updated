@@ -513,7 +513,15 @@ const AnalyticsUpdated = () => {
 
   // Calculate target average daily views needed for next bonus tier
   const calculateTargetDailyViews = () => {
-    if (!monthlyBonusData?.nextMilestone) return 0;
+    console.log('🎯 Target calculation debug:', {
+      monthlyBonusData,
+      nextMilestone: monthlyBonusData?.nextMilestone
+    });
+
+    if (!monthlyBonusData?.nextMilestone) {
+      console.log('🎯 No target milestone found, returning 0');
+      return 0;
+    }
 
     // Get current date and calculate days remaining in month
     const now = new Date();
@@ -1951,11 +1959,7 @@ const AnalyticsUpdated = () => {
                               {
                                 name: 'Daily Views',
                                 icon: 'circle'
-                              },
-                              ...(calculateTargetDailyViews() > 0 ? [{
-                                name: 'Next Bonus Target',
-                                icon: 'rect'
-                              }] : [])
+                              }
                             ]
                           },
                           tooltip: {
@@ -2027,6 +2031,19 @@ const AnalyticsUpdated = () => {
                           },
                           yAxis: {
                             type: 'value',
+                            scale: true, // Enable auto-scaling
+                            min: (value) => {
+                              // Calculate min/max based on views data, but include target line if reasonable
+                              const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
+                              const minViews = Math.min(...viewsData);
+                              return Math.max(0, Math.floor(minViews * 0.9));
+                            },
+                            max: (value) => {
+                              // Only scale based on actual views data, not target line
+                              const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
+                              const maxViews = Math.max(...viewsData);
+                              return Math.ceil(maxViews * 1.1);
+                            },
                             axisLabel: {
                               formatter: (value) => {
                                 if (value >= 1000000) {
@@ -2047,7 +2064,7 @@ const AnalyticsUpdated = () => {
                             }
                           },
                           series: [
-                            // Main views line chart
+                            // Main views line chart with target line as markLine
                             {
                               name: 'Daily Views',
                               data: analyticsData.aggregatedViewsData.map(item => item.views),
@@ -2077,41 +2094,42 @@ const AnalyticsUpdated = () => {
                                 borderColor: '#fff',
                                 borderWidth: 2
                               },
-                              connectNulls: false
-                            },
-                            // Bonus target trend line
-                            ...((() => {
-                              const targetDailyViews = calculateTargetDailyViews();
-                              if (targetDailyViews > 0) {
-                                return [{
-                                  name: 'Next Bonus Target',
-                                  data: analyticsData.aggregatedViewsData.map(() => targetDailyViews),
-                                  type: 'line',
-                                  smooth: false,
-                                  lineStyle: {
-                                    color: '#FFA726', // Orange color for contrast
-                                    width: 2,
-                                    type: 'dashed'
-                                  },
-                                  symbol: 'none', // No symbols on the trend line
-                                  itemStyle: {
-                                    color: '#FFA726'
-                                  },
-                                  markLine: {
+                              connectNulls: false,
+                              // Add target line as markLine if target exists
+                              markLine: (() => {
+                                const targetDailyViews = calculateTargetDailyViews();
+                                console.log('🎯 MarkLine creation:', { targetDailyViews, monthlyBonusData });
+
+                                if (targetDailyViews > 0) {
+                                  // Position the line at 90% of the chart height for visibility
+                                  const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
+                                  const maxViews = Math.max(...viewsData);
+                                  const linePosition = maxViews * 0.9; // 90% of max views
+
+                                  return {
                                     silent: true,
+                                    lineStyle: {
+                                      color: '#FFA726',
+                                      width: 2,
+                                      type: 'dashed'
+                                    },
                                     label: {
                                       show: true,
-                                      position: 'end',
-                                      formatter: `Target: ${formatNumber(targetDailyViews)}/day`,
+                                      position: 'middle',
+                                      formatter: `Daily ${formatNumber(targetDailyViews)}`,
                                       color: '#FFA726',
                                       fontSize: 11,
                                       fontWeight: 'bold'
-                                    }
-                                  }
-                                }];
-                              }
-                              return [];
-                            })())
+                                    },
+                                    data: [{
+                                      yAxis: linePosition,
+                                      name: 'Next Bonus Target'
+                                    }]
+                                  };
+                                }
+                                return null;
+                              })()
+                            }
                           ]
                         }}
                         style={{ height: '100%', width: '100%' }}
