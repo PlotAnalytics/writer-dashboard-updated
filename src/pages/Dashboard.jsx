@@ -345,7 +345,7 @@ const Dashboard = () => {
   const isExcludedFromRetentionField = [
     'sabreu8590', 'alex \'the\' kazarian', 'aironas liucvaikis', 'aironasliu',
     'lucislust', 'lucisstl', 'jamez.garcia', 'monicastl', 'aiwriter',
-    'helinm', 'trentstride'
+    'helinm', 'trentstride', 'ludo'
   ].includes(user?.username?.toLowerCase());
 
   const handleSubmit = async (e) => {
