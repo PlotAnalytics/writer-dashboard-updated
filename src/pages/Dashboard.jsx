@@ -432,8 +432,13 @@ const Dashboard = () => {
       return;
     }
 
-    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 50) {
-      setError("Viewer retention reason must be 50 characters or less.");
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length < 50) {
+      setError("Viewer retention reason must be at least 50 characters.");
+      return;
+    }
+
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 500) {
+      setError("Viewer retention reason must be no more than 500 characters.");
       return;
     }
 
@@ -1171,12 +1176,23 @@ const Dashboard = () => {
                     </Typography>
                     <TextField
                       fullWidth
+                      multiline
+                      rows={3}
                       value={viewerRetentionReason}
                       onChange={(e) => setViewerRetentionReason(e.target.value)}
-                      placeholder="Explain what keeps viewers engaged (max 50 characters)"
+                      placeholder="Explain what keeps viewers engaged (minimum 50 characters)"
                       required
-                      inputProps={{ maxLength: 50 }}
-                      helperText={`${viewerRetentionReason.length}/50 characters`}
+                      inputProps={{ maxLength: 500 }}
+                      helperText={`${viewerRetentionReason.length}/500 characters (minimum 50 required)`}
+                      FormHelperTextProps={{
+                        sx: {
+                          color: viewerRetentionReason.length < 50
+                            ? '#ff4444'
+                            : viewerRetentionReason.length > 450
+                            ? '#ffa726'
+                            : 'rgba(255, 255, 255, 0.6)'
+                        }
+                      }}
                       sx={{
                         '& .MuiOutlinedInput-root': {
                           backgroundColor: 'rgba(255, 255, 255, 0.02)',
