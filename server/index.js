@@ -866,6 +866,7 @@ app.post("/api/updateStatus", async (req, res) => {
     timestamp,
     loom,
     short_video_url,
+    posting_account,
   } = req.body;
   try {
     // Normalize the status
