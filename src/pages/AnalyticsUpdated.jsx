@@ -2838,15 +2838,14 @@ const AnalyticsUpdated = () => {
         }}>
           {/* Compact KPI Performance Cards - 4 Grouped Cards */}
           <Box sx={{
-            display: { xs: 'grid', md: 'flex' },
-            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            display: 'grid',
+            gridTemplateColumns: {
+              xs: 'repeat(2, 1fr)',
+              sm: 'repeat(2, 1fr)',
+              md: 'repeat(4, 1fr)'
+            },
             gap: { xs: 1.5, md: 2 },
-            flex: 1,
-            minWidth: 0,
-            '& > *': {
-              flex: { md: '1 1 0' },
-              minWidth: 0
-            }
+            width: '100%'
           }}>
 
             {/* Performance Overview Card - Total Views + Submissions */}
