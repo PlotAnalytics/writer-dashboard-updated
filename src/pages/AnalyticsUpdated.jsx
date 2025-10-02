@@ -1722,11 +1722,11 @@ const AnalyticsUpdated = () => {
           <Box sx={{
             bgcolor: 'transparent',
             borderRadius: '20px',
-            p: 2,
+            p: { xs: 1, md: 2 },
             border: 'none',
             backdropFilter: 'none',
-            height: 'calc(100vh - 120px)', // Increased height to fill viewport
-            minHeight: '600px', // Minimum height for smaller screens
+            height: { xs: 'auto', md: 'calc(100vh - 120px)' }, // Auto height on mobile
+            minHeight: { xs: '400px', md: '600px' }, // Smaller minimum height on mobile
             overflow: 'hidden'
           }}>
 
@@ -1734,9 +1734,9 @@ const AnalyticsUpdated = () => {
             {/* Two Column Layout - Full Height */}
             <Box sx={{
               display: 'grid',
-              gridTemplateColumns: '2fr 1fr',
+              gridTemplateColumns: { xs: '1fr', md: '2fr 1fr' },
               gap: 2,
-              height: '100%', // Use full height of container
+              height: { xs: 'auto', md: '100%' }, // Auto height on mobile
               overflow: 'hidden'
             }}>
 
@@ -2828,21 +2828,22 @@ const AnalyticsUpdated = () => {
 
         {/* KPI Performance Cards Container - Below Hero Section */}
         <Box sx={{
-          px: 3,
-          py: 4,
-          pt: 4,
-          mb: 4,
+          px: { xs: 1, md: 3 },
+          py: { xs: 2, md: 4 },
+          pt: { xs: 2, md: 4 },
+          mb: { xs: 2, md: 4 },
           mt: 0, // Remove negative margin to separate from hero section
           overflow: 'hidden'
         }}>
           {/* Compact KPI Performance Cards - 4 Grouped Cards */}
           <Box sx={{
-            display: 'flex',
-            gap: 2,
+            display: { xs: 'grid', md: 'flex' },
+            gridTemplateColumns: { xs: 'repeat(2, 1fr)', sm: 'repeat(4, 1fr)' },
+            gap: { xs: 1.5, md: 2 },
             flex: 1,
             minWidth: 0,
             '& > *': {
-              flex: '1 1 0',
+              flex: { md: '1 1 0' },
               minWidth: 0
             }
           }}>
@@ -2853,7 +2854,7 @@ const AnalyticsUpdated = () => {
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(102, 126, 234, 0.4)',
               borderRadius: 1,
-              p: 1,
+              p: { xs: 0.75, md: 1 },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               position: 'relative',
               overflow: 'hidden',
@@ -2880,12 +2881,13 @@ const AnalyticsUpdated = () => {
               <Typography sx={{
                 color: 'white',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', md: '0.75rem' },
                 letterSpacing: '0.5px',
                 mb: 1,
-                textAlign: 'center'
+                textAlign: 'center',
+                lineHeight: 1.2
               }}>
-                PERFORMANCE OVERVIEW
+                {isMobile ? 'PERF OVERVIEW' : 'PERFORMANCE OVERVIEW'}
               </Typography>
 
               {/* Total Views */}
@@ -2895,7 +2897,7 @@ const AnalyticsUpdated = () => {
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
                   fontWeight: 800,
-                  fontSize: '1.8rem',
+                  fontSize: { xs: '1.2rem', md: '1.8rem' },
                   lineHeight: 1,
                   textAlign: 'center',
                   filter: 'drop-shadow(0 2px 8px rgba(102, 126, 234, 0.4))'
@@ -2904,9 +2906,10 @@ const AnalyticsUpdated = () => {
                 </Typography>
                 <Typography sx={{
                   color: 'rgba(255, 255, 255, 0.8)',
-                  fontSize: '0.7rem',
+                  fontSize: { xs: '0.55rem', md: '0.7rem' },
                   textAlign: 'center',
-                  mt: 0.25
+                  mt: 0.25,
+                  lineHeight: 1.2
                 }}>
                   Total Views
                 </Typography>
@@ -2965,7 +2968,7 @@ const AnalyticsUpdated = () => {
                 backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(255, 87, 34, 0.4)',
                 borderRadius: 1,
-                p: 1,
+                p: { xs: 0.75, md: 1 },
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
@@ -2993,12 +2996,13 @@ const AnalyticsUpdated = () => {
               <Typography sx={{
                 color: 'white',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', md: '0.75rem' },
                 letterSpacing: '0.5px',
                 mb: 1,
-                textAlign: 'center'
+                textAlign: 'center',
+                lineHeight: 1.2
               }}>
-                VIRAL PERFORMANCE
+                {isMobile ? 'VIRALS' : 'VIRAL PERFORMANCE'}
               </Typography>
 
               {/* Viral Categories */}
@@ -3013,14 +3017,14 @@ const AnalyticsUpdated = () => {
                     borderRadius: 0.5,
                     p: 0.5
                   }}>
-                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: '0.65rem' }}>
-                      MEGA VIRALS
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.8)', fontSize: { xs: '0.55rem', md: '0.65rem' } }}>
+                      {isMobile ? 'MEGA' : 'MEGA VIRALS'}
                     </Typography>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                      <Typography sx={{ color: '#FFD700', fontWeight: 700, fontSize: '0.9rem' }}>
+                      <Typography sx={{ color: '#FFD700', fontWeight: 700, fontSize: { xs: '0.75rem', md: '0.9rem' } }}>
                         {analyticsData.megaViralsCount}
                       </Typography>
-                      <Typography sx={{ color: '#FFD700', fontSize: '0.7rem' }}>
+                      <Typography sx={{ color: '#FFD700', fontSize: { xs: '0.6rem', md: '0.7rem' } }}>
                         {analyticsData.megaViralsPercentage}%
                       </Typography>
                     </Box>
@@ -3103,7 +3107,7 @@ const AnalyticsUpdated = () => {
                 backdropFilter: 'blur(20px)',
                 border: '1px solid rgba(76, 175, 80, 0.4)',
                 borderRadius: 1,
-                p: 1,
+                p: { xs: 0.75, md: 1 },
                 cursor: 'pointer',
                 transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                 position: 'relative',
@@ -3131,12 +3135,13 @@ const AnalyticsUpdated = () => {
               <Typography sx={{
                 color: 'white',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', md: '0.75rem' },
                 letterSpacing: '0.5px',
                 mb: 1,
-                textAlign: 'center'
+                textAlign: 'center',
+                lineHeight: 1.2
               }}>
-                CONTENT QUALITY
+                {isMobile ? 'CONTENT' : 'CONTENT QUALITY'}
               </Typography>
 
               {/* Decent Videos */}
@@ -3209,7 +3214,7 @@ const AnalyticsUpdated = () => {
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(33, 150, 243, 0.4)',
               borderRadius: 1,
-              p: 1,
+              p: { xs: 0.75, md: 1 },
               transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
               position: 'relative',
               overflow: 'hidden',
@@ -3236,12 +3241,13 @@ const AnalyticsUpdated = () => {
               <Typography sx={{
                 color: 'white',
                 fontWeight: 700,
-                fontSize: '0.75rem',
+                fontSize: { xs: '0.65rem', md: '0.75rem' },
                 letterSpacing: '0.5px',
                 mb: 1,
-                textAlign: 'center'
+                textAlign: 'center',
+                lineHeight: 1.2
               }}>
-                ANALYTICS INSIGHTS
+                {isMobile ? 'ANALYTICS' : 'ANALYTICS INSIGHTS'}
               </Typography>
 
               {/* Analytics Metrics */}
