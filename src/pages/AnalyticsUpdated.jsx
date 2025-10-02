@@ -1746,7 +1746,7 @@ const AnalyticsUpdated = () => {
                 backdropFilter: 'blur(15px)',
                 borderRadius: '16px',
                 border: '1px solid rgba(255,255,255,0.2)',
-                p: 3,
+                p: { xs: 2, md: 3 },
                 display: 'flex',
                 flexDirection: 'column',
                 overflow: 'hidden',
@@ -1757,16 +1757,16 @@ const AnalyticsUpdated = () => {
                 {/* Level Badge - Top Right Corner */}
                 <Box sx={{
                   position: 'absolute',
-                  top: 16,
-                  right: 16,
+                  top: { xs: 12, md: 16 },
+                  right: { xs: 12, md: 16 },
                   display: 'flex',
                   flexDirection: 'column',
                   alignItems: 'center',
                   zIndex: 1
                 }}>
                   <Box sx={{
-                    width: 90,
-                    height: 90,
+                    width: { xs: 60, md: 90 },
+                    height: { xs: 60, md: 90 },
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -1816,64 +1816,65 @@ const AnalyticsUpdated = () => {
                 <Typography variant="h6" sx={{
                   color: 'white',
                   fontWeight: 600,
-                  mb: 1.5,
-                  fontSize: '16px'
+                  mb: { xs: 1, md: 1.5 },
+                  fontSize: { xs: '14px', md: '16px' }
                 }}>
-                  Milestone Progress
+                  {isMobile ? 'Progress' : 'Milestone Progress'}
                 </Typography>
 
                 {/* Hero Section: Shorts Views + Total Bonus Earned + Progress Bar */}
                 <Box sx={{
                   display: 'flex',
-                  alignItems: 'center',
-                  mb: 4,
-                  mt: 3, // Move lower
-                  pr: 8, // Add padding to avoid overlap with badge
-                  gap: 8 // Better spacing between elements
+                  flexDirection: { xs: 'column', md: 'row' },
+                  alignItems: { xs: 'flex-start', md: 'center' },
+                  mb: { xs: 2, md: 4 },
+                  mt: { xs: 1, md: 3 }, // Move lower
+                  pr: { xs: 4, md: 8 }, // Add padding to avoid overlap with badge
+                  gap: { xs: 2, md: 8 } // Better spacing between elements
                 }}>
                   {/* Left: Shorts Views */}
                   <Box>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255,255,255,0.7)',
                       mb: 1,
-                      fontSize: '14px'
+                      fontSize: { xs: '12px', md: '14px' }
                     }}>
                       Shorts Views
                     </Typography>
                     <Typography variant="h4" sx={{
                       color: 'white',
                       fontWeight: 700,
-                      fontSize: '32px'
+                      fontSize: { xs: '20px', md: '32px' }
                     }}>
                       {formatNumber(analyticsData?.totalViews || 66100000)}
                     </Typography>
                   </Box>
 
                   {/* Center: Total Bonus Earned */}
-                  <Box sx={{ textAlign: 'center' }}>
+                  <Box sx={{ textAlign: { xs: 'left', md: 'center' } }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255,255,255,0.7)',
                       mb: 1,
-                      fontSize: '14px'
+                      fontSize: { xs: '12px', md: '14px' }
                     }}>
                       Total Bonus Earned
                     </Typography>
                     <Typography variant="h4" sx={{
                       color: 'white',
                       fontWeight: 700,
-                      fontSize: '32px'
+                      fontSize: { xs: '20px', md: '32px' }
                     }}>
                       ${monthlyBonusData.totalBonus.toLocaleString()}
                     </Typography>
                   </Box>
 
                   {/* Right: Bonus Progress */}
-                  <Box sx={{ minWidth: '200px' }}>
+                  <Box sx={{ minWidth: { xs: '100%', md: '200px' } }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255,255,255,0.7)',
                       mb: 1,
-                      fontSize: '14px',
-                      textAlign: 'center'
+                      fontSize: { xs: '12px', md: '14px' },
+                      textAlign: { xs: 'left', md: 'center' }
                     }}>
                       Bonus Progress
                     </Typography>
@@ -2288,7 +2289,7 @@ const AnalyticsUpdated = () => {
                   backdropFilter: 'blur(15px)',
                   borderRadius: '16px',
                   border: '1px solid rgba(255,255,255,0.2)',
-                  p: 3,
+                  p: { xs: 2, md: 3 },
                   flex: 1,
                   overflow: 'hidden',
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04)',
@@ -2305,7 +2306,7 @@ const AnalyticsUpdated = () => {
                     <Typography variant="h6" sx={{
                       color: 'white',
                       fontWeight: 600,
-                      fontSize: '16px'
+                      fontSize: { xs: '14px', md: '16px' }
                     }}>
                       Leaderboard
                     </Typography>
