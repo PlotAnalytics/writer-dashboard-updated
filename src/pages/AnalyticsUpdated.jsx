@@ -275,6 +275,7 @@ const AnalyticsUpdated = () => {
   // State management
   const [analyticsData, setAnalyticsData] = useState(null);
   const [realtimeData, setRealtimeData] = useState(null);
+  const [ytdViews, setYtdViews] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [dateRange, setDateRange] = useState('last30days');
@@ -612,6 +613,42 @@ const AnalyticsUpdated = () => {
 
     } catch (error) {
       console.error('Error fetching monthly bonus data:', error);
+    }
+  };
+
+  // Fetch YTD (Year-to-Date) 2025 data
+  const fetchYTDData = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      let writerId = user?.writerId || localStorage.getItem('writerId');
+
+      if (!writerId) {
+        console.error('No writer ID found for YTD data');
+        return 0;
+      }
+
+      const response = await fetch(buildApiUrl('/api/analytics/ytd-views'), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          writerId: writerId,
+          year: 2025
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      console.log('📊 YTD 2025 data received:', data);
+      return data.totalViews || 0;
+    } catch (error) {
+      console.error('Error fetching YTD data:', error);
+      return 0;
     }
   };
 
@@ -1267,6 +1304,11 @@ const AnalyticsUpdated = () => {
     fetchRealtimeData();
     fetchMonthlyBonusData(); // Always fetch current calendar month for bonus (independent of date filter)
     fetchScriptSubmissionData(); // Fetch script submission data for tooltip
+
+    // Fetch YTD data (independent of date filter, always shows 2025 data)
+    fetchYTDData().then(ytdData => {
+      setYtdViews(ytdData);
+    });
 
     // Fetch streak stats with date filtering for script count
     if (dateRange.startsWith('custom_')) {
@@ -2885,6 +2927,32 @@ const AnalyticsUpdated = () => {
               }}>
                 {isMobile ? 'PERF OVERVIEW' : 'PERFORMANCE OVERVIEW'}
               </Typography>
+
+              {/* YTD 2025 Views - Small row at top */}
+              <Box sx={{
+                mb: 1.5,
+                background: 'rgba(255, 255, 255, 0.08)',
+                borderRadius: 1,
+                p: 0.5,
+                textAlign: 'center'
+              }}>
+                <Typography sx={{
+                  color: '#667eea',
+                  fontWeight: 700,
+                  fontSize: { xs: '0.9rem', md: '1.1rem' },
+                  lineHeight: 1
+                }}>
+                  {formatNumber(ytdViews)}
+                </Typography>
+                <Typography sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: { xs: '0.5rem', md: '0.6rem' },
+                  mt: 0.25,
+                  lineHeight: 1
+                }}>
+                  Total Views (YTD 2025)
+                </Typography>
+              </Box>
 
               {/* Total Views */}
               <Box sx={{ mb: 1.5 }}>

@@ -10328,5 +10328,88 @@ router.post('/script-submissions', async (req, res) => {
   }
 });
 
+// YTD (Year-to-Date) views endpoint
+router.post('/ytd-views', async (req, res) => {
+  try {
+    const { writerId, year } = req.body;
+
+    if (!writerId || !year) {
+      return res.status(400).json({ error: 'Missing required parameters: writerId, year' });
+    }
+
+    console.log(`📊 Fetching YTD ${year} views for writer ${writerId}`);
+
+    // Use the global BigQuery client
+    const bigqueryClient = getBigQueryClient();
+    if (!bigqueryClient) {
+      throw new Error('BigQuery client not initialized');
+    }
+
+    // Query to get YTD views for the writer
+    const query = `
+      WITH unique_videos AS (
+        SELECT DISTINCT
+          video_id,
+          writer_id,
+          writer_name,
+          snippet_published_at
+        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+        WHERE writer_id = @writerId
+          AND snippet_published_at IS NOT NULL
+          AND EXTRACT(YEAR FROM PARSE_DATETIME('%Y-%m-%dT%H:%M:%S', snippet_published_at)) = @year
+      ),
+      latest_views AS (
+        SELECT
+          uv.video_id,
+          uv.snippet_published_at,
+          ymh.statistics_view_count
+        FROM unique_videos uv
+        JOIN (
+          SELECT
+            video_id,
+            statistics_view_count,
+            ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+          WHERE statistics_view_count IS NOT NULL
+        ) ymh ON uv.video_id = ymh.video_id AND ymh.rn = 1
+      )
+      SELECT
+        SUM(CAST(statistics_view_count AS INT64)) as total_views,
+        COUNT(*) as video_count
+      FROM latest_views
+    `;
+
+    const options = {
+      query: query,
+      params: {
+        writerId: writerId.toString(),
+        year: parseInt(year)
+      }
+    };
+
+    console.log('📊 Executing YTD BigQuery:', query);
+    console.log('📊 Query params:', options.params);
+
+    const [rows] = await bigqueryClient.query(options);
+
+    console.log('📊 YTD BigQuery results:', rows);
+
+    const result = {
+      totalViews: rows[0]?.total_views || 0,
+      videoCount: rows[0]?.video_count || 0,
+      year: year,
+      writerId: writerId
+    };
+
+    console.log('📊 YTD response:', result);
+
+    res.json(result);
+
+  } catch (error) {
+    console.error('❌ Error fetching YTD views:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 module.exports = router;
 module.exports.bigquery = bigquery;
