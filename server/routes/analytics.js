@@ -10345,38 +10345,47 @@ router.post('/ytd-views', async (req, res) => {
       throw new Error('BigQuery client not initialized');
     }
 
+    // First, let's test a simple query to see if the writer exists
+    const testQuery = `
+      SELECT COUNT(*) as total_records
+      FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+      WHERE writer_id = @writerId
+      LIMIT 1
+    `;
+
+    console.log('📊 Testing writer existence with query:', testQuery);
+    console.log('📊 Writer ID:', writerId);
+
+    const testOptions = {
+      query: testQuery,
+      params: {
+        writerId: writerId.toString()
+      }
+    };
+
+    const [testRows] = await bigqueryClient.query(testOptions);
+    console.log('📊 Test query results:', testRows);
+
     // Query to get YTD views for the writer
     const query = `
-      WITH unique_videos AS (
-        SELECT DISTINCT
+      WITH latest_metadata AS (
+        SELECT
           video_id,
           writer_id,
-          writer_name,
-          snippet_published_at
+          statistics_view_count,
+          snippet_published_at,
+          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-        WHERE writer_id = @writerId
+        WHERE statistics_view_count IS NOT NULL
+          AND writer_id = @writerId
           AND snippet_published_at IS NOT NULL
-          AND EXTRACT(YEAR FROM PARSE_DATETIME('%Y-%m-%dT%H:%M:%S', snippet_published_at)) = @year
-      ),
-      latest_views AS (
-        SELECT
-          uv.video_id,
-          uv.snippet_published_at,
-          ymh.statistics_view_count
-        FROM unique_videos uv
-        JOIN (
-          SELECT
-            video_id,
-            statistics_view_count,
-            ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-          WHERE statistics_view_count IS NOT NULL
-        ) ymh ON uv.video_id = ymh.video_id AND ymh.rn = 1
+          AND EXTRACT(YEAR FROM snippet_published_at) = @year
       )
       SELECT
         SUM(CAST(statistics_view_count AS INT64)) as total_views,
-        COUNT(*) as video_count
-      FROM latest_views
+        COUNT(DISTINCT video_id) as video_count
+      FROM latest_metadata
+      WHERE rn = 1
     `;
 
     const options = {
