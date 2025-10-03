@@ -645,7 +645,11 @@ const AnalyticsUpdated = () => {
 
       const data = await response.json();
       console.log('📊 YTD 2025 data received:', data);
-      return data.totalViews || 0;
+      console.log('📊 YTD totalViews value:', data.totalViews);
+      console.log('📊 YTD totalViews type:', typeof data.totalViews);
+      const ytdValue = data.totalViews || 0;
+      console.log('📊 YTD final value being returned:', ytdValue);
+      return ytdValue;
     } catch (error) {
       console.error('Error fetching YTD data:', error);
       return 0;
@@ -1307,6 +1311,7 @@ const AnalyticsUpdated = () => {
 
     // Fetch YTD data (independent of date filter, always shows 2025 data)
     fetchYTDData().then(ytdData => {
+      console.log('📊 Setting YTD views state to:', ytdData);
       setYtdViews(ytdData);
     });
 

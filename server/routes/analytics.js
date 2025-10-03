@@ -10359,7 +10359,7 @@ router.post('/ytd-views', async (req, res) => {
     const testOptions = {
       query: testQuery,
       params: {
-        writerId: writerId.toString()
+        writerId: parseInt(writerId) // Convert to integer for BigQuery
       }
     };
 
@@ -10391,7 +10391,7 @@ router.post('/ytd-views', async (req, res) => {
     const options = {
       query: query,
       params: {
-        writerId: writerId.toString(),
+        writerId: parseInt(writerId), // Convert to integer for BigQuery
         year: parseInt(year)
       }
     };
@@ -10402,6 +10402,9 @@ router.post('/ytd-views', async (req, res) => {
     const [rows] = await bigqueryClient.query(options);
 
     console.log('📊 YTD BigQuery results:', rows);
+    console.log('📊 YTD BigQuery first row:', rows[0]);
+    console.log('📊 YTD total_views value:', rows[0]?.total_views);
+    console.log('📊 YTD video_count value:', rows[0]?.video_count);
 
     const result = {
       totalViews: rows[0]?.total_views || 0,
@@ -10410,7 +10413,7 @@ router.post('/ytd-views', async (req, res) => {
       writerId: writerId
     };
 
-    console.log('📊 YTD response:', result);
+    console.log('📊 YTD response being sent:', result);
 
     res.json(result);
 
