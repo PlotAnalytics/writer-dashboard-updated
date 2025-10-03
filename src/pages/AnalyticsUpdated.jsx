@@ -2102,11 +2102,7 @@ const AnalyticsUpdated = () => {
                                 console.log('🎯 MarkLine creation:', { targetDailyViews, monthlyBonusData });
 
                                 if (targetDailyViews > 0) {
-                                  // Position the line at 90% of the chart height for visibility
-                                  const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
-                                  const maxViews = Math.max(...viewsData);
-                                  const linePosition = maxViews * 0.9; // 90% of max views
-
+                                  // Position the line at the actual target value, not 90% of max
                                   return {
                                     silent: true,
                                     lineStyle: {
@@ -2123,7 +2119,7 @@ const AnalyticsUpdated = () => {
                                       fontWeight: 'bold'
                                     },
                                     data: [{
-                                      yAxis: linePosition,
+                                      yAxis: targetDailyViews, // Use actual target value instead of 90% of max
                                       name: 'Next Bonus Target'
                                     }]
                                   };
