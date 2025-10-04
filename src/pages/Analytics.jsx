@@ -1978,7 +1978,7 @@ const Analytics = () => {
                         letterSpacing: '0.1px',
                         mb: 0.0625
                       }}>
-                        TOTAL VIEWS
+                        {isSTLWriter() ? 'LONG VIDEOS' : 'TOTAL VIEWS'}
                       </Typography>
                       <Typography variant="caption" sx={{
                         color: 'rgba(255, 255, 255, 0.7)',
@@ -1989,6 +1989,71 @@ const Analytics = () => {
                       </Typography>
                     </Box>
                   </Box>
+
+                  {/* SHORT + LONG Views Card - Only for STL Writers */}
+                  {isSTLWriter() && analyticsData.shortPlusLongViews !== undefined && (
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 142, 83, 0.08) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 107, 107, 0.25)',
+                      borderRadius: 1,
+                      p: 0.75,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '30px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 16px rgba(255, 107, 107, 0.25)',
+                        border: '1px solid rgba(255, 107, 107, 0.4)',
+                        background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 142, 83, 0.12) 100%)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: 'linear-gradient(90deg, #FF6B6B, #FF8E53)',
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
+                        <Typography variant="h6" sx={{
+                          background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 700,
+                          fontSize: '1.1rem',
+                          lineHeight: 1,
+                          filter: 'drop-shadow(0 2px 8px rgba(255, 107, 107, 0.4))'
+                        }}>
+                          {formatNumber(analyticsData.shortPlusLongViews || 0)}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.6rem',
+                          letterSpacing: '0.1px',
+                          mb: 0.0625
+                        }}>
+                          SHORT + LONG
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.55rem',
+                          display: 'block'
+                        }}>
+                          All Videos
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
 
                   {/* Submissions Card */}
                   {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
