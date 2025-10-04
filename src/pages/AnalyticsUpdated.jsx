@@ -2980,9 +2980,36 @@ const AnalyticsUpdated = () => {
                   mt: 0.25,
                   lineHeight: 1.2
                 }}>
-                  Total Views
+                  {isSTLWriter() ? 'Long Videos (>189s)' : 'Total Views'}
                 </Typography>
               </Box>
+
+              {/* SHORT + LONG Views - Only for STL Writers */}
+              {isSTLWriter() && (
+                <Box sx={{ mb: 1.5 }}>
+                  <Typography variant="h5" sx={{
+                    background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                    WebkitBackgroundClip: 'text',
+                    WebkitTextFillColor: 'transparent',
+                    fontWeight: 800,
+                    fontSize: { xs: '1.2rem', md: '1.8rem' },
+                    lineHeight: 1,
+                    textAlign: 'center',
+                    filter: 'drop-shadow(0 2px 8px rgba(255, 107, 107, 0.4))'
+                  }}>
+                    {formatNumber(analyticsData?.shortPlusLongViews || 0)}
+                  </Typography>
+                  <Typography sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    fontSize: { xs: '0.55rem', md: '0.7rem' },
+                    textAlign: 'center',
+                    mt: 0.25,
+                    lineHeight: 1.2
+                  }}>
+                    Short + Long Views
+                  </Typography>
+                </Box>
+              )}
 
               {/* Submissions */}
               <Box sx={{

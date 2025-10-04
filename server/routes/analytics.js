@@ -2080,9 +2080,65 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting video details by category:', videoDetailsError);
     }
 
-    // ———————————————— 8) Return frontend-compatible DAILY TOTALS data ————————————————
+    // ———————————————— 8) Calculate SHORT + LONG total for STL writers ————————————————
+    let shortPlusLongViews = finalTotalViews; // Default to current total views
+
+    // Check if this is an STL writer that needs combined short + long calculation
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+    const isSTLWriter = stlWriters.includes(writerName);
+
+    if (isSTLWriter) {
+      console.log(`🎬 STL Writer detected: ${writerName} - calculating SHORT + LONG total views`);
+
+      try {
+        // Get ALL videos (both short and long) for this writer in the date range
+        const allVideosQuery = `
+          WITH latest_metadata AS (
+            SELECT
+              video_id,
+              writer_name,
+              statistics_view_count,
+              snippet_published_at,
+              ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
+            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+            WHERE writer_name = @writer_name
+              AND writer_name IS NOT NULL
+              AND statistics_view_count IS NOT NULL
+              AND CAST(statistics_view_count AS INT64) > 0
+              AND snippet_published_at IS NOT NULL
+              AND DATE(snippet_published_at) >= @start_date
+              AND DATE(snippet_published_at) <= @end_date
+          )
+          SELECT
+            SUM(CAST(statistics_view_count AS INT64)) as total_all_views
+          FROM latest_metadata
+          WHERE rn = 1
+        `;
+
+        const [allVideosResult] = await bigquery.query({
+          query: allVideosQuery,
+          params: {
+            writer_name: writerName,
+            start_date: finalStartDate,
+            end_date: finalEndDate
+          }
+        });
+
+        if (allVideosResult.length > 0 && allVideosResult[0].total_all_views) {
+          shortPlusLongViews = parseInt(allVideosResult[0].total_all_views);
+          console.log(`🎬 STL ${writerName}: SHORT + LONG total = ${shortPlusLongViews.toLocaleString()} views`);
+          console.log(`🎬 STL ${writerName}: LONG only total = ${finalTotalViews.toLocaleString()} views`);
+        }
+      } catch (shortLongError) {
+        console.error('❌ Error calculating SHORT + LONG views for STL writer:', shortLongError);
+        shortPlusLongViews = finalTotalViews; // Fallback to current total
+      }
+    }
+
+    // ———————————————— 9) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
       totalViews: finalTotalViews,
+      shortPlusLongViews: shortPlusLongViews, // New field for STL writers
       chartData: chartData,
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
