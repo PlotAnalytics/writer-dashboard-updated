@@ -2080,65 +2080,52 @@ async function getBigQueryAnalyticsOverview(
       console.error('❌ Error getting video details by category:', videoDetailsError);
     }
 
-    // ———————————————— 8) Calculate SHORT + LONG total for STL writers ————————————————
-    let shortPlusLongViews = finalTotalViews; // Default to current total views
+    // ———————————————— 8) Calculate SHORTS ONLY views for STL writers ————————————————
+    let shortsOnlyViews = 0; // Default to 0 for non-STL writers
+    let totalAllViews = finalTotalViews; // Default to current total views (long videos for STL)
 
-    // Check if this is an STL writer that needs combined short + long calculation
+    // Check if this is an STL writer that needs shorts calculation
     const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     if (isSTLWriter) {
-      console.log(`🎬 STL Writer detected: ${writerName} - calculating SHORT + LONG total views`);
+      console.log(`🎬 STL Writer detected: ${writerName} - will calculate from chart data`);
 
-      try {
-        // Get ALL videos (both short and long) for this writer in the date range
-        const allVideosQuery = `
-          WITH latest_metadata AS (
-            SELECT
-              video_id,
-              writer_name,
-              statistics_view_count,
-              snippet_published_at,
-              ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY snapshot_date DESC) as rn
-            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-            WHERE writer_name = @writer_name
-              AND writer_name IS NOT NULL
-              AND statistics_view_count IS NOT NULL
-              AND CAST(statistics_view_count AS INT64) > 0
-              AND snippet_published_at IS NOT NULL
-              AND DATE(snippet_published_at) >= @start_date
-              AND DATE(snippet_published_at) <= @end_date
-          )
-          SELECT
-            SUM(CAST(statistics_view_count AS INT64)) as total_all_views
-          FROM latest_metadata
-          WHERE rn = 1
-        `;
-
-        const [allVideosResult] = await bigquery.query({
-          query: allVideosQuery,
-          params: {
-            writer_name: writerName,
-            start_date: finalStartDate,
-            end_date: finalEndDate
-          }
-        });
-
-        if (allVideosResult.length > 0 && allVideosResult[0].total_all_views) {
-          shortPlusLongViews = parseInt(allVideosResult[0].total_all_views);
-          console.log(`🎬 STL ${writerName}: SHORT + LONG total = ${shortPlusLongViews.toLocaleString()} views`);
-          console.log(`🎬 STL ${writerName}: LONG only total = ${finalTotalViews.toLocaleString()} views`);
-        }
-      } catch (shortLongError) {
-        console.error('❌ Error calculating SHORT + LONG views for STL writer:', shortLongError);
-        shortPlusLongViews = finalTotalViews; // Fallback to current total
-      }
+      // For STL writers, we'll calculate the totals from the chart data
+      // after it's generated (see below after chart calculation)
+      console.log(`🎬 STL ${writerName}: Deferring calculation until chart data is ready`);
     }
 
-    // ———————————————— 9) Return frontend-compatible DAILY TOTALS data ————————————————
+    // ———————————————— 9) Calculate STL totals from chart data ————————————————
+    if (isSTLWriter && chartData && chartData.length > 0) {
+      // IMPORTANT: For STL writers, chartData contains LONG videos (>189s) only due to the query filter
+      // The frontend will show:
+      // - Blue line = "Long Videos" (chartData - videos >189s)
+      // - Orange line = "Shorts Videos" (shortsData - videos ≤189s)
+      // - Tooltip total = blue + orange combined
+
+      const chartTotalViews = chartData.reduce((sum, day) => sum + (day.views || 0), 0);
+
+      // For STL writers:
+      // - shortsOnlyViews = will be calculated from shortsData in frontend (≤189s)
+      // - totalAllViews = shorts + longs combined from chart data
+      // - chartTotalViews = long videos only (>189s) - this is what blue line shows
+
+      shortsOnlyViews = 0; // Will be calculated from shortsData in frontend
+
+      // For STL writers, defer calculation until split data is available
+      console.log(`🎬 STL ${writerName}: Deferring calculation until chart data is ready`);
+
+      // Use chart total for now, will be updated later with split data
+      totalAllViews = chartTotalViews;
+    }
+
+    // ———————————————— 10) Return frontend-compatible DAILY TOTALS data ————————————————
     return {
-      totalViews: finalTotalViews,
-      shortPlusLongViews: shortPlusLongViews, // New field for STL writers
+      totalViews: isSTLWriter ? totalAllViews : finalTotalViews, // For STL: shorts+longs combined, for others: current logic
+      longViews: isSTLWriter ? chartData.reduce((sum, day) => sum + (day.views || 0), 0) : finalTotalViews, // For STL: long videos only (>189s), for others: all
+      shortsViews: shortsOnlyViews, // For STL: will be calculated from shortsData in frontend (≤189s)
+      isSTLWriter: isSTLWriter, // Flag to tell frontend this is an STL writer
       chartData: chartData,
       aggregatedViewsData: dailyTotalsData, // Use daily totals data as QA script shows
       avgDailyViews: dailyTotalsData.length > 0 ? Math.round(finalTotalViews / dailyTotalsData.length) : 0,
@@ -3089,7 +3076,7 @@ async function handleAnalyticsRequest(req, res) {
     // Check Redis cache after we have the correct writerId and actual dates
     const redisService = global.redisService;
     if (redisService && redisService.isAvailable()) {
-      const cacheKey = `analytics:overview:v9:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+      const cacheKey = `analytics:overview:v10:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
       const cachedData = await redisService.get(cacheKey);
 
       if (cachedData) {
@@ -3125,6 +3112,10 @@ async function handleAnalyticsRequest(req, res) {
           customStartDate,
           customEndDate
         );
+
+        // Check if this is an STL writer for special calculation
+        const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+        const isSTLWriter = stlWriters.includes(writerName);
 
         // If this writer should get split data, add shorts/longs breakdown
         if (shouldSplitByType) {
@@ -3175,6 +3166,22 @@ async function handleAnalyticsRequest(req, res) {
 
               analyticsData.hasSplitData = true;
 
+              // For STL writers, recalculate totals using split data
+              if (isSTLWriter) {
+                const shortsTotal = splitData.shorts.reduce((sum, day) => sum + (day.views || 0), 0);
+                const longsTotal = splitData.longs.reduce((sum, day) => sum + (day.views || 0), 0);
+                const combinedTotal = shortsTotal + longsTotal;
+
+                // Update analytics data with correct totals
+                analyticsData.totalViews = combinedTotal; // SHORTS + LONG card
+                analyticsData.longViews = longsTotal; // SHORTS VIEWS card (actually long videos)
+
+                console.log(`🎬 STL ${writerName}: Recalculated with split data`);
+                console.log(`🎬 STL ${writerName}: SHORTS views (orange line) = ${shortsTotal.toLocaleString()}`);
+                console.log(`🎬 STL ${writerName}: LONG views (blue line) = ${longsTotal.toLocaleString()}`);
+                console.log(`🎬 STL ${writerName}: COMBINED total (SHORTS + LONG card) = ${combinedTotal.toLocaleString()}`);
+              }
+
               console.log(`📊 Added split data to analytics response`);
             }
           } catch (splitError) {
@@ -3199,7 +3206,7 @@ async function handleAnalyticsRequest(req, res) {
 
         // Cache the response data using actual dates with custom TTL
         if (redisService && redisService.isAvailable()) {
-          const cacheKey = `analytics:overview:v9:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
+          const cacheKey = `analytics:overview:v10:writer:${writerId}:range:${range}:start:${actualStartDate}:end:${actualEndDate}`;
 
           // Calculate TTL to expire at 10:36:46 AM UTC+5:30 (6 minutes after 10:30:46 AM)
           const calculateCustomTTL = () => {
