@@ -868,117 +868,209 @@ app.post("/api/updateStatus", async (req, res) => {
     short_video_url,
     posting_account,
   } = req.body;
+
+  // Input validation
+  if (!trello_card_id || !status) {
+    return res.status(400).json({ error: "Missing required fields: trello_card_id, status" });
+  }
+
+  const client = await pool.connect();
+
   try {
-    // Normalize the status
-    const normalizedStatus =
-      status.trim().toLowerCase() === "rejected" ? "Rejected" : status;
-    // Update the script status in the script table
-    const query = `
-      UPDATE script
-      SET approval_status = $1,
-          loom_url = CASE WHEN $2 = 'Rejected' THEN $3 ELSE loom_url END
-      WHERE trello_card_id = $4
-      RETURNING *;
-    `;
-    const { rows } = await pool.query(query, [
-      normalizedStatus,
-      normalizedStatus,
-      loom,
-      trello_card_id,
-    ]);
-    if (rows.length === 0) {
-      return res.status(404).json({
-        error: `Script not found for the given Trello Card ID: ${trello_card_id}. Unable to update status to ${normalizedStatus}.`,
-      });
-    }
-    const script = rows[0];
-    // Log the status update to trello_card_movements table
-    const movementQuery = `
-      INSERT INTO trello_card_movements (timestamp, trello_card_id, status)
-      VALUES (NOW(), $1, $2)
-    `;
-    await pool.query(movementQuery, [trello_card_id, normalizedStatus]);
-    console.log(`:white_check_mark: Status movement logged: ${trello_card_id} -> ${normalizedStatus}`);
+    await client.query('BEGIN');
 
-    // If the status is "Posted", insert into the video table
-    if (normalizedStatus === "posted" && (short_video_url || long_video_url)) {
-      console.log(`🎬 Proceeding with video table insertion...`);
-      
+    const scriptStatus = status.trim().toLowerCase();
+    let updatedScript = null;
 
-      const getPostAcctIDQuery = `SELECT id FROM posting_accounts WHERE account = $1;
-      `;
-      const postAcctIdResult = await pool.query(getPostAcctIDQuery, [posting_account]);
+    if (scriptStatus === "rejected") {
+      // Update script with rejection
+      const result = await client.query(`
+        UPDATE script
+        SET approval_status = $1,
+            loom_url = $2,
+            updated_at = NOW()
+        WHERE trello_card_id = $3
+        RETURNING *;
+      `, [scriptStatus, loom, trello_card_id]);
 
-      const postAcctId = postAcctIdResult.rows[0] ? postAcctIdResult.rows[0].id : null;
-
-      const urlsToInsert = [];
-      if (short_video_url) urlsToInsert.push({ url: short_video_url, type: 'short', account_id: postAcctId });
-      if (long_video_url) urlsToInsert.push({ url: long_video_url, type: 'long', account_id: postAcctId });
-      
-      console.log(`📋 URLs to insert: ${urlsToInsert.length}`, urlsToInsert.map(u => `${u.type}: ${u.url}`));
-
-      // Check if short video record exists
-      const checkShortVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'short';
-      `;
-      const shortVideoExistsResult = await pool.query(checkShortVideoExist, [trello_card_id]);
-      
-      // Check if long video record exists
-      const checkLongVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'long';
-      `;
-      const longVideoExistsResult = await pool.query(checkLongVideoExist, [trello_card_id]);
-
-
-      // Fetch writer_id, title
-      const writerQuery = `
-        SELECT writer_id, title FROM script WHERE trello_card_id = $1;
-      `;
-      const writerResult = await pool.query(writerQuery, [trello_card_id]);
-
-
-      const writer_id = writerResult.rows[0]?.writer_id;
-      const script_title = writerResult.rows[0]?.title;
-     
-      for (const videoData of urlsToInsert) {
-        try {
-          console.log(`🔍 Checking if ${videoData.type} URL exists: ${videoData.url}`);
-          
-          // Check if URL already exists
-          const urlExistsResult = await pool.query(`SELECT id FROM video WHERE url = $1`, [videoData.url]);
-          
-          if (urlExistsResult.rows.length === 0) {
-            console.log(`✅ Inserting ${videoData.type} video: ${videoData.url}`);
-            
-            const videoResult = await pool.query(`
-              INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-              VALUES ($1, $2, $3, $4, $5, $6, $7)
-              RETURNING *;
-            `, [
-              videoData.url,
-              timestamp || new Date().toISOString(),
-              script.writer_id,
-              script.title,
-              trello_card_id,
-              videoData.account_id,
-              videoData.type
-            ]);
-            
-            console.log(`🎬 ${videoData.type} video record created: ${videoResult.rows[0].id}`);
-          } else {
-            console.log(`⚠️ ${videoData.type} video URL already exists: ${urlExistsResult.rows[0].id}`);
-          }
-        } catch (videoError) {
-          console.error(`❌ Error inserting ${videoData.type} video:`, videoError);
-        }
+      if (result.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: "Script not found" });
       }
+
+      updatedScript = result.rows[0];
+      console.log(`❌ Script rejected: ${trello_card_id}`);
+
+    } else if (scriptStatus === "posted") {
+      // Validate posting account is provided
+      if (!posting_account) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: "posting_account required for posted status" });
+      }
+
+      // Get posting account ID
+      const postAcctIdResult = await client.query(
+        `SELECT id FROM posting_accounts WHERE account = $1;`,
+        [posting_account.trim()]
+      );
+
+      if (postAcctIdResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: `Posting account not found: ${posting_account}` });
+      }
+
+      const postAcctId = postAcctIdResult.rows[0].id;
+
+      // Fetch script details
+      const scriptResult = await client.query(
+        `SELECT writer_id, title FROM script WHERE trello_card_id = $1;`,
+        [trello_card_id]
+      );
+
+      if (scriptResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: "Script not found" });
+      }
+
+      const { writer_id, title: script_title } = scriptResult.rows[0];
+
+      // Prepare video URLs to insert
+      const urlsToInsert = [];
+      if (short_video_url?.trim()) {
+        urlsToInsert.push({ url: short_video_url.trim(), type: 'short', account_id: postAcctId });
+      }
+      if (long_video_url?.trim()) {
+        urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: postAcctId });
+      }
+
+      if (urlsToInsert.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: "At least one video URL required for posted status" });
+      }
+
+      // Upsert videos
+      const videoIds = [];
+      for (const videoData of urlsToInsert) {
+        const videoResult = await client.query(`
+          INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          ON CONFLICT (url)
+          DO UPDATE SET
+            created = EXCLUDED.created,
+            writer_id = EXCLUDED.writer_id,
+            script_title = EXCLUDED.script_title,
+            trello_card_id = EXCLUDED.trello_card_id,
+            account_id = EXCLUDED.account_id,
+            video_cat = EXCLUDED.video_cat,
+            updated_at = NOW()
+          RETURNING id, (xmax = 0) AS inserted;
+        `, [
+          videoData.url,
+          timestamp || new Date().toISOString(),
+          writer_id,
+          script_title,
+          trello_card_id,
+          videoData.account_id,
+          videoData.type
+        ]);
+
+        const { id: videoId, inserted: wasInserted } = videoResult.rows[0];
+        videoIds.push(videoId);
+
+        console.log(
+          wasInserted
+            ? `✅ Inserted ${videoData.type} video: ${videoId}`
+            : `🔄 Updated ${videoData.type} video: ${videoId}`
+        );
+      }
+
+      // Update script status
+      const scriptUpdateResult = await client.query(`
+        UPDATE script
+        SET approval_status = $1,
+            updated_at = NOW()
+        WHERE trello_card_id = $2
+        RETURNING *;
+      `, [scriptStatus, trello_card_id]);
+
+      updatedScript = {
+        ...scriptUpdateResult.rows[0],
+        video_ids: videoIds
+      };
+      console.log(`✅ Script posted: ${trello_card_id}`);
+
+    } else {
+      // Also update the script status
+      const scriptUpdateResult = await client.query(`
+        UPDATE script
+        SET approval_status = $1,
+            updated_at = NOW()
+        WHERE trello_card_id = $2
+        RETURNING *;
+      `, [scriptStatus, trello_card_id]);
+
+      if (scriptUpdateResult.rows.length === 0) {
+        await client.query('ROLLBACK');
+        return res.status(404).json({ error: "Script not found" });
+      }
+
+      updatedScript = scriptUpdateResult.rows[0];
+      console.log(`📝 Script status updated: ${trello_card_id} -> ${scriptStatus}`);
     }
-    // Broadcast and return success
-    broadcastUpdate(script);
-    return res.json(script);
+
+// Log movement for ALL status changes (runs after all branches)
+    const movementResult = await client.query(`
+      INSERT INTO trello_card_movements (timestamp, trello_card_id, status)
+      VALUES ($1, $2, $3)
+      RETURNING *;
+    `, [timestamp || new Date().toISOString(), trello_card_id, scriptStatus]);
+
+    await client.query('COMMIT');
+
+    // Build comprehensive response with all updated data
+    const responseData = {
+      script: updatedScript,
+      movement: movementResult.rows[0],
+      status: scriptStatus,
+      trello_card_id: trello_card_id,
+    };
+
+    // Add branch-specific data
+    if (scriptStatus === "rejected") {
+      responseData.loom_url = loom;
+      responseData.rejection_details = {
+        loom_url: loom,
+        rejected_at: updatedScript.updated_at
+      };
+    } else if (scriptStatus === "posted") {
+      responseData.videos = updatedScript.video_ids;
+      responseData.posting_details = {
+        posting_account: posting_account,
+        video_ids: updatedScript.video_ids,
+        short_video_url: short_video_url || null,
+        long_video_url: long_video_url || null,
+        posted_at: updatedScript.updated_at
+      };
+    }
+
+    // Broadcast update
+    broadcastUpdate(responseData);
+
+    return res.json({
+      success: true,
+      data: responseData,
+      message: `Script status updated to '${scriptStatus}' successfully`
+    });
+
   } catch (error) {
-    console.error(":x: Error updating script status:", error);
-    return res.status(500).json({ error: "Internal Server Error" });
+    await client.query('ROLLBACK');
+    console.error("❌ Error updating script status:", error);
+    return res.status(500).json({
+      error: "Internal Server Error",
+      message: error.message
+    });
+  } finally {
+    client.release();
   }
 });
 
