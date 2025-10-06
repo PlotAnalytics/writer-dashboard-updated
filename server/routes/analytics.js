@@ -923,10 +923,10 @@ async function getPostgresContentVideosWithBigQueryNames(writerId, dateRange, pa
     const syncStatusQuery = `
       SELECT
         COUNT(*) as total_videos_with_stats,
-        MAX(updated_at) as last_sync_time,
-        COUNT(CASE WHEN updated_at >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as synced_today,
-        COUNT(CASE WHEN posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as published_today,
-        COUNT(CASE WHEN posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 1 END) as published_last_2_days
+        MAX(s.updated_at) as last_sync_time,
+        COUNT(CASE WHEN s.updated_at >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as synced_today,
+        COUNT(CASE WHEN s.posted_date >= CURRENT_DATE - INTERVAL '1 day' THEN 1 END) as published_today,
+        COUNT(CASE WHEN s.posted_date >= CURRENT_DATE - INTERVAL '2 days' THEN 1 END) as published_last_2_days
       FROM statistics_youtube_api s
       INNER JOIN video v ON CAST(v.id AS VARCHAR) = s.video_id
       WHERE v.writer_id = $1
