@@ -892,7 +892,6 @@ app.post("/api/updateStatus", async (req, res) => {
       });
     }
     const script = rows[0];
-
     // Log the status update to trello_card_movements table
     const movementQuery = `
       INSERT INTO trello_card_movements (timestamp, trello_card_id, status)
@@ -902,14 +901,27 @@ app.post("/api/updateStatus", async (req, res) => {
     console.log(`:white_check_mark: Status movement logged: ${trello_card_id} -> ${normalizedStatus}`);
 
     // If the status is "Posted", insert into the video table
-    if (normalizedStatus === "posted" && (short_video_url || (long_video_url && timestamp))) {
+    if (normalizedStatus === "posted" && (short_video_url || long_video_url)) {
       console.log(`🎬 Proceeding with video table insertion...`);
       
+
+      const getPostAcctIDQuery = `SELECT id FROM posting_accounts WHERE account = $1;
+      `;
+      const postAcctIdResult = await pool.query(getPostAcctIDQuery, [posting_account]);
+
+      const postAcctId = postAcctIdResult.rows[0] ? postAcctIdResult.rows[0].id : null;
+
       const urlsToInsert = [];
-      if (short_video_url) urlsToInsert.push({ url: short_video_url, type: 'short' });
-      if (long_video_url) urlsToInsert.push({ url: long_video_url, type: 'long' });
+      if (short_video_url) urlsToInsert.push({ url: short_video_url, type: 'short', account_id: postAcctId });
+      if (long_video_url) urlsToInsert.push({ url: long_video_url, type: 'long', account_id: postAcctId });
       
       console.log(`📋 URLs to insert: ${urlsToInsert.length}`, urlsToInsert.map(u => `${u.type}: ${u.url}`));
+
+      // Check if short video record exists
+      const checkShortVideoExist = `
+        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'short';
+      `;
+      const shortVideoExistsResult = await pool.query(checkShortVideoExist, [trello_card_id]);
       
       // Check if long video record exists
       const checkLongVideoExist = `
@@ -917,21 +929,17 @@ app.post("/api/updateStatus", async (req, res) => {
       `;
       const longVideoExistsResult = await pool.query(checkLongVideoExist, [trello_card_id]);
 
-      // Check if short video record exists
-      const checkShortVideoExist = `
-        SELECT id FROM video WHERE trello_card_id = $1 AND video_cat = 'short';
-      `;
-      const shortVideoExistsResult = await pool.query(checkShortVideoExist, [trello_card_id]);
 
-      // Fetch writer_id, title, account_id
+      // Fetch writer_id, title
       const writerQuery = `
-        SELECT writer_id, title, account_id FROM script WHERE trello_card_id = $1;
+        SELECT writer_id, title FROM script WHERE trello_card_id = $1;
       `;
       const writerResult = await pool.query(writerQuery, [trello_card_id]);
+
+
       const writer_id = writerResult.rows[0]?.writer_id;
       const script_title = writerResult.rows[0]?.title;
-      let account_id = writerResult.rows[0]?.account_id;
-
+     
       for (const videoData of urlsToInsert) {
         try {
           console.log(`🔍 Checking if ${videoData.type} URL exists: ${videoData.url}`);
@@ -972,7 +980,7 @@ app.post("/api/updateStatus", async (req, res) => {
               writer_id,
               script_title,
               trello_card_id,
-              account_id,
+              videoData.account_id,
               videoData.type
             ]);
             
