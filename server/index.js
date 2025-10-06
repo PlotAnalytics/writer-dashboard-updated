@@ -555,7 +555,7 @@ const createTrelloCard = async (
 };
 
 app.post("/api/scripts", async (req, res) => {
-  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure } = req.body;
+  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason } = req.body;
   try {
     // Fetch Trello settings
     const settingsResult = await pool.query(
@@ -602,7 +602,7 @@ app.post("/api/scripts", async (req, res) => {
     const aiSubmissionsListID = "68d98dcf1469947d64157067";
 
     // Check if title contains "STL" keyword
-    const isSTL = title.includes("STL");
+    const isSTL = title.includes("[STL]");
 
     // CHeck if writer is AI
     const isAI = writer_id == 1010;
@@ -703,9 +703,9 @@ app.post("/api/scripts", async (req, res) => {
 
     // Insert script into the database with trello_card_id (only if no errors occurred)
     const { rows } = await pool.query(
-      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, created_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, CURRENT_TIMESTAMP) RETURNING *`,
-      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure]
+      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP) RETURNING *`,
+      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason]
     );
     const script = rows[0];
 
@@ -950,41 +950,21 @@ app.post("/api/updateStatus", async (req, res) => {
           if (urlExistsResult.rows.length === 0) {
             console.log(`✅ Inserting ${videoData.type} video: ${videoData.url}`);
             
-            const existsResult = videoData.type === 'long' ? longVideoExistsResult : shortVideoExistsResult;
-            
-            let videoQuery;
-            if (!existsResult.rows.length) {
-              videoQuery = `
-                INSERT INTO video
-                (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-                VALUES ($1, $2, $3, $4, $5, $6, $7)
-                RETURNING *;
-              `;
-            } else {
-              videoQuery = `
-                UPDATE video
-                SET url = $1,
-                    created = $2,
-                    writer_id = $3,
-                    script_title = $4,
-                    account_id = $6,
-                    video_cat = $7
-                WHERE trello_card_id = $5 AND video_cat = $7
-                RETURNING *;
-              `;
-            }
-            
-            const videoResult = await pool.query(videoQuery, [
+            const videoResult = await pool.query(`
+              INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
+              VALUES ($1, $2, $3, $4, $5, $6, $7)
+              RETURNING *;
+            `, [
               videoData.url,
-              timestamp,
-              writer_id,
-              script_title,
+              timestamp || new Date().toISOString(),
+              script.writer_id,
+              script.title,
               trello_card_id,
               videoData.account_id,
               videoData.type
             ]);
             
-            console.log(`🎬 ${videoData.type} video record created/updated: ${videoResult.rows[0].id}`);
+            console.log(`🎬 ${videoData.type} video record created: ${videoResult.rows[0].id}`);
           } else {
             console.log(`⚠️ ${videoData.type} video URL already exists: ${urlExistsResult.rows[0].id}`);
           }
@@ -6856,6 +6836,56 @@ app.post('/api/test-structure-migration', async (req, res) => {
       error: error.message,
       stack: error.stack
     });
+  }
+});
+
+// Chat proxy endpoint to avoid CORS issues with n8n
+app.post("/api/chat", async (req, res) => {
+  try {
+    const { message, userId, userName } = req.body;
+
+    if (!message) {
+      return res.status(400).json({ error: "Message is required" });
+    }
+
+    // Forward request to n8n webhook (Chat Trigger format)
+    const n8nResponse = await axios.post(
+      'https://plotpointe-ai.app.n8n.cloud/webhook/1c0d08f0-abd0-4bdc-beef-370c27aae1a0/chat',
+      {
+        action: "sendMessage",
+        sessionId: `${userId || 'anonymous'}-${Date.now()}`,
+        chatInput: message,
+        metadata: {
+          userId: userId || 'anonymous',
+          userName: userName || 'User',
+          timestamp: new Date().toISOString()
+        }
+      },
+      {
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        timeout: 10000 // 10 second timeout
+      }
+    );
+
+    // Return the response from n8n
+    res.json(n8nResponse.data);
+
+  } catch (error) {
+    console.error('Chat proxy error:', error.message);
+
+    if (error.code === 'ECONNABORTED') {
+      return res.status(408).json({ error: "Request timeout" });
+    }
+
+    if (error.response) {
+      return res.status(error.response.status).json({
+        error: error.response.data || "Error from chat service"
+      });
+    }
+
+    res.status(500).json({ error: "Internal server error" });
   }
 });
 

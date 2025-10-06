@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   Box,
@@ -33,7 +33,9 @@ import {
   Search as SearchIcon,
   Description as DescriptionIcon,
   Chat as ChatIcon,
-  Article as ArticleIcon
+  Article as ArticleIcon,
+  ContentCopy as CopyIcon,
+  InsertDriveFile as GoogleDocIcon
 } from '@mui/icons-material';
 import Layout from '../components/Layout.jsx';
 import { useAuth } from '../contexts/AuthContext.jsx';
@@ -190,6 +192,52 @@ const Content = () => {
     return docId ? coreConceptTitles[docId] : null;
   };
 
+  // Function to extract title text after first square brackets
+  const extractTitleAfterBrackets = (title) => {
+    if (!title) return '';
+
+    // Find the first closing bracket ]
+    const firstClosingBracket = title.indexOf(']');
+    if (firstClosingBracket === -1) {
+      // No brackets found, return the whole title
+      return title;
+    }
+
+    // Get text after the first ] and trim whitespace
+    const textAfterBrackets = title.substring(firstClosingBracket + 1).trim();
+
+    // If there are additional brackets (like [Core Concept 3]), remove them too
+    const secondOpeningBracket = textAfterBrackets.indexOf('[');
+    if (secondOpeningBracket !== -1) {
+      const secondClosingBracket = textAfterBrackets.indexOf(']', secondOpeningBracket);
+      if (secondClosingBracket !== -1) {
+        return textAfterBrackets.substring(secondClosingBracket + 1).trim();
+      }
+    }
+
+    return textAfterBrackets;
+  };
+
+  // Function to copy title to clipboard
+  const copyTitleToClipboard = async (title) => {
+    const cleanTitle = extractTitleAfterBrackets(title);
+    try {
+      await navigator.clipboard.writeText(cleanTitle);
+      console.log('✅ Title copied to clipboard:', cleanTitle);
+      console.log('📋 Original title:', title);
+      // You could add a toast notification here if needed
+    } catch (error) {
+      console.error('❌ Failed to copy title to clipboard:', error);
+      // Fallback for older browsers
+      const textArea = document.createElement('textarea');
+      textArea.value = cleanTitle;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+    }
+  };
+
   // Fetch writer-specific videos from InfluxDB and PostgreSQL
   const fetchContentData = async () => {
     setLoading(true);
@@ -223,30 +271,49 @@ const Content = () => {
 
       console.log('🎬 Fetching content for writer:', writerId, 'Range:', dateRange, 'Type:', videoTypeFilter, 'Tab:', tabValue);
 
-      // Use same data source for all tabs (including virals)
+      // Use different endpoints for virals vs regular content
       let responseData;
       try {
-        const { data } = await contentApi.getVideos({
-          writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
-          range: dateRange,
-          page: currentPage,
-          limit: videosPerPage,
-          type: videoTypeFilter // Pass virals type directly to backend
-        });
-        responseData = data;
-        console.log('✅ Got response from /api/writer/videos:', data);
-      } catch (influxError) {
-        console.log('⚠️ InfluxDB API failed, trying PostgreSQL fallback');
-        const response = await axios.get(`/api/writer/analytics`, {
-          params: {
-            writer_id: videoTypeFilter === 'virals' ? null : writerId, // No writer filter for virals
+        if (videoTypeFilter === 'virals') {
+          // Use dynamic virals endpoint - fetches ALL viral videos
+          const response = await axios.get('/api/analytics/public/virals-dynamic', {
+            params: {
+              limit: 2000 // Get all viral videos
+            }
+          });
+          responseData = response.data;
+          console.log('✅ Got response from /api/analytics/public/virals-dynamic (all viral videos):', responseData);
+        } else {
+          // Use regular endpoint for other content
+          const { data } = await contentApi.getVideos({
+            writer_id: writerId,
+            range: dateRange,
             page: currentPage,
             limit: videosPerPage,
-            type: videoTypeFilter // Pass virals type directly to backend
-          }
-        });
-        responseData = response.data;
-        console.log('✅ Got response from PostgreSQL fallback:', response.data);
+            type: videoTypeFilter
+          });
+          responseData = data;
+          console.log('✅ Got response from /api/writer/videos:', data);
+        }
+      } catch (influxError) {
+        console.log('⚠️ Primary API failed');
+        if (videoTypeFilter === 'virals') {
+          // NO FALLBACK for virals tab - fail cleanly
+          console.error('❌ Virals API failed, no fallback available');
+          throw new Error('Failed to load viral videos');
+        } else {
+          // For regular content, use analytics fallback
+          const response = await axios.get(`/api/writer/analytics`, {
+            params: {
+              writer_id: writerId,
+              page: currentPage,
+              limit: videosPerPage,
+              type: videoTypeFilter
+            }
+          });
+          responseData = response.data;
+          console.log('✅ Got response from analytics fallback:', responseData);
+        }
       }
 
       // Handle paginated response
@@ -258,6 +325,9 @@ const Content = () => {
           videos = responseData.videos;
           paginationData = responseData.pagination;
           setPagination(paginationData);
+        } else if (responseData.videos && responseData.totalVideos !== undefined) {
+          // Dynamic virals response - don't set pagination yet, wait for filtering
+          videos = responseData.videos;
         } else if (Array.isArray(responseData)) {
           // Legacy non-paginated response
           videos = responseData;
@@ -285,8 +355,8 @@ const Content = () => {
           );
         }
 
-        // Apply search filtering
-        if (searchQuery.trim()) {
+        // Apply search filtering (not for virals tab)
+        if (searchQuery.trim() && videoTypeFilter !== 'virals') {
           videos = videos.filter(video => {
             const title = video.title?.toLowerCase() || '';
             const url = video.url?.toLowerCase() || '';
@@ -304,21 +374,35 @@ const Content = () => {
           });
         }
 
-        // Apply virals-specific filtering: only show videos with 500k+ views and core concept titles
+        // For virals tab, filter to show only videos with Google Sheets matches
         if (videoTypeFilter === 'virals') {
           videos = videos.filter(video => {
-            // Must have views over 500,000
-            const views = video.views || 0;
-            if (views <= 500000) return false;
+            // Must have a core concept doc AND a title mapping from Google Sheets
+            if (!video.core_concept_doc) {
+              return false;
+            }
 
-            // Must have a core concept title
-            if (!video.core_concept_doc) return false;
             const title = getCoreConceptTitle(video.core_concept_doc);
-            if (!title) return false;
+            if (!title) {
+              return false; // Filter out videos without Google Sheets title mapping
+            }
 
-            return true;
+            return true; // Show only videos with Google Sheets title mapping
           });
-          console.log('🔥 Virals filtered: showing', videos.length, 'videos with 500k+ views and core concepts');
+          console.log('🔥 Virals tab: showing', videos.length, 'viral videos with Google Sheets matches');
+
+          // Re-sort after filtering for virals tab
+          videos = sortVideos(videos, sortBy, sortOrder, videoTypeFilter);
+
+          // Set pagination for virals after filtering
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalVideos: videos.length, // Use filtered count
+            videosPerPage: videos.length,
+            hasNextPage: false,
+            hasPrevPage: false
+          });
         }
 
         setContentData(videos);
@@ -326,12 +410,18 @@ const Content = () => {
 
         // Extract available core concept titles for filtering
         const uniqueTitles = new Set();
-        videos.forEach(video => {
+        console.log('🔍 Extracting core concept titles from', videos.length, 'videos');
+        videos.forEach((video, index) => {
           if (video.core_concept_doc) {
             const title = getCoreConceptTitle(video.core_concept_doc);
+            if (index < 3) { // Log first 3 for debugging
+              console.log(`📄 Video ${index}: core_concept_doc="${video.core_concept_doc}" -> title="${title}"`);
+            }
             if (title) {
               uniqueTitles.add(title);
             }
+          } else if (index < 3) {
+            console.log(`📄 Video ${index}: NO core_concept_doc`);
           }
         });
         // Sort core concept titles numerically by the number at the beginning
@@ -359,6 +449,7 @@ const Content = () => {
         });
 
         setAvailableCoreConceptTitles(sortedTitles);
+        console.log('🎯 Core concept titles extracted:', sortedTitles.length, 'titles:', sortedTitles);
 
         // Debug: Log video types in the response
         if (videos.length > 0) {
@@ -381,22 +472,49 @@ const Content = () => {
           });
         }
       } else {
-        console.log('⚠️ No video data received, using mock data');
-        setContentData(getMockData());
-        setPagination({
-          currentPage: 1,
-          totalPages: 1,
-          totalVideos: 2,
-          videosPerPage: 2,
-          hasNextPage: false,
-          hasPrevPage: false
-        });
+        if (videoTypeFilter === 'virals') {
+          // NO FALLBACK for virals tab - show empty state
+          console.log('⚠️ No viral video data received, showing empty state');
+          setContentData([]);
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalVideos: 0,
+            videosPerPage: 0,
+            hasNextPage: false,
+            hasPrevPage: false
+          });
+        } else {
+          console.log('⚠️ No video data received, using mock data');
+          setContentData(getMockData());
+          setPagination({
+            currentPage: 1,
+            totalPages: 1,
+            totalVideos: 2,
+            videosPerPage: 2,
+            hasNextPage: false,
+            hasPrevPage: false
+          });
+        }
       }
     } catch (err) {
       console.error('❌ Error fetching writer videos:', err);
       setError(err.message);
-      // Fallback to mock data
-      setContentData(getMockData());
+      if (videoTypeFilter === 'virals') {
+        // NO FALLBACK for virals tab - show empty state with error
+        setContentData([]);
+        setPagination({
+          currentPage: 1,
+          totalPages: 1,
+          totalVideos: 0,
+          videosPerPage: 0,
+          hasNextPage: false,
+          hasPrevPage: false
+        });
+      } else {
+        // Fallback to mock data for other tabs
+        setContentData(getMockData());
+      }
     } finally {
       setLoading(false);
     }
@@ -417,26 +535,25 @@ const Content = () => {
           bVal = b.views || 0;
           break;
         case 'title':
-          // For virals tab, sort by core concept numbers if available
           if (currentVideoTypeFilter === 'virals') {
-            const extractCoreConceptNumber = (video) => {
+            // For virals tab, sort by numbers in Google Sheets titles
+            const extractGoogleSheetsNumber = (video) => {
               if (!video.core_concept_doc) return 0;
-              const title = getCoreConceptTitle(video.core_concept_doc);
-              if (!title) return 0;
-              const match = title.match(/^(\d+)/);
-              const number = match ? parseInt(match[1], 10) : 0;
-              console.log(`🔍 Core concept for video "${video.title}": title="${title}", number=${number}`);
-              return number;
+              const googleSheetsTitle = getCoreConceptTitle(video.core_concept_doc);
+              if (!googleSheetsTitle) return 0;
+              const match = googleSheetsTitle.match(/^(\d+)/);
+              return match ? parseInt(match[1], 10) : 0;
             };
 
-            aVal = extractCoreConceptNumber(a);
-            bVal = extractCoreConceptNumber(b);
-            console.log(`📊 Comparing: ${aVal} vs ${bVal} (order: ${order})`);
+            aVal = extractGoogleSheetsNumber(a);
+            bVal = extractGoogleSheetsNumber(b);
 
-            // If no core concept numbers found, fall back to video title sorting
+            // If no numbers found, fall back to alphabetical sorting of Google Sheets titles
             if (aVal === 0 && bVal === 0) {
-              aVal = a.title?.toLowerCase() || '';
-              bVal = b.title?.toLowerCase() || '';
+              const titleA = getCoreConceptTitle(a.core_concept_doc) || '';
+              const titleB = getCoreConceptTitle(b.core_concept_doc) || '';
+              aVal = titleA.toLowerCase();
+              bVal = titleB.toLowerCase();
             }
           } else {
             // For other tabs, extract numbers from video titles for numerical sorting
@@ -526,7 +643,8 @@ const Content = () => {
 
   useEffect(() => {
     fetchContentData();
-  }, [sortBy, sortOrder, filterStatus, dateRange, currentPage, videoTypeFilter, searchQuery, coreConceptFilter]);
+  }, [sortBy, sortOrder, filterStatus, dateRange, currentPage, videoTypeFilter,
+      ...(videoTypeFilter !== 'virals' ? [searchQuery] : []), coreConceptFilter]);
 
   // Fetch core concept titles on component mount
   useEffect(() => {
@@ -631,6 +749,8 @@ const Content = () => {
     }
   };
 
+
+
   return (
     <Layout>
       <Box sx={{
@@ -691,8 +811,10 @@ const Content = () => {
               } else if (newValue === 3) {
                 console.log('🔄 Setting filter to: virals');
                 setVideoTypeFilter('virals'); // Virals tab
-                setSortBy('title'); // Default sort by core concept numbers for virals
-                setSortOrder('asc'); // Ascending order for numerical sorting
+                setSearchQuery(''); // Clear search when switching to virals
+                setCoreConceptFilter(''); // Clear core concept filter
+                setSortBy('title'); // Default sort by title (Google Sheets numbers)
+                setSortOrder('asc'); // Ascending order (1, 2, 3, ...)
               }
               setCurrentPage(1); // Reset to first page when changing tabs
             }}
@@ -721,14 +843,15 @@ const Content = () => {
           </Tabs>
         </Box>
 
-        {/* Filter Bar */}
-        <Box sx={{
-          display: 'flex',
-          alignItems: 'center',
-          gap: 2,
-          p: 2,
-          borderBottom: '1px solid #333'
-        }}>
+        {/* Filter Bar - Hidden for virals tab */}
+        {videoTypeFilter !== 'virals' && (
+          <Box sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 2,
+            p: 2,
+            borderBottom: '1px solid #333'
+          }}>
           <IconButton
             onClick={(e) => setFilterAnchor(e.currentTarget)}
             sx={{ color: '#888' }}
@@ -804,17 +927,19 @@ const Content = () => {
               Private
             </MenuItem>
           </Menu>
-        </Box>
+          </Box>
+        )}
 
-        {/* Modern Search Bar and Filters */}
-        <Box sx={{ p: 2, borderBottom: '1px solid #333' }}>
-          <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-            <TextField
-              fullWidth
-              placeholder="Search content by title or URL..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              size="small"
+        {/* Modern Search Bar and Filters - Hidden for virals tab */}
+        {videoTypeFilter !== 'virals' && (
+          <Box sx={{ p: 2, borderBottom: '1px solid #333' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <TextField
+                fullWidth
+                placeholder="Search content by title or URL..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                size="small"
             slotProps={{
               input: {
                 startAdornment: (
@@ -928,7 +1053,62 @@ const Content = () => {
             </FormControl>
           )}
           </Box>
-        </Box>
+          </Box>
+        )}
+
+        {/* Core Concept Filter for Virals Tab */}
+        {videoTypeFilter === 'virals' && (
+          <Box sx={{ p: 2, borderBottom: '1px solid #333' }}>
+            <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              <FormControl size="small" sx={{ minWidth: 200 }}>
+                <Select
+                  value={coreConceptFilter}
+                  onChange={(e) => setCoreConceptFilter(e.target.value)}
+                  displayEmpty
+                  sx={{
+                    background: 'rgba(255, 255, 255, 0.04)',
+                    backdropFilter: 'blur(5px)',
+                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                    borderRadius: '12px',
+                    color: 'white',
+                    transition: 'all 0.2s ease-in-out',
+                    '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                    '&:hover': {
+                      background: 'rgba(255, 255, 255, 0.08)',
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                    },
+                    '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.7)' }
+                  }}
+                >
+                  <MenuItem value="">
+                    <Typography sx={{ color: 'rgba(255, 255, 255, 0.5)', fontStyle: 'italic' }}>
+                      All Core Concepts
+                    </Typography>
+                  </MenuItem>
+                  {console.log('🎯 Dropdown render: availableCoreConceptTitles.length =', availableCoreConceptTitles.length) || availableCoreConceptTitles.length > 0 ? (
+                    availableCoreConceptTitles.map((title) => (
+                      <MenuItem key={title} value={title}>
+                        <Typography sx={{ color: 'white' }}>
+                          {title}
+                        </Typography>
+                      </MenuItem>
+                    ))
+                  ) : (
+                    <MenuItem disabled>
+                      <Typography sx={{ color: 'rgba(255, 255, 255, 0.3)', fontStyle: 'italic' }}>
+                        Loading titles...
+                      </Typography>
+                    </MenuItem>
+                  )}
+                </Select>
+              </FormControl>
+
+              <Typography variant="body2" sx={{ color: '#888', ml: 'auto' }}>
+                {pagination.totalVideos} videos found • Page {pagination.currentPage} of {pagination.totalPages}
+              </Typography>
+            </Box>
+          </Box>
+        )}
 
         {/* Virals Content */}
         {videoTypeFilter === 'virals' ? (
@@ -961,7 +1141,7 @@ const Content = () => {
                   <Button
                     onClick={() => handleSort('title')}
                     sx={{
-                      color: '#888',
+                      color: sortBy === 'title' ? '#667eea' : '#888',
                       textTransform: 'none',
                       p: 0,
                       minWidth: 'auto',
@@ -974,7 +1154,8 @@ const Content = () => {
                         sx={{
                           fontSize: 16,
                           ml: 0.5,
-                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none'
+                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none',
+                          color: '#667eea'
                         }}
                       />
                     )}
@@ -984,7 +1165,7 @@ const Content = () => {
                   <Button
                     onClick={() => handleSort('date')}
                     sx={{
-                      color: '#888',
+                      color: sortBy === 'date' ? '#667eea' : '#888',
                       textTransform: 'none',
                       p: 0,
                       minWidth: 'auto',
@@ -997,7 +1178,8 @@ const Content = () => {
                         sx={{
                           fontSize: 16,
                           ml: 0.5,
-                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none'
+                          transform: sortOrder === 'asc' ? 'rotate(180deg)' : 'none',
+                          color: '#667eea'
                         }}
                       />
                     )}
@@ -1118,7 +1300,7 @@ const Content = () => {
                           <Box
                             className="video-thumbnail"
                             component="img"
-                            src={item.preview || `https://img.youtube.com/vi/${item.url?.split('v=')[1]}/maxresdefault.jpg`}
+                            src={item.preview}
                             sx={{
                               width: 60,
                               height: 40,
@@ -1218,7 +1400,7 @@ const Content = () => {
                               sx={{
                                 color: 'white',
                                 fontWeight: 500,
-                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
+                                maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '320px' : '470px',
                                 overflow: 'hidden',
                                 textOverflow: 'ellipsis',
                                 whiteSpace: 'nowrap',
@@ -1228,6 +1410,24 @@ const Content = () => {
                             >
                               {item.title}
                             </Typography>
+                            <IconButton
+                              size="small"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                copyTitleToClipboard(item.title);
+                              }}
+                              sx={{
+                                color: '#888',
+                                padding: '2px',
+                                '&:hover': {
+                                  color: '#667eea',
+                                  backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                                }
+                              }}
+                              title="Copy title to clipboard"
+                            >
+                              <CopyIcon fontSize="small" />
+                            </IconButton>
                             {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                               <Typography
                                 variant="caption"
@@ -1721,7 +1921,7 @@ const Content = () => {
                     )}
                   </Button>
                 </TableCell>
-                <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>Account</TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, maxWidth: '120px' }}>Account</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1 }}>
                   <Button
                     onClick={() => handleSort('date')}
@@ -1791,13 +1991,14 @@ const Content = () => {
                     )}
                   </Button>
                 </TableCell>
+                <TableCell sx={{ color: '#888', border: 'none', py: 1, width: '60px', textAlign: 'center' }}>Script</TableCell>
                 <TableCell sx={{ color: '#888', border: 'none', py: 1 }}></TableCell>
               </TableRow>
             </TableHead>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <CircularProgress sx={{
                       background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                       borderRadius: '50%',
@@ -1830,7 +2031,7 @@ const Content = () => {
                 </TableRow>
               ) : error ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <Typography variant="body2" sx={{ color: '#ff6b6b', mb: 1 }}>
                       Error loading content: {error}
                     </Typography>
@@ -1844,7 +2045,7 @@ const Content = () => {
                 </TableRow>
               ) : currentContent.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={7} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
+                  <TableCell colSpan={8} sx={{ border: 'none', py: 4, textAlign: 'center' }}>
                     <Typography variant="body2" sx={{ color: '#888' }}>
                       No content found for this writer
                     </Typography>
@@ -1883,7 +2084,7 @@ const Content = () => {
                         <Box
                           className="video-thumbnail"
                           component="img"
-                          src={item.preview || `https://img.youtube.com/vi/${item.url?.split('v=')[1]}/maxresdefault.jpg`}
+                          src={item.preview}
                           sx={{
                             width: 60,
                             height: 40,
@@ -1982,7 +2183,7 @@ const Content = () => {
                             sx={{
                               color: 'white',
                               fontWeight: 500,
-                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '350px' : '500px',
+                              maxWidth: item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' ? '250px' : '350px',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
                               whiteSpace: 'nowrap',
@@ -1992,6 +2193,24 @@ const Content = () => {
                           >
                             {item.title}
                           </Typography>
+                          <IconButton
+                            size="small"
+                            onClick={(event) => {
+                              event.stopPropagation();
+                              copyTitleToClipboard(item.title);
+                            }}
+                            sx={{
+                              color: '#888',
+                              padding: '2px',
+                              '&:hover': {
+                                color: '#667eea',
+                                backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                              }
+                            }}
+                            title="Copy title to clipboard"
+                          >
+                            <CopyIcon fontSize="small" />
+                          </IconButton>
                           {item.core_concept_doc && getCoreConceptTitle(item.core_concept_doc) && videoTypeFilter === 'virals' && (
                             <Typography
                               variant="caption"
@@ -2018,45 +2237,76 @@ const Content = () => {
                       </Box>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, maxWidth: '120px' }}>
                     <Typography
                       variant="body2"
                       sx={{
                         color: item.account_name ? 'white' : '#888',
-                        fontStyle: item.account_name ? 'normal' : 'italic'
+                        fontStyle: item.account_name ? 'normal' : 'italic',
+                        fontSize: '0.8rem',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
                       }}
+                      title={item.account_name || `[No Account] ${item.writer_name || 'Writer'}`}
                     >
-                      {item.account_name || `[No Account] ${item.writer_name || 'Writer'}`}
+                      {item.account_name || `No Account`}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '100px' }}>
                     <Box>
-                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5, fontSize: '0.8rem' }}>
                         {formatDate(item.posted_date)}
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#888' }}>
+                      <Typography variant="caption" sx={{ color: '#888', fontSize: '0.7rem' }}>
                         {item.status || 'Published'}
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <Typography variant="body2" sx={{ color: 'white' }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '80px' }}>
+                    <Typography variant="body2" sx={{ color: 'white', fontSize: '0.8rem' }}>
                       {formatViews(item.views)}
                     </Typography>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
+                  <TableCell sx={{ border: 'none', py: 2, width: '90px' }}>
                     <Box>
-                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5 }}>
+                      <Typography variant="body2" sx={{ color: 'white', mb: 0.5, fontSize: '0.8rem' }}>
                         {calculateEngagement(item.likes, item.views)}%
                       </Typography>
-                      <Typography variant="caption" sx={{ color: '#888' }}>
+                      <Typography variant="caption" sx={{ color: '#888', fontSize: '0.7rem' }}>
                         {item.likes?.toLocaleString() || '0'} likes
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell sx={{ border: 'none', py: 2 }}>
-                    <IconButton sx={{ color: '#888' }}>
-                      <MoreVertIcon />
+                  <TableCell sx={{ border: 'none', py: 2, width: '60px', textAlign: 'center' }}>
+                    {item.google_doc_link ? (
+                      <IconButton
+                        size="small"
+                        onClick={(event) => {
+                          event.stopPropagation();
+                          window.open(item.google_doc_link, '_blank');
+                        }}
+                        sx={{
+                          color: '#888',
+                          padding: '4px',
+                          '&:hover': {
+                            color: '#667eea',
+                            backgroundColor: 'rgba(102, 126, 234, 0.1)'
+                          }
+                        }}
+                        title="Open Google Doc"
+                      >
+                        <GoogleDocIcon fontSize="small" />
+                      </IconButton>
+                    ) : (
+                      <Typography variant="caption" sx={{ color: '#555', fontSize: '10px' }}>
+                        -
+                      </Typography>
+                    )}
+                  </TableCell>
+                  <TableCell sx={{ border: 'none', py: 2, width: '50px' }}>
+                    <IconButton size="small" sx={{ color: '#888', padding: '4px' }}>
+                      <MoreVertIcon fontSize="small" />
                     </IconButton>
                   </TableCell>
                 </TableRow>

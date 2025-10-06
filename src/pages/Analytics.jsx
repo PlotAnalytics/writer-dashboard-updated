@@ -24,7 +24,8 @@ import {
   Whatshot as WhatshotIcon,
   FlashOn as FlashOnIcon,
   ThumbUp as ThumbUpIcon,
-  SentimentDissatisfied as SentimentDissatisfiedIcon
+  SentimentDissatisfied as SentimentDissatisfiedIcon,
+  CalendarToday as CalendarIcon
 } from '@mui/icons-material';
 import { keyframes } from '@mui/system';
 import ReactECharts from 'echarts-for-react';
@@ -603,15 +604,26 @@ const Analytics = () => {
         }
       };
 
-      // For STL writers with split data, override totalViews to show only shorts views
-      if (combinedData.hasSplitData && combinedData.shortsData && isSTLWriter()) {
+      // For STL writers with split data, calculate both shorts-only and combined totals
+      if (combinedData.hasSplitData && combinedData.shortsData && combinedData.longsData && isSTLWriter()) {
         const shortsOnlyViews = combinedData.shortsData.reduce((acc, item) => acc + (item.views || 0), 0);
-        console.log(`📊 STL Writer detected with split data - overriding totalViews from ${combinedData.totalViews.toLocaleString()} to shorts only: ${shortsOnlyViews.toLocaleString()}`);
+        const longsOnlyViews = combinedData.longsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        const combinedTotalViews = shortsOnlyViews + longsOnlyViews;
 
-        combinedData.totalViews = shortsOnlyViews;
-        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(shortsOnlyViews / combinedData.shortsData.length) : 0;
-        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(shortsOnlyViews / overviewData.totalSubmissions) : 0;
-        combinedData.summary.progressToTarget = (shortsOnlyViews / 100000000) * 100;
+        console.log(`📊 STL Writer detected with split data:`);
+        console.log(`📊 Shorts only: ${shortsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Longs only: ${longsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Combined total: ${combinedTotalViews.toLocaleString()}`);
+
+        // Store both values for the cards
+        combinedData.shortsOnlyViews = shortsOnlyViews;  // For "SHORTS VIEWS" card
+        combinedData.combinedTotalViews = combinedTotalViews;  // For "SHORTS + LONG" card
+
+        // Keep totalViews as combined for other calculations
+        combinedData.totalViews = combinedTotalViews;
+        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(combinedTotalViews / combinedData.shortsData.length) : 0;
+        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(combinedTotalViews / overviewData.totalSubmissions) : 0;
+        combinedData.summary.progressToTarget = (combinedTotalViews / 100000000) * 100;
       }
 
       console.log('📊 Final analytics data:', {
@@ -845,15 +857,26 @@ const Analytics = () => {
         }
       };
 
-      // For STL writers with split data, override totalViews to show only shorts views
-      if (combinedData.hasSplitData && combinedData.shortsData && isSTLWriter()) {
+      // For STL writers with split data, calculate both shorts-only and combined totals
+      if (combinedData.hasSplitData && combinedData.shortsData && combinedData.longsData && isSTLWriter()) {
         const shortsOnlyViews = combinedData.shortsData.reduce((acc, item) => acc + (item.views || 0), 0);
-        console.log(`📊 STL Writer detected with split data - overriding totalViews from ${combinedData.totalViews.toLocaleString()} to shorts only: ${shortsOnlyViews.toLocaleString()}`);
+        const longsOnlyViews = combinedData.longsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        const combinedTotalViews = shortsOnlyViews + longsOnlyViews;
 
-        combinedData.totalViews = shortsOnlyViews;
-        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(shortsOnlyViews / combinedData.shortsData.length) : 0;
-        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(shortsOnlyViews / overviewData.totalSubmissions) : 0;
-        combinedData.summary.progressToTarget = (shortsOnlyViews / 100000000) * 100;
+        console.log(`📊 STL Writer detected with split data (custom range):`);
+        console.log(`📊 Shorts only: ${shortsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Longs only: ${longsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Combined total: ${combinedTotalViews.toLocaleString()}`);
+
+        // Store both values for the cards
+        combinedData.shortsOnlyViews = shortsOnlyViews;  // For "SHORTS VIEWS" card
+        combinedData.combinedTotalViews = combinedTotalViews;  // For "SHORTS + LONG" card
+
+        // Keep totalViews as combined for other calculations
+        combinedData.totalViews = combinedTotalViews;
+        combinedData.avgDailyViews = combinedData.shortsData.length > 0 ? Math.round(combinedTotalViews / combinedData.shortsData.length) : 0;
+        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(combinedTotalViews / overviewData.totalSubmissions) : 0;
+        combinedData.summary.progressToTarget = (combinedTotalViews / 100000000) * 100;
       }
 
       console.log('📊 Final analytics data for custom range:', {
@@ -1640,7 +1663,7 @@ const Analytics = () => {
                   }
                 }}
               >
-                <Box sx={{ fontSize: '16px' }}>📅</Box>
+                <CalendarIcon sx={{ fontSize: '18px', opacity: 0.8 }} />
                 <Box sx={{ flex: 1, textAlign: 'left' }}>
                   {customStartDate === customEndDate ?
                     new Date(customStartDate).toLocaleDateString('en-US', {
@@ -1905,7 +1928,7 @@ const Analytics = () => {
                         lineHeight: 1,
                         filter: 'drop-shadow(0 2px 8px rgba(102, 126, 234, 0.4))'
                       }}>
-                        {formatNumber(analyticsData.totalViews || 0)}
+                        {formatNumber(analyticsData.isSTLWriter && analyticsData.combinedTotalViews !== undefined ? analyticsData.combinedTotalViews : analyticsData.totalViews || 0)}
                       </Typography>
 
                       {/* Circular Progress Meter */}
@@ -1977,17 +2000,86 @@ const Analytics = () => {
                         letterSpacing: '0.1px',
                         mb: 0.0625
                       }}>
-                        TOTAL VIEWS
+                        {analyticsData.isSTLWriter ? 'SHORTS + LONG' : 'TOTAL VIEWS'}
                       </Typography>
                       <Typography variant="caption" sx={{
                         color: 'rgba(255, 255, 255, 0.7)',
                         fontSize: '0.55rem',
                         display: 'block'
                       }}>
-                        {getDateRangeLabel()}
+                        {analyticsData.isSTLWriter ? 'Combined Views' : getDateRangeLabel()}
                       </Typography>
                     </Box>
                   </Box>
+
+                  {/* SHORTS Views Card - Only for STL Writers */}
+                  {isSTLWriter() && analyticsData.shortsViews !== undefined && (
+                    <Box sx={{
+                      background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.15) 0%, rgba(255, 142, 83, 0.08) 100%)',
+                      backdropFilter: 'blur(10px)',
+                      border: '1px solid rgba(255, 107, 107, 0.25)',
+                      borderRadius: 1,
+                      p: 0.75,
+                      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      minHeight: '30px',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      justifyContent: 'space-between',
+                      '&:hover': {
+                        transform: 'translateY(-1px)',
+                        boxShadow: '0 4px 16px rgba(255, 107, 107, 0.25)',
+                        border: '1px solid rgba(255, 107, 107, 0.4)',
+                        background: 'linear-gradient(135deg, rgba(255, 107, 107, 0.2) 0%, rgba(255, 142, 83, 0.12) 100%)',
+                      },
+                      '&::before': {
+                        content: '""',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        height: '3px',
+                        background: 'linear-gradient(90deg, #FF6B6B, #FF8E53)',
+                      }
+                    }}>
+                      <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'flex-start', mb: 0.125, pr: 9 }}>
+                        <Typography variant="h6" sx={{
+                          background: 'linear-gradient(135deg, #FF6B6B 0%, #FF8E53 100%)',
+                          WebkitBackgroundClip: 'text',
+                          WebkitTextFillColor: 'transparent',
+                          fontWeight: 700,
+                          fontSize: '1.1rem',
+                          lineHeight: 1,
+                          filter: 'drop-shadow(0 2px 8px rgba(255, 107, 107, 0.4))'
+                        }}>
+                          {formatNumber(
+                            analyticsData.isSTLWriter && analyticsData.shortsOnlyViews !== undefined
+                              ? analyticsData.shortsOnlyViews
+                              : (analyticsData.shortsViews || 0)
+                          )}
+                        </Typography>
+                      </Box>
+                      <Box>
+                        <Typography sx={{
+                          color: 'white',
+                          fontWeight: 600,
+                          fontSize: '0.6rem',
+                          letterSpacing: '0.1px',
+                          mb: 0.0625
+                        }}>
+                          SHORTS VIEWS
+                        </Typography>
+                        <Typography variant="caption" sx={{
+                          color: 'rgba(255, 255, 255, 0.7)',
+                          fontSize: '0.55rem',
+                          display: 'block'
+                        }}>
+                          ≤189 seconds
+                        </Typography>
+                      </Box>
+                    </Box>
+                  )}
 
                   {/* Submissions Card */}
                   {(analyticsData.totalSubmissions !== undefined || analyticsData.topVideos?.length) && (
@@ -2417,14 +2509,14 @@ const Analytics = () => {
 
                 </Box>
 
-                {/* Bottom Row: 4 cards side by side */}
+                {/* Bottom Row: 5 cards side by side */}
                 <Box sx={{
                   display: 'flex',
                   gap: 0.75,
                   '& > *': {
                     flex: '1 1 0',
                     minWidth: 0,
-                    maxWidth: 'calc(25% - 4.5px)'
+                    maxWidth: 'calc(20% - 3.6px)'
                   }
                 }}>
 
@@ -2432,7 +2524,7 @@ const Analytics = () => {
 
 
                   {/* Decent Videos Card */}
-                  {analyticsData && analyticsData.decentVideosCount !== undefined && analyticsData.decentVideosCount > 0 && (
+                  {analyticsData && analyticsData.decentVideosCount !== undefined && (
                     <Box
                       onClick={() => handleOpenVideoModal('decentVideos')}
                       sx={{
@@ -2549,7 +2641,7 @@ const Analytics = () => {
                   )}
 
                   {/* Flops Card */}
-                  {analyticsData && analyticsData.flopsCount !== undefined && analyticsData.flopsCount > 0 && (
+                  {analyticsData && analyticsData.flopsCount !== undefined && (
                     <Box
                       onClick={() => handleOpenVideoModal('flops')}
                       sx={{
@@ -2976,10 +3068,10 @@ const Analytics = () => {
                           let longsValue = 0;
 
                           params.forEach(param => {
-                            if (param.seriesName === 'Shorts Videos') {
-                              shortsValue = param.value || 0;
-                            } else if (param.seriesName === 'Long Videos') {
+                            if (param.seriesName === 'Long Videos') {
                               longsValue = param.value || 0;
+                            } else if (param.seriesName === 'Shorts Videos') {
+                              shortsValue = param.value || 0;
                             }
                           });
 
@@ -2991,14 +3083,14 @@ const Analytics = () => {
 
                               <div style="margin-bottom: 6px;">
                                 <span style="display: inline-block; width: 10px; height: 10px; background-color: #4fc3f7; border-radius: 50%; margin-right: 8px;"></span>
-                                <span style="color: #fff; font-weight: 500;">Shorts Videos:</span>
-                                <span style="color: #4fc3f7; font-weight: 600; float: right;">${formatNumber(shortsValue)}</span>
+                                <span style="color: #fff; font-weight: 500;">Long Videos:</span>
+                                <span style="color: #4fc3f7; font-weight: 600; float: right;">${formatNumber(longsValue)}</span>
                               </div>
 
                               <div style="margin-bottom: 8px;">
                                 <span style="display: inline-block; width: 10px; height: 10px; background-color: #FF9800; border-radius: 50%; margin-right: 8px;"></span>
-                                <span style="color: #fff; font-weight: 500;">Long Videos:</span>
-                                <span style="color: #FF9800; font-weight: 600; float: right;">${formatNumber(longsValue)}</span>
+                                <span style="color: #fff; font-weight: 500;">Shorts Videos:</span>
+                                <span style="color: #FF9800; font-weight: 600; float: right;">${formatNumber(shortsValue)}</span>
                               </div>
 
                               <div style="border-top: 1px solid #666; padding-top: 6px; margin-top: 8px;">
@@ -3110,12 +3202,12 @@ const Analytics = () => {
                       if (analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
                         console.log('📊 Rendering split chart with shorts and longs data');
 
-                        // Add Shorts series (blue line)
-                        const shortsData = analyticsData.shortsData.map(item => item.views);
-                        if (shortsData.some(val => val !== null)) {
+                        // Add Long Videos series (blue line) - for STL writers, chartData contains long videos (>189s)
+                        const longsData = analyticsData.longsData ? analyticsData.longsData.map(item => item.views) : chartData.map(item => item.views);
+                        if (longsData.some(val => val !== null)) {
                           series.push({
-                            name: 'Shorts Videos',
-                            data: shortsData,
+                            name: 'Long Videos',
+                            data: longsData,
                             type: 'line',
                             smooth: true,
                             lineStyle: {
@@ -3147,12 +3239,12 @@ const Analytics = () => {
                           });
                         }
 
-                        // Add Long Videos series (orange line)
-                        const longsData = analyticsData.longsData.map(item => item.views);
-                        if (longsData.some(val => val !== null)) {
+                        // Add Shorts Videos series (orange line)
+                        const shortsDataValues = analyticsData.shortsData.map(item => item.views);
+                        if (shortsDataValues.some(val => val !== null)) {
                           series.push({
-                            name: 'Long Videos',
-                            data: longsData,
+                            name: 'Shorts Videos',
+                            data: shortsDataValues,
                             type: 'line',
                             smooth: true,
                             lineStyle: {

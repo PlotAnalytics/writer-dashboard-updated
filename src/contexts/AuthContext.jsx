@@ -89,7 +89,8 @@ export const AuthProvider = ({ children }) => {
       const userData = {
         username: userName,
         role: role,
-        name: userName // Use username as display name
+        name: userName, // Use username as display name
+        secondaryRole: response.data.secondaryRole || null
       };
 
       try {
@@ -109,10 +110,11 @@ export const AuthProvider = ({ children }) => {
             localStorage.setItem('writerId', profileResponse.data.user.writerId.toString());
             console.log('✅ Writer ID stored after login:', profileResponse.data.user.writerId);
 
-            // Update user data with writer ID
+            // Update user data with writer ID and secondary role
             setUser({
               ...userData,
-              writerId: profileResponse.data.user.writerId
+              writerId: profileResponse.data.user.writerId,
+              secondaryRole: profileResponse.data.user.secondaryRole || null
             });
           }
         } catch (profileError) {

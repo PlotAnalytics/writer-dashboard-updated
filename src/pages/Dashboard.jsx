@@ -33,6 +33,7 @@ const Dashboard = () => {
   const [googleDocLink, setGoogleDocLink] = useState('');
   const [inspirationLink, setInspirationLink] = useState('');
   const [coreConceptDoc, setCoreConceptDoc] = useState(''); // New field for Remix only
+  const [viewerRetentionReason, setViewerRetentionReason] = useState(''); // New field for Remix only
   const [aiChatUrls, setAiChatUrls] = useState(['']); // Array to handle multiple URLs
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -340,6 +341,13 @@ const Dashboard = () => {
     };
   }, [onStatusUpdate, offStatusUpdate]);
 
+  // Check if current user should be excluded from viewer retention field
+  const isExcludedFromRetentionField = [
+    'sabreu8590', 'alex \'the\' kazarian', 'aironas liucvaikis', 'aironasliu',
+    'lucislust', 'lucisstl', 'jamez.garcia', 'monicastl', 'aiwriter',
+    'helinm', 'trentstride', 'ludo'
+  ].includes(user?.username?.toLowerCase());
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
@@ -371,14 +379,9 @@ const Dashboard = () => {
     }
     console.log('✅ Type validation passed');
 
-    // Validate Structure selection (skip for intern writers)
+    // Structure validation removed - no longer used
     const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
-    console.log('🏗️ Structure validation - selectedStructure:', selectedStructure, 'Type:', typeof selectedStructure, 'isIntern:', isIntern);
-    if (!isIntern && (!selectedStructure || selectedStructure === '' || selectedStructure === '-- Select Structure --')) {
-      console.log('❌ Structure validation failed - must select a valid structure');
-      setError('Please select a Structure from the dropdown options.');
-      return;
-    }
+    console.log('🏗️ Structure validation skipped - structures no longer used');
     console.log('✅ Structure validation passed');
 
     // Validate Script (Google Doc Link)
@@ -399,11 +402,7 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate Structure Explanation when "No Structure" is selected (skip for intern writers)
-    if (!isIntern && selectedStructure === "No Structure" && structureExplanation.trim().length < 50) {
-      setError("Structure explanation must be at least 50 characters when 'No Structure' is selected.");
-      return;
-    }
+    // Structure explanation validation removed - no longer used
 
     // Validate Inspiration Link for Remix and Re-write
     if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
@@ -427,6 +426,33 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Viewer Retention Reason for Remix only (skip for excluded users)
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && !viewerRetentionReason.trim()) {
+      setError("Please explain why the viewer will watch till the end (required for Remix scripts).");
+      return;
+    }
+
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length < 50) {
+      setError("Viewer retention reason must be at least 50 characters.");
+      return;
+    }
+
+    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 500) {
+      setError("Viewer retention reason must be no more than 500 characters.");
+      return;
+    }
+
+    // Validate Core Concept Doc for STL only
+    if (prefixType === 'STL' && !coreConceptDoc.trim()) {
+      setError("Core Concept Doc is required for STL scripts.");
+      return;
+    }
+
+    if (prefixType === 'STL' && !coreConceptDoc.includes('docs.google.com')) {
+      setError("Core Concept Doc must contain 'docs.google.com'.");
+      return;
+    }
+
     setError(''); // Clear previous errors
     setIsSubmitting(true);
 
@@ -444,10 +470,11 @@ const Dashboard = () => {
         title: fullTitle,
         googleDocLink: googleDocLink,
         aiChatUrl: aiChatUrlsString,
-        structure_explanation: (!isIntern && selectedStructure === "No Structure") ? structureExplanation : null,
+        structure_explanation: null, // No longer used
         inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
-        core_concept_doc: prefixType === 'Remix' ? coreConceptDoc : null,
-        structure: (!isIntern && selectedStructure) ? selectedStructure : null,
+        core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
+        viewer_retention_reason: (prefixType === 'Remix' && !isExcludedFromRetentionField) ? viewerRetentionReason : null,
+        structure: null, // No longer used
       });
 
       // Refresh the scripts list to get the latest data
@@ -490,6 +517,7 @@ const Dashboard = () => {
       setAiChatUrls(['']);
       setInspirationLink('');
       setCoreConceptDoc('');
+      setViewerRetentionReason('');
 
       setError(null);
       alert('Script submitted successfully! (Demo mode - API not available)');
@@ -505,8 +533,8 @@ const Dashboard = () => {
     if (e.target.value !== 'Remix' && e.target.value !== 'Re-write') {
       setInspirationLink('');
     }
-    // Clear core concept doc if not Remix
-    if (e.target.value !== 'Remix') {
+    // Clear core concept doc if not Remix or STL
+    if (e.target.value !== 'Remix' && e.target.value !== 'STL') {
       setCoreConceptDoc('');
     }
   };
@@ -873,8 +901,8 @@ const Dashboard = () => {
                   </Box>
                 </Box>
 
-                {/* Structure Selection - Hidden for intern writers */}
-                {!['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase()) && (
+                {/* Structure Selection - Hidden for all writers (no longer used) */}
+                {false && (
                   <>
                     <Box sx={{ mb: 2.5 }}>
                       <Typography variant="body2" sx={{
@@ -954,57 +982,7 @@ const Dashboard = () => {
                   </FormControl>
                 </Box>
 
-                {/* Structure Explanation (conditional) */}
-                {selectedStructure === "No Structure" && (
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="body2" sx={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      mb: 1.2,
-                      fontWeight: '700',
-                      fontSize: '13px'
-                    }}>
-                      Please explain your approach <span style={{ color: '#ff4444' }}>*</span>
-                    </Typography>
-
-                    {/* Container box for explanation */}
-                    <Box sx={{
-                      border: '2px solid rgba(255, 255, 255, 0.1)',
-                      borderRadius: '8px',
-                      padding: '20px',
-                      background: 'rgba(255, 255, 255, 0.02)'
-                    }}>
-                      <TextField
-                        fullWidth
-                        multiline
-                        rows={4}
-                        value={structureExplanation}
-                        onChange={(e) => setStructureExplanation(e.target.value)}
-                        placeholder="Explain your structure approach (minimum 50 characters)..."
-                        sx={{
-                          '& .MuiOutlinedInput-root': {
-                            background: 'transparent',
-                            border: 'none',
-                            '& fieldset': { border: 'none' },
-                          },
-                          '& .MuiInputBase-input': {
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            fontSize: '14px',
-                            '&::placeholder': {
-                              color: 'rgba(255, 255, 255, 0.4)',
-                            }
-                          },
-                        }}
-                      />
-                      <Typography variant="body2" sx={{
-                        mt: 1,
-                        fontSize: '14px',
-                        color: structureExplanation.length >= 50 ? '#4CAF50' : 'rgba(255, 255, 255, 0.6)'
-                      }}>
-                        {structureExplanation.length}/50 characters
-                      </Typography>
-                    </Box>
-                  </Box>
-                )}
+                {/* Structure Explanation (conditional) - Hidden */}
                   </>
                 )}
 
@@ -1137,6 +1115,117 @@ const Dashboard = () => {
 
                 {/* Core Concept Doc (conditional - Remix only) */}
                 {prefixType === 'Remix' && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Core Concept Doc <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      type="url"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={coreConceptDoc}
+                      onChange={(e) => setCoreConceptDoc(e.target.value)}
+                      required
+                      size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '& fieldset': { border: 'none' },
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                          },
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '10px 12px',
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Viewer Retention Reason (conditional - Remix only, excluded users don't see this) */}
+                {prefixType === 'Remix' && !isExcludedFromRetentionField && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Why will the viewer watch till the end? <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      multiline
+                      rows={3}
+                      value={viewerRetentionReason}
+                      onChange={(e) => setViewerRetentionReason(e.target.value)}
+                      placeholder="Explain what keeps viewers engaged (minimum 50 characters)"
+                      required
+                      inputProps={{ maxLength: 500 }}
+                      helperText={`${viewerRetentionReason.length}/500 characters (minimum 50 required)`}
+                      FormHelperTextProps={{
+                        sx: {
+                          color: viewerRetentionReason.length < 50
+                            ? '#ff4444'
+                            : viewerRetentionReason.length > 450
+                            ? '#ffa726'
+                            : 'rgba(255, 255, 255, 0.6)'
+                        }
+                      }}
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                          borderRadius: '8px',
+                          '& fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.1)',
+                          },
+                          '&:hover fieldset': {
+                            borderColor: 'rgba(255, 255, 255, 0.2)',
+                          },
+                          '&.Mui-focused fieldset': {
+                            borderColor: '#667eea',
+                          },
+                          '& input': {
+                            color: 'white',
+                            fontSize: '14px',
+                          },
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                        '& .MuiFormHelperText-root': {
+                          color: 'rgba(255, 255, 255, 0.6)',
+                          fontSize: '12px',
+                          marginTop: '4px'
+                        }
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Core Concept Doc (conditional - STL only) */}
+                {prefixType === 'STL' && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',

@@ -88,9 +88,26 @@ const WriterLeaderboard = ({ currentWriterName }) => {
       // Extract the actual data array from the response
       const leaderboardArray = data.data || data || [];
       console.log('🏆 Leaderboard Array:', leaderboardArray);
-      console.log('🏆 Array length:', leaderboardArray.length);
 
-      setLeaderboardData(leaderboardArray);
+      // Filter out excluded writers
+      const excludedWriters = [
+        "Jamez Garcia",
+        "Alexander 'the' Kazarian",
+        "Steven Abreu",
+        "A/B testing writer",
+        "ludo",
+        "gianmarco",
+        "AIwriter"
+      ];
+
+      const filteredLeaderboard = leaderboardArray.filter(writer =>
+        !excludedWriters.includes(writer.writer_name)
+      );
+
+      console.log('🏆 Filtered Leaderboard (excluded writers removed):', filteredLeaderboard);
+      console.log('🏆 Filtered Array length:', filteredLeaderboard.length);
+
+      setLeaderboardData(filteredLeaderboard);
     } catch (err) {
       console.error('❌ Error fetching leaderboard data:', err);
       setError(err.message);

@@ -73,6 +73,8 @@ const Layout = ({
   // Check if user is retention master or master editor
   const isRetentionMaster = user?.role === "retention_master";
   const isMasterEditor = user?.role === "master_editor";
+  const isFullTimeWriter = user?.secondaryRole === "Full Time";
+  const isRegularWriter = !isFullTimeWriter && !isRetentionMaster && !isMasterEditor;
 
   const menuItems =
     isRetentionMaster || hideNavigation
@@ -97,13 +99,31 @@ const Layout = ({
             description: "Overview & stats",
             badge: null,
           },
-          {
-            text: "Analytics",
-            icon: <InsightsIcon />,
-            path: "/analytics",
-            description: "Performance insights",
-            badge: "New",
-          },
+          // Conditionally show Analytics based on secondary_role
+          ...(isFullTimeWriter
+            ? [
+                // Full Time writers see Analytics Updated as "Analytics"
+                {
+                  text: "Analytics",
+                  icon: <InsightsIcon />,
+                  path: "/analytics-updated",
+                  description: "Performance insights",
+                  badge: "New",
+                }
+              ]
+            : isRegularWriter
+            ? [
+                // Regular writers (NULL/empty secondary_role) see only main Analytics
+                {
+                  text: "Analytics",
+                  icon: <InsightsIcon />,
+                  path: "/analytics",
+                  description: "Performance insights",
+                  badge: "New",
+                }
+              ]
+            : []
+          ),
           {
             text: "Content",
             icon: <VideoLibraryIcon />,
