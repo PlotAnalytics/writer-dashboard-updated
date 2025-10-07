@@ -116,6 +116,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Block known search engine crawlers by user agent
+app.use((req, res, next) => {
+  const userAgent = req.get('User-Agent') || '';
+  const blockedBots = [
+    'googlebot', 'bingbot', 'slurp', 'duckduckbot', 'baiduspider',
+    'yandexbot', 'facebookexternalhit', 'twitterbot', 'linkedinbot',
+    'crawler', 'spider', 'bot', 'scraper'
+  ];
+
+  const isBot = blockedBots.some(bot =>
+    userAgent.toLowerCase().includes(bot.toLowerCase())
+  );
+
+  if (isBot) {
+    console.log(`🚫 Blocked crawler: ${userAgent}`);
+    return res.status(403).send('Access denied for crawlers');
+  }
+
+  next();
+});
+
 // JWT authentication middleware
 const authenticateToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
