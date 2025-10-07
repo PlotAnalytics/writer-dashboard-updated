@@ -21,6 +21,7 @@ import RetentionMaster from "./pages/RetentionMaster.jsx";
 import MasterEditor from "./pages/MasterEditor.jsx";
 import WriterSettings from "./pages/WriterSettings.jsx";
 import ChatWidget from "./components/ChatWidget.jsx";
+import AccessGate from "./components/AccessGate.jsx";
 
 import "./styles/mobile-responsive.css";
 import "./styles/mobile-fixes.css";
@@ -179,11 +180,12 @@ const darkTheme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={darkTheme}>
-      <CssBaseline />
-      <AuthProvider>
-        <NotificationProvider>
-          <Router>
+    <AccessGate>
+      <ThemeProvider theme={darkTheme}>
+        <CssBaseline />
+        <AuthProvider>
+          <NotificationProvider>
+            <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
               <Route
@@ -288,10 +290,11 @@ function App() {
 
             {/* Chat Widget - appears after login */}
             <ChatWidget />
-          </Router>
-        </NotificationProvider>
-      </AuthProvider>
-    </ThemeProvider>
+            </Router>
+          </NotificationProvider>
+        </AuthProvider>
+      </ThemeProvider>
+    </AccessGate>
   );
 }
 
