@@ -30,3 +30,12 @@ Disallow: /
 
 # Block all crawlers from all content
 Crawl-delay: 86400
+
+# No sitemap provided
+# Sitemap:
+
+# Additional blocking directives
+Noindex: /
+Nofollow: /
+Noarchive: /
+Nosnippet: /
