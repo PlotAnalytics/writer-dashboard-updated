@@ -110,12 +110,6 @@ try {
 app.use(cors());
 app.use(express.json());
 
-// SEO blocking headers - prevent search engine indexing
-app.use((req, res, next) => {
-  res.setHeader('X-Robots-Tag', 'noindex, nofollow, noarchive, nosnippet, noimageindex');
-  next();
-});
-
 // JWT authentication middleware
 const authenticateToken = (req, res, next) => {
   const token = req.headers.authorization?.split(" ")[1];
