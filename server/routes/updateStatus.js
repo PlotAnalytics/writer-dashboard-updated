@@ -41,6 +41,26 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ error: "Missing required fields: trello_card_id, status" });
   }
 
+  let posting_account_id = null;
+
+  if (posting_account && typeof posting_account === 'string') {
+    try {
+      const result = await pool.query(
+        `SELECT id FROM posting_accounts WHERE account ILIKE $1 LIMIT 1`,
+        [`%${posting_account.trim()}%`]
+      );
+      
+      if (result.rows.length > 0) {
+        posting_account_id = result.rows[0].id;
+        console.log(`✅ Found posting account: ${posting_account} -> ID: ${posting_account_id}`);
+      } else {
+        console.log(`⚠️ Posting account not found: ${posting_account}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error looking up posting account:`, error);
+    }
+  }
+
   // Validate trello_card_id is a string
   if (typeof trello_card_id !== 'string' || !trello_card_id.trim()) {
     return res.status(400).json({ error: "Invalid trello_card_id" });
@@ -64,19 +84,28 @@ router.post('/', async (req, res) => {
   try {
     await client.query('BEGIN');
     
-    const scriptStatus = status.trim().toLowerCase();
+    const scriptStatus = status.trim();
     let updatedScript = null;
 
-    if (scriptStatus === "rejected") {
+    if (scriptStatus.toLowerCase() === "rejected") {
       // Update script with rejection
+      const updateFields = ['approval_status = $1', 'loom_url = $2', 'updated_at = NOW()'];
+      const updateValues = [scriptStatus, loom || null];
+
+      // Add account_id if posting_account was provided and found
+      if (posting_account_id) {
+        updateFields.push('account_id = $' + (updateValues.length + 1));
+        updateValues.push(posting_account_id);
+      }
+
+      updateValues.push(trello_card_id.trim()); // trello_card_id is always last
+
       const result = await client.query(`
         UPDATE script
-        SET approval_status = $1,
-            loom_url = $2,
-            updated_at = NOW()
-        WHERE trello_card_id = $3
+        SET ${updateFields.join(', ')}
+        WHERE trello_card_id = $${updateValues.length}
         RETURNING *;
-      `, [scriptStatus, loom || null, trello_card_id.trim()]);
+      `, updateValues);
 
       if (result.rows.length === 0) {
         await client.query('ROLLBACK');
@@ -86,7 +115,7 @@ router.post('/', async (req, res) => {
       updatedScript = result.rows[0];
       console.log(`❌ Script rejected: ${trello_card_id}`);
 
-    } else if (scriptStatus === "posted") {
+    } else if (scriptStatus.toLowerCase() === "posted") {
       // Validate posting account is provided and is a string
       if (!posting_account || typeof posting_account !== 'string' || !posting_account.trim()) {
         await client.query('ROLLBACK');
@@ -102,18 +131,11 @@ router.post('/', async (req, res) => {
         return res.status(400).json({ error: "At least one valid video URL required for posted status" });
       }
 
-      // Get posting account ID
-      const postAcctIdResult = await client.query(
-        `SELECT id FROM posting_accounts WHERE account = $1;`, 
-        [posting_account.trim()]
-      );
-      
-      if (postAcctIdResult.rows.length === 0) {
+      // Validate posting account was found
+      if (!posting_account_id) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: `Posting account not found: ${posting_account}` });
       }
-
-      const postAcctId = postAcctIdResult.rows[0].id;
 
       // Fetch script details
       const scriptResult = await client.query(
@@ -131,10 +153,10 @@ router.post('/', async (req, res) => {
       // Prepare video URLs to insert (already validated above)
       const urlsToInsert = [];
       if (hasShortVideo) {
-        urlsToInsert.push({ url: short_video_url.trim(), type: 'short', account_id: postAcctId });
+        urlsToInsert.push({ url: short_video_url.trim(), type: 'short', account_id: posting_account_id });
       }
       if (hasLongVideo) {
-        urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: postAcctId });
+        urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: posting_account_id });
       }
 
       // Upsert videos
@@ -194,14 +216,24 @@ router.post('/', async (req, res) => {
         }
       }
 
-      // Update script status
+      // Update script status and account_id for posted status
+      const updateFields = ['approval_status = $1', 'updated_at = NOW()'];
+      const updateValues = [scriptStatus];
+
+      // Add account_id if posting_account was provided and found
+      if (posting_account_id) {
+        updateFields.push('account_id = $' + (updateValues.length + 1));
+        updateValues.push(posting_account_id);
+      }
+
+      updateValues.push(trello_card_id.trim()); // trello_card_id is always last
+
       const scriptUpdateResult = await client.query(`
         UPDATE script
-        SET approval_status = $1,
-            updated_at = NOW()
-        WHERE trello_card_id = $2
+        SET ${updateFields.join(', ')}
+        WHERE trello_card_id = $${updateValues.length}
         RETURNING *;
-      `, [scriptStatus, trello_card_id.trim()]);
+      `, updateValues);
 
       updatedScript = { 
         ...scriptUpdateResult.rows[0], 
@@ -212,13 +244,23 @@ router.post('/', async (req, res) => {
 
     } else {
       // Handle other status changes
+      const updateFields = ['approval_status = $1', 'updated_at = NOW()'];
+      const updateValues = [scriptStatus];
+
+      // Add account_id if posting_account was provided and found
+      if (posting_account_id) {
+        updateFields.push('account_id = $' + (updateValues.length + 1));
+        updateValues.push(posting_account_id);
+      }
+
+      updateValues.push(trello_card_id.trim()); // trello_card_id is always last
+
       const scriptUpdateResult = await client.query(`
         UPDATE script
-        SET approval_status = $1,
-            updated_at = NOW()
-        WHERE trello_card_id = $2
+        SET ${updateFields.join(', ')}
+        WHERE trello_card_id = $${updateValues.length}
         RETURNING *;
-      `, [scriptStatus, trello_card_id.trim()]);
+      `, updateValues);
 
       if (scriptUpdateResult.rows.length === 0) {
         await client.query('ROLLBACK');
