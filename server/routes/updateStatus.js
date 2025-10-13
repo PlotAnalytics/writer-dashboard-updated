@@ -305,3 +305,5 @@ router.post('/', async (req, res) => {
     client.release();
   }
 });
+
+module.exports = router;
