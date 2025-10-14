@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
+import { useAuth } from "../contexts/AuthContext";
 import {
   Container,
   Form,
@@ -26,6 +27,7 @@ import MotivationalPopup from "../components/MotivationalPopup";
 
 
 const WriterDashboard = () => {
+  const { user } = useAuth();
   const [writer, setWriter] = useState(null);
   const [error, setError] = useState(null);
   const [title, setTitle] = useState("");
@@ -45,6 +47,9 @@ const WriterDashboard = () => {
   const [tropeList, setTropeList] = useState([]);
   const [structureList, setStructureList] = useState([]);
   const [selectedStructure, setSelectedStructure] = useState("");
+
+  // Check if user is an intern
+  const isIntern = user?.secondaryRole === 'Intern';
 
   const username = localStorage.getItem("username");
 
@@ -153,7 +158,7 @@ const WriterDashboard = () => {
 
     try {
       // Structure prefix removed - no longer used
-      const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase());
+      const isIntern = user?.secondaryRole === 'Intern';
       const structurePrefix = ""; // No longer used
 
       const fullTitle =
@@ -168,7 +173,7 @@ const WriterDashboard = () => {
         writer_id: writer.id,
         title: fullTitle,
         googleDocLink,
-        aiChatUrl,
+        aiChatUrl: isIntern ? '' : aiChatUrl,
       });
 
       setScripts([...scripts, response.data]);
@@ -414,7 +419,10 @@ const WriterDashboard = () => {
                     />
                   </Form.Group>
 
-                  <Form.Group style={{ marginBottom: "25px" }}>
+                  <Form.Group style={{
+                    marginBottom: "25px",
+                    display: isIntern ? 'none' : 'block'
+                  }}>
                     <Form.Label>AI Chat URL (Optional)</Form.Label>
                     <Form.Control
                       type="url"

@@ -24,6 +24,9 @@ const Dashboard = () => {
   const [submissions, setSubmissions] = useState([]);
   const [loading, setLoading] = useState(false);
 
+  // Check if user is an intern
+  const isIntern = user?.secondaryRole === 'Intern';
+
   // Form state matching reference code
   const [title, setTitle] = useState('');
   const [prefixType, setPrefixType] = useState('');
@@ -380,7 +383,7 @@ const Dashboard = () => {
     console.log('✅ Type validation passed');
 
     // Structure validation removed - no longer used
-    const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
+    const isIntern = user?.secondaryRole === 'Intern';
     console.log('🏗️ Structure validation skipped - structures no longer used');
     console.log('✅ Structure validation passed');
 
@@ -395,11 +398,13 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate AI Chat URLs - all fields must be filled
-    const hasEmptyUrls = aiChatUrls.some(url => url.trim() === '');
-    if (hasEmptyUrls) {
-      setError('All AI Chat URL fields must be filled. Please enter a URL in each field or remove empty fields.');
-      return;
+    // Validate AI Chat URLs - all fields must be filled (skip for interns)
+    if (!isIntern) {
+      const hasEmptyUrls = aiChatUrls.some(url => url.trim() === '');
+      if (hasEmptyUrls) {
+        setError('All AI Chat URL fields must be filled. Please enter a URL in each field or remove empty fields.');
+        return;
+      }
     }
 
     // Structure explanation validation removed - no longer used
@@ -463,7 +468,7 @@ const Dashboard = () => {
 
       // Filter out empty URLs and join multiple URLs with forward slashes
       const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
-      const aiChatUrlsString = filteredUrls.join(' / ');
+      const aiChatUrlsString = isIntern ? '' : filteredUrls.join(' / ');
 
       await axios.post('/api/scripts', {
         writer_id: writer.id,
@@ -793,7 +798,10 @@ const Dashboard = () => {
                 </Box>
 
                 {/* AI Chat URL(s) */}
-                <Box sx={{ mb: 2.5 }}>
+                <Box sx={{
+                  mb: 2.5,
+                  display: isIntern ? 'none' : 'block'
+                }}>
                   <Typography variant="body2" sx={{
                     color: 'rgba(255, 255, 255, 0.8)',
                     mb: 1.2,
