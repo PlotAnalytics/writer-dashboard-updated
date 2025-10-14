@@ -380,7 +380,7 @@ const Dashboard = () => {
     console.log('✅ Type validation passed');
 
     // Structure validation removed - no longer used
-    const isIntern = user?.secondaryRole === 'Intern';
+    const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(user?.username?.toLowerCase());
     console.log('🏗️ Structure validation skipped - structures no longer used');
     console.log('✅ Structure validation passed');
 
@@ -395,13 +395,11 @@ const Dashboard = () => {
       return;
     }
 
-    // Validate AI Chat URLs - all fields must be filled (skip for interns)
-    if (!isIntern) {
-      const hasEmptyUrls = aiChatUrls.some(url => url.trim() === '');
-      if (hasEmptyUrls) {
-        setError('All AI Chat URL fields must be filled. Please enter a URL in each field or remove empty fields.');
-        return;
-      }
+    // Validate AI Chat URLs - all fields must be filled
+    const hasEmptyUrls = aiChatUrls.some(url => url.trim() === '');
+    if (hasEmptyUrls) {
+      setError('All AI Chat URL fields must be filled. Please enter a URL in each field or remove empty fields.');
+      return;
     }
 
     // Structure explanation validation removed - no longer used
@@ -463,8 +461,8 @@ const Dashboard = () => {
       const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : '';
       const fullTitle = structurePrefix + `[${prefixType}] ${title}`;
 
-      // Filter out empty URLs and join multiple URLs with forward slashes (empty for interns)
-      const filteredUrls = isIntern ? [] : aiChatUrls.filter(url => url.trim() !== '');
+      // Filter out empty URLs and join multiple URLs with forward slashes
+      const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
       const aiChatUrlsString = filteredUrls.join(' / ');
 
       await axios.post('/api/scripts', {
@@ -794,17 +792,16 @@ const Dashboard = () => {
                   />
                 </Box>
 
-                {/* AI Chat URL(s) - Hidden for interns */}
-                {!isIntern && (
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="body2" sx={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      mb: 1.2,
-                      fontWeight: '700',
-                      fontSize: '13px'
-                    }}>
-                      AI Chat URL(s) <span style={{ color: '#ff4444' }}>*</span>
-                    </Typography>
+                {/* AI Chat URL(s) */}
+                <Box sx={{ mb: 2.5 }}>
+                  <Typography variant="body2" sx={{
+                    color: 'rgba(255, 255, 255, 0.8)',
+                    mb: 1.2,
+                    fontWeight: '700',
+                    fontSize: '13px'
+                  }}>
+                    AI Chat URL(s) <span style={{ color: '#ff4444' }}>*</span>
+                  </Typography>
 
                   {/* Container box for URL inputs and button */}
                   <Box sx={{
@@ -902,8 +899,7 @@ const Dashboard = () => {
                       + Add Another Chat
                     </Button>
                   </Box>
-                  </Box>
-                )}
+                </Box>
 
                 {/* Structure Selection - Hidden for all writers (no longer used) */}
                 {false && (
