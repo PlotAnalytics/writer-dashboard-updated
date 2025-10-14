@@ -23,9 +23,11 @@ import {
   faPlayCircle,
 } from "@fortawesome/free-solid-svg-icons";
 import MotivationalPopup from "../components/MotivationalPopup";
+import { useAuth } from "../contexts/AuthContext.jsx";
 
 
 const WriterDashboard = () => {
+  const { user } = useAuth();
   const [writer, setWriter] = useState(null);
   const [error, setError] = useState(null);
   const [title, setTitle] = useState("");
@@ -153,7 +155,7 @@ const WriterDashboard = () => {
 
     try {
       // Structure prefix removed - no longer used
-      const isIntern = ['quinn', 'kayla', 'gianmarco', 'seth'].includes(username?.toLowerCase());
+      const isIntern = user?.secondaryRole === 'Intern';
       const structurePrefix = ""; // No longer used
 
       const fullTitle =
@@ -168,7 +170,7 @@ const WriterDashboard = () => {
         writer_id: writer.id,
         title: fullTitle,
         googleDocLink,
-        aiChatUrl,
+        aiChatUrl: isIntern ? "" : aiChatUrl,
       });
 
       setScripts([...scripts, response.data]);
@@ -414,15 +416,18 @@ const WriterDashboard = () => {
                     />
                   </Form.Group>
 
-                  <Form.Group style={{ marginBottom: "25px" }}>
-                    <Form.Label>AI Chat URL (Optional)</Form.Label>
-                    <Form.Control
-                      type="url"
-                      value={aiChatUrl}
-                      onChange={(e) => setAiChatUrl(e.target.value)}
-                      placeholder="https://chatgpt.com/share/..."
-                    />
-                  </Form.Group>
+                  {/* AI Chat URL - Hidden for interns */}
+                  {!isIntern && (
+                    <Form.Group style={{ marginBottom: "25px" }}>
+                      <Form.Label>AI Chat URL (Optional)</Form.Label>
+                      <Form.Control
+                        type="url"
+                        value={aiChatUrl}
+                        onChange={(e) => setAiChatUrl(e.target.value)}
+                        placeholder="https://chatgpt.com/share/..."
+                      />
+                    </Form.Group>
+                  )}
 
                   <Button
                     type="submit"
