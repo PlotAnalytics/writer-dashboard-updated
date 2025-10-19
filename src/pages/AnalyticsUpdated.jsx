@@ -448,7 +448,33 @@ const AnalyticsUpdated = () => {
     }
   };
 
-  // Calculate bonus based on monthly views
+  // Calculate progress based on user role and views
+  const calculateRoleBasedProgress = (views, isMonthly = true) => {
+    const userRole = user?.secondaryRole;
+    const viewsInMillions = views / 1000000;
+
+    console.log('🎯 Role-based progress calculation:', { userRole, views, viewsInMillions, isMonthly });
+
+    // For Full Time, Head, Misc, Sponsor - use monthly bonus logic
+    if (['Full Time', 'Head', 'Misc', 'Sponsor'].includes(userRole)) {
+      return calculateBonus(views);
+    }
+
+    // For STL - use level system (all-time views)
+    if (userRole === 'STL') {
+      return calculateSTLProgress(views);
+    }
+
+    // For Intern and Part Time - use promotion thresholds (all-time views)
+    if (['Intern', 'Part Time'].includes(userRole)) {
+      return calculatePromotionProgress(views, userRole);
+    }
+
+    // Default to bonus calculation for unknown roles
+    return calculateBonus(views);
+  };
+
+  // Calculate bonus based on monthly views (Full Time logic)
   const calculateBonus = (monthlyViews) => {
     const viewsInMillions = monthlyViews / 1000000;
     let totalBonus = 0;
@@ -512,6 +538,85 @@ const AnalyticsUpdated = () => {
     return { totalBonus, progress, nextMilestone, currentViews: viewsInMillions };
   };
 
+  // Calculate STL level progress (all-time views)
+  const calculateSTLProgress = (allTimeViews) => {
+    const viewsInMillions = allTimeViews / 1000000;
+
+    const levels = [
+      { level: 1, threshold: 15, label: 'Level 1' },
+      { level: 2, threshold: 30, label: 'Level 2' },
+      { level: 3, threshold: 50, label: 'Level 3' },
+      { level: 4, threshold: 75, label: 'Level 4' },
+      { level: 5, threshold: 100, label: 'Level 5' }
+    ];
+
+    let currentLevel = 0;
+    let nextMilestone = 15;
+    let progress = 0;
+
+    // Find current level
+    for (let i = 0; i < levels.length; i++) {
+      if (viewsInMillions >= levels[i].threshold) {
+        currentLevel = levels[i].level;
+        if (i < levels.length - 1) {
+          nextMilestone = levels[i + 1].threshold;
+        } else {
+          nextMilestone = levels[i].threshold; // Max level reached
+        }
+      }
+    }
+
+    // Calculate progress to next level
+    if (currentLevel === 0) {
+      // Not yet at Level 1
+      progress = Math.max(0, (viewsInMillions / 15) * 100);
+    } else if (currentLevel < 5) {
+      // Between levels
+      const currentThreshold = levels[currentLevel - 1].threshold;
+      const nextThreshold = levels[currentLevel].threshold;
+      const progressInRange = viewsInMillions - currentThreshold;
+      const milestoneRange = nextThreshold - currentThreshold;
+      progress = Math.max(0, (progressInRange / milestoneRange) * 100);
+    } else {
+      // Max level reached
+      progress = 100;
+    }
+
+    return {
+      totalBonus: 0, // STL always gets $0 bonus (they have level system)
+      progress,
+      nextMilestone,
+      currentViews: viewsInMillions,
+      currentLevel: currentLevel || 1,
+      levelLabel: currentLevel > 0 ? `Level ${currentLevel}` : 'No Level'
+    };
+  };
+
+  // Calculate promotion progress for Intern/Part Time (all-time views)
+  const calculatePromotionProgress = (allTimeViews, currentRole) => {
+    const viewsInMillions = allTimeViews / 1000000;
+
+    let nextMilestone, progress, nextRole;
+
+    if (currentRole === 'Intern') {
+      nextMilestone = 15;
+      nextRole = 'Part Time';
+      progress = Math.max(0, (viewsInMillions / 15) * 100);
+    } else if (currentRole === 'Part Time') {
+      nextMilestone = 30;
+      nextRole = 'Full Time';
+      progress = Math.max(0, ((viewsInMillions - 15) / 15) * 100); // Progress from 15M to 30M
+    }
+
+    return {
+      totalBonus: 0, // Always $0 bonus for Intern and Part Time
+      progress: Math.min(progress, 100),
+      nextMilestone,
+      currentViews: viewsInMillions,
+      nextRole
+    };
+  };
+
   // Calculate target average daily views needed for next bonus tier
   const calculateTargetDailyViews = () => {
     console.log('🎯 Target calculation debug:', {
@@ -554,66 +659,107 @@ const AnalyticsUpdated = () => {
     return targetDailyViews;
   };
 
-  // Fetch monthly bonus data (always current calendar month, independent of date filter)
-  const fetchMonthlyBonusData = async () => {
+  // Fetch progress data based on user role
+  const fetchProgressData = async () => {
     try {
-      const token = localStorage.getItem('token');
-      let writerId = user?.writerId || localStorage.getItem('writerId');
+      console.log('🔄 Fetching role-based progress data...');
 
-      if (!token || !writerId) return;
+      // Fetch progress data based on user role
+      await fetchRoleBasedProgressData();
 
-      // Always get current calendar month date range for bonus calculation (independent of main filter)
-      const now = new Date();
-      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
-      const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+    } catch (error) {
+      console.error('❌ Error in progress fetch:', error);
+    }
+  };
 
-      const formatDate = (date) => {
-        // Use local date formatting to avoid timezone conversion issues
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}-${month}-${day}`;
-      };
+  // Fetch progress data based on user role
+  const fetchRoleBasedProgressData = async () => {
+    try {
+      console.log('🎯 Progress: Starting role-based fetch for role:', user?.secondaryRole);
 
-      const params = {
-        start_date: formatDate(startOfMonth),
-        end_date: formatDate(endOfMonth)
-      };
+      const userRole = user?.secondaryRole;
+      let progressData;
 
-      console.log('🎯 Bonus Progress: Fetching calendar month data from', formatDate(startOfMonth), 'to', formatDate(endOfMonth));
+      // For Full Time, Head, Misc, Sponsor - use monthly views
+      if (['Full Time', 'Head', 'Misc', 'Sponsor'].includes(userRole)) {
+        progressData = await fetchMonthlyProgressData();
+      }
+      // For STL, Intern, Part Time - use all-time views
+      else if (['STL', 'Intern', 'Part Time'].includes(userRole)) {
+        progressData = await fetchAllTimeProgressData();
+      }
+      // Default to monthly for unknown roles
+      else {
+        progressData = await fetchMonthlyProgressData();
+      }
 
-      const overviewResult = await analyticsApi.getOverview({
-        params: params
-      });
+      setMonthlyBonusData(progressData);
 
-      const monthlyViews = overviewResult.data?.totalViews || 0;
-      console.log('🎯 Bonus Progress: Calendar month views =', monthlyViews);
-
-      const bonusData = calculateBonus(monthlyViews);
-      console.log('🎯 Bonus Data:', {
-        monthlyViews,
-        totalBonus: bonusData.totalBonus,
-        progress: bonusData.progress,
-        nextMilestone: bonusData.nextMilestone,
-        currentViews: bonusData.currentViews
-      });
-
-      setMonthlyBonusData(bonusData);
-
-      // Update progress animation with calculated progress - start from 0 for cool effect (only once and after page loads)
-      if (!hasAnimated && bonusData.progress > 0 && pageFullyLoaded) {
-        console.log('🎯 Animation: Starting progress animation from 0% to', bonusData.progress, '% (page fully loaded)');
+      // Update progress animation
+      if (!hasAnimated && progressData.progress > 0 && pageFullyLoaded) {
+        console.log('🎯 Animation: Starting progress animation from 0% to', progressData.progress, '% (page fully loaded)');
         setHasAnimated(true);
         setProgressAnimation(0);
         setTimeout(() => {
-          console.log('🎯 Animation: Setting progress to', bonusData.progress, '% after 1.2s delay');
-          setProgressAnimation(bonusData.progress);
-        }, 1200); // Longer delay for more anticipation
+          console.log('🎯 Animation: Setting progress to', progressData.progress, '% after 1.2s delay');
+          setProgressAnimation(progressData.progress);
+        }, 1200);
       }
 
     } catch (error) {
-      console.error('Error fetching monthly bonus data:', error);
+      console.error('Error fetching role-based progress data:', error);
     }
+  };
+
+  // Fetch monthly progress data (for Full Time roles)
+  const fetchMonthlyProgressData = async () => {
+    console.log('🎯 Fetching monthly progress data...');
+
+    const token = localStorage.getItem('token');
+    const writerId = user?.writerId || localStorage.getItem('writerId');
+    if (!token || !writerId) return { progress: 0, nextMilestone: 55, currentViews: 0 };
+
+    // Get current calendar month range
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+
+    const formatDate = (date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
+
+    const params = {
+      start_date: formatDate(startOfMonth),
+      end_date: formatDate(endOfMonth)
+    };
+
+    const overviewResult = await analyticsApi.getOverview({ params });
+    const monthlyViews = overviewResult.data?.totalViews || 0;
+
+    console.log('🎯 Monthly views:', monthlyViews);
+    return calculateRoleBasedProgress(monthlyViews, true);
+  };
+
+  // Fetch all-time progress data (for STL, Intern, Part Time)
+  const fetchAllTimeProgressData = async () => {
+    console.log('🎯 Fetching all-time progress data...');
+
+    const token = localStorage.getItem('token');
+    const writerId = user?.writerId || localStorage.getItem('writerId');
+    if (!token || !writerId) return { progress: 0, nextMilestone: 15, currentViews: 0 };
+
+    // Get all-time views (no date filter)
+    const overviewResult = await analyticsApi.getOverview({
+      params: {} // No date filter for all-time
+    });
+
+    const allTimeViews = overviewResult.data?.totalViews || 0;
+
+    console.log('🎯 All-time views:', allTimeViews);
+    return calculateRoleBasedProgress(allTimeViews, false);
   };
 
   // Fetch YTD (Year-to-Date) 2025 data
@@ -779,6 +925,33 @@ const AnalyticsUpdated = () => {
         combinedData.viralRate = 0;
         combinedData.decentRate = 0;
         combinedData.flopRate = 0;
+      }
+
+      // For STL writers, fetch split data (shorts vs longs) like main analytics page
+      if (isSTLWriter() && overviewData.hasSplitData && overviewData.shortsData && overviewData.longsData) {
+        console.log('📊 STL Writer detected with split data');
+
+        // Calculate shorts-only and combined totals
+        const shortsOnlyViews = overviewData.shortsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        const longsOnlyViews = overviewData.longsData.reduce((acc, item) => acc + (item.views || 0), 0);
+        const combinedTotalViews = shortsOnlyViews + longsOnlyViews;
+
+        console.log(`📊 STL Writer split data:`);
+        console.log(`📊 Shorts only (≤189s): ${shortsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Longs only (>189s): ${longsOnlyViews.toLocaleString()}`);
+        console.log(`📊 Combined total: ${combinedTotalViews.toLocaleString()}`);
+
+        // Add split data to combinedData
+        combinedData.hasSplitData = true;
+        combinedData.shortsData = overviewData.shortsData;
+        combinedData.longsData = overviewData.longsData;
+        combinedData.shortsOnlyViews = shortsOnlyViews;  // For "SHORTS VIEWS" card
+        combinedData.combinedTotalViews = combinedTotalViews;  // For "Total Views" card
+
+        // Update totalViews to show combined for STL writers
+        combinedData.totalViews = combinedTotalViews;
+        combinedData.avgDailyViews = overviewData.shortsData.length > 0 ? Math.round(combinedTotalViews / overviewData.shortsData.length) : 0;
+        combinedData.avgVideoViews = overviewData.totalSubmissions > 0 ? Math.round(combinedTotalViews / overviewData.totalSubmissions) : 0;
       }
 
       setAnalyticsData(combinedData);
@@ -1306,7 +1479,7 @@ const AnalyticsUpdated = () => {
       fetchAnalytics();
     }
     fetchRealtimeData();
-    fetchMonthlyBonusData(); // Always fetch current calendar month for bonus (independent of date filter)
+    fetchProgressData(); // Fetch role-based progress data
     fetchScriptSubmissionData(); // Fetch script submission data for tooltip
 
     // Fetch YTD data (independent of date filter, always shows 2025 data)
@@ -1886,7 +2059,7 @@ const AnalyticsUpdated = () => {
                       mb: 1,
                       fontSize: { xs: '12px', md: '14px' }
                     }}>
-                      Shorts Views
+                      Total Views
                     </Typography>
                     <Typography variant="h4" sx={{
                       color: 'white',
@@ -1911,11 +2084,25 @@ const AnalyticsUpdated = () => {
                       fontWeight: 700,
                       fontSize: { xs: '20px', md: '32px' }
                     }}>
-                      ${monthlyBonusData.totalBonus.toLocaleString()}
+                      {(() => {
+                        const userRole = user?.secondaryRole;
+                        // Interns and Part Time get $0 bonus
+                        if (['Intern', 'Part Time'].includes(userRole)) {
+                          return '$0';
+                        }
+                        // STL gets $0 bonus (they have level system instead)
+                        else if (userRole === 'STL') {
+                          return '$0';
+                        }
+                        // Full Time, Head, Misc, Sponsor get actual bonus calculation
+                        else {
+                          return `$${monthlyBonusData.totalBonus?.toLocaleString() || '0'}`;
+                        }
+                      })()}
                     </Typography>
                   </Box>
 
-                  {/* Right: Bonus Progress */}
+                  {/* Right: Role-based Progress */}
                   <Box sx={{ minWidth: { xs: '100%', md: '200px' } }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255,255,255,0.7)',
@@ -1923,7 +2110,12 @@ const AnalyticsUpdated = () => {
                       fontSize: { xs: '12px', md: '14px' },
                       textAlign: { xs: 'left', md: 'center' }
                     }}>
-                      Bonus Progress
+                      {(() => {
+                        const userRole = user?.secondaryRole;
+                        if (userRole === 'STL') return 'Level Progress';
+                        if (['Intern', 'Part Time'].includes(userRole)) return 'Promotion Progress';
+                        return 'Bonus Progress';
+                      })()}
                     </Typography>
                     <Typography variant="h6" sx={{
                       color: 'white',
@@ -1932,11 +2124,43 @@ const AnalyticsUpdated = () => {
                       mb: 1,
                       textAlign: 'center'
                     }}>
-                      {monthlyBonusData.currentViews?.toFixed(1) || '0.0'}<Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}>M</Typography> / {monthlyBonusData.nextMilestone}
-                      <Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}> M → +${monthlyBonusData.nextMilestone >= 80 ? '375' : (() => {
-                        const tiers = { 55: '250', 60: '250', 65: '275', 70: '300', 75: '350', 80: '375' };
-                        return tiers[monthlyBonusData.nextMilestone] || '375';
-                      })()} next</Typography>
+                      {(() => {
+                        const userRole = user?.secondaryRole;
+                        const currentViews = monthlyBonusData.currentViews?.toFixed(1) || '0.0';
+                        const nextMilestone = monthlyBonusData.nextMilestone;
+
+                        if (userRole === 'STL') {
+                          const currentLevel = monthlyBonusData.currentLevel || 1;
+                          const nextLevel = currentLevel < 5 ? currentLevel + 1 : 5;
+                          return (
+                            <>
+                              {currentViews}<Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}>M</Typography> / {nextMilestone}
+                              <Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}> M → Level {nextLevel}</Typography>
+                            </>
+                          );
+                        } else if (['Intern', 'Part Time'].includes(userRole)) {
+                          const nextRole = monthlyBonusData.nextRole || (userRole === 'Intern' ? 'Part Time' : 'Full Time');
+                          // For interns, don't show "Intern" in the display, just show progress to Part Time
+                          const displayNextRole = userRole === 'Intern' ? 'Part Time' : nextRole;
+                          return (
+                            <>
+                              {currentViews}<Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}>M</Typography> / {nextMilestone}
+                              <Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}> M → {displayNextRole}</Typography>
+                            </>
+                          );
+                        } else {
+                          // Full Time, Head, Misc, Sponsor - show bonus
+                          return (
+                            <>
+                              {currentViews}<Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}>M</Typography> / {nextMilestone}
+                              <Typography component="span" sx={{ fontSize: '16px', color: 'rgba(255,255,255,0.7)' }}> M → +${nextMilestone >= 80 ? '375' : (() => {
+                                const tiers = { 55: '250', 60: '250', 65: '275', 70: '300', 75: '350', 80: '375' };
+                                return tiers[nextMilestone] || '375';
+                              })()} next</Typography>
+                            </>
+                          );
+                        }
+                      })()}
                     </Typography>
 
                     {/* Progress Bar */}
@@ -2003,12 +2227,28 @@ const AnalyticsUpdated = () => {
                             },
                             itemWidth: 20,
                             itemHeight: 12,
-                            data: [
-                              {
-                                name: 'Daily Views',
-                                icon: 'circle'
+                            data: (() => {
+                              // For STL writers with split data, show both lines in legend
+                              if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
+                                return [
+                                  {
+                                    name: 'Long Videos',
+                                    icon: 'circle'
+                                  },
+                                  {
+                                    name: 'Shorts Videos',
+                                    icon: 'circle'
+                                  }
+                                ];
                               }
-                            ]
+                              // Default single line for non-STL writers
+                              return [
+                                {
+                                  name: 'Daily Views',
+                                  icon: 'circle'
+                                }
+                              ];
+                            })()
                           },
                           tooltip: {
                             trigger: 'axis',
@@ -2023,13 +2263,31 @@ const AnalyticsUpdated = () => {
                               const date = params[0]?.axisValue || 'N/A';
 
                               // Process each series in the tooltip
-                              params.forEach((param, index) => {
-                                if (param.seriesName === 'Daily Views') {
-                                  const views = param.value || 0;
+                              let totalViews = 0;
+                              let shortsViews = 0;
+                              let longsViews = 0;
+                              let submissions = 0;
 
-                                  // Get script submission data using UTC date processing
+                              params.forEach((param, index) => {
+                                const views = param.value || 0;
+
+                                if (param.seriesName === 'Daily Views') {
+                                  totalViews = views;
+                                } else if (param.seriesName === 'Long Videos') {
+                                  longsViews = views;
+                                  totalViews += views;
+                                } else if (param.seriesName === 'Shorts Videos') {
+                                  shortsViews = views;
+                                  totalViews += views;
+                                } else if (param.seriesName === 'Next Bonus Target') {
+                                  const targetViews = param.value || 0;
+                                  tooltipContent += `<br/><span style="color: #FFA726;">Target: ${formatNumber(targetViews)}/day for next bonus tier</span>`;
+                                  return; // Skip submission calculation for target line
+                                }
+
+                                // Get script submission data using UTC date processing (only once)
+                                if (submissions === 0) {
                                   const dataIndex = param.dataIndex;
-                                  let submissions = 0;
                                   if (dataIndex !== undefined && analyticsData?.aggregatedViewsData?.[dataIndex]) {
                                     const originalDate = analyticsData.aggregatedViewsData[dataIndex].time;
                                     // Convert to YYYY-MM-DD format using UTC to avoid timezone issues
@@ -2046,13 +2304,18 @@ const AnalyticsUpdated = () => {
                                     }
                                     submissions = scriptSubmissionData[dateKey] || 0;
                                   }
-
-                                  tooltipContent = `${date}<br/>Views: ${formatNumber(views)}<br/>Script Submissions: ${submissions}`;
-                                } else if (param.seriesName === 'Next Bonus Target') {
-                                  const targetViews = param.value || 0;
-                                  tooltipContent += `<br/><span style="color: #FFA726;">Target: ${formatNumber(targetViews)}/day for next bonus tier</span>`;
                                 }
                               });
+
+                              // Build tooltip content based on whether we have split data
+                              if (isSTLWriter() && analyticsData.hasSplitData && (shortsViews > 0 || longsViews > 0)) {
+                                tooltipContent = `${date}<br/>`;
+                                if (longsViews > 0) tooltipContent += `Long Videos: ${formatNumber(longsViews)}<br/>`;
+                                if (shortsViews > 0) tooltipContent += `Shorts Videos: ${formatNumber(shortsViews)}<br/>`;
+                                tooltipContent += `Total: ${formatNumber(totalViews)}<br/>Script Submissions: ${submissions}`;
+                              } else {
+                                tooltipContent = `${date}<br/>Views: ${formatNumber(totalViews)}<br/>Script Submissions: ${submissions}`;
+                              }
 
                               return tooltipContent;
                             }
@@ -2081,13 +2344,33 @@ const AnalyticsUpdated = () => {
                             type: 'value',
                             scale: true, // Enable auto-scaling
                             min: (value) => {
-                              // Calculate min/max based on views data, but include target line if reasonable
+                              // For STL writers with split data, consider both lines
+                              if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
+                                const shortsViews = analyticsData.shortsData.map(item => item.views);
+                                const longsViews = analyticsData.longsData.map(item => item.views);
+                                const allViews = [...shortsViews, ...longsViews];
+                                const minViews = Math.min(...allViews);
+                                const calculatedMin = Math.max(0, Math.floor(minViews * 0.9));
+                                console.log('📊 Y-axis min calculation for STL:', { shortsViews, longsViews, minViews, calculatedMin });
+                                return calculatedMin;
+                              }
+                              // For non-STL writers, use aggregated data
                               const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
                               const minViews = Math.min(...viewsData);
                               return Math.max(0, Math.floor(minViews * 0.9));
                             },
                             max: (value) => {
-                              // Only scale based on actual views data, not target line
+                              // For STL writers with split data, consider both lines
+                              if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
+                                const shortsViews = analyticsData.shortsData.map(item => item.views);
+                                const longsViews = analyticsData.longsData.map(item => item.views);
+                                const allViews = [...shortsViews, ...longsViews];
+                                const maxViews = Math.max(...allViews);
+                                const calculatedMax = Math.ceil(maxViews * 1.1);
+                                console.log('📊 Y-axis max calculation for STL:', { shortsViews, longsViews, maxViews, calculatedMax });
+                                return calculatedMax;
+                              }
+                              // For non-STL writers, use aggregated data
                               const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
                               const maxViews = Math.max(...viewsData);
                               return Math.ceil(maxViews * 1.1);
@@ -2111,70 +2394,158 @@ const AnalyticsUpdated = () => {
                               lineStyle: { color: 'rgba(66, 66, 66, 0.3)', type: 'dashed' }
                             }
                           },
-                          series: [
-                            // Main views line chart with target line as markLine
-                            {
-                              name: 'Daily Views',
-                              data: analyticsData.aggregatedViewsData.map(item => item.views),
-                              type: 'line',
-                              smooth: true,
-                              lineStyle: {
-                                color: '#4fc3f7',
-                                width: 3
-                              },
-                              areaStyle: {
-                                color: {
-                                  type: 'linear',
-                                  x: 0,
-                                  y: 0,
-                                  x2: 0,
-                                  y2: 1,
-                                  colorStops: [
-                                    { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
-                                    { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
-                                  ],
-                                },
-                              },
-                              symbol: 'circle',
-                              symbolSize: 6,
-                              itemStyle: {
-                                color: '#4fc3f7',
-                                borderColor: '#fff',
-                                borderWidth: 2
-                              },
-                              connectNulls: false,
-                              // Add target line as markLine if target exists
-                              markLine: (() => {
-                                const targetDailyViews = calculateTargetDailyViews();
-                                console.log('🎯 MarkLine creation:', { targetDailyViews, monthlyBonusData });
+                          series: (() => {
+                            const series = [];
 
-                                if (targetDailyViews > 0) {
-                                  // Position the line at the actual target value, not 90% of max
-                                  return {
-                                    silent: true,
-                                    lineStyle: {
-                                      color: '#FFA726',
-                                      width: 2,
-                                      type: 'dashed'
+                            // Check if we have split data for STL writers
+                            if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
+                              console.log('📊 Rendering split chart with shorts and longs data');
+
+                              // Add Long Videos series (blue line)
+                              const longsData = analyticsData.longsData.map(item => item.views);
+                              if (longsData.some(val => val !== null)) {
+                                series.push({
+                                  name: 'Long Videos',
+                                  data: longsData,
+                                  type: 'line',
+                                  smooth: true,
+                                  lineStyle: {
+                                    color: '#4fc3f7',
+                                    width: 3,
+                                    type: 'solid'
+                                  },
+                                  areaStyle: {
+                                    color: {
+                                      type: 'linear',
+                                      x: 0,
+                                      y: 0,
+                                      x2: 0,
+                                      y2: 1,
+                                      colorStops: [
+                                        { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                        { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                                      ],
                                     },
-                                    label: {
-                                      show: true,
-                                      position: 'middle',
-                                      formatter: `Daily ${formatNumber(targetDailyViews)}`,
-                                      color: '#FFA726',
-                                      fontSize: 11,
-                                      fontWeight: 'bold'
+                                  },
+                                  symbol: 'circle',
+                                  symbolSize: 6,
+                                  itemStyle: {
+                                    color: '#4fc3f7',
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                  },
+                                  connectNulls: false
+                                });
+                              }
+
+                              // Add Shorts Videos series (orange line)
+                              const shortsDataValues = analyticsData.shortsData.map(item => item.views);
+                              if (shortsDataValues.some(val => val !== null)) {
+                                series.push({
+                                  name: 'Shorts Videos',
+                                  data: shortsDataValues,
+                                  type: 'line',
+                                  smooth: true,
+                                  lineStyle: {
+                                    color: '#FF9800',
+                                    width: 3,
+                                    type: 'solid'
+                                  },
+                                  areaStyle: {
+                                    color: {
+                                      type: 'linear',
+                                      x: 0,
+                                      y: 0,
+                                      x2: 0,
+                                      y2: 1,
+                                      colorStops: [
+                                        { offset: 0, color: 'rgba(255, 152, 0, 0.3)' },
+                                        { offset: 1, color: 'rgba(255, 152, 0, 0.05)' },
+                                      ],
                                     },
-                                    data: [{
-                                      yAxis: targetDailyViews, // Use actual target value instead of 90% of max
-                                      name: 'Next Bonus Target'
-                                    }]
-                                  };
-                                }
-                                return null;
-                              })()
+                                  },
+                                  symbol: 'circle',
+                                  symbolSize: 6,
+                                  itemStyle: {
+                                    color: '#FF9800',
+                                    borderColor: '#fff',
+                                    borderWidth: 1
+                                  },
+                                  connectNulls: false
+                                });
+                              }
+                            } else {
+                              // Original single line chart for non-STL writers
+                              series.push({
+                                name: 'Daily Views',
+                                data: analyticsData.aggregatedViewsData.map(item => item.views),
+                                type: 'line',
+                                smooth: true,
+                                lineStyle: {
+                                  color: '#4fc3f7',
+                                  width: 3
+                                },
+                                areaStyle: {
+                                  color: {
+                                    type: 'linear',
+                                    x: 0,
+                                    y: 0,
+                                    x2: 0,
+                                    y2: 1,
+                                    colorStops: [
+                                      { offset: 0, color: 'rgba(79, 195, 247, 0.3)' },
+                                      { offset: 1, color: 'rgba(79, 195, 247, 0.05)' },
+                                    ],
+                                  },
+                                },
+                                symbol: 'circle',
+                                symbolSize: 6,
+                                itemStyle: {
+                                  color: '#4fc3f7',
+                                  borderColor: '#fff',
+                                  borderWidth: 2
+                                },
+                                connectNulls: false,
+                                // Add target line as markLine if target exists (only for non-STL writers)
+                                markLine: (() => {
+                                  // Don't show target line for STL writers since they use all-time view progression
+                                  if (isSTLWriter()) {
+                                    return null;
+                                  }
+
+                                  const targetDailyViews = calculateTargetDailyViews();
+                                  console.log('🎯 MarkLine creation:', { targetDailyViews, monthlyBonusData });
+
+                                  if (targetDailyViews > 0) {
+                                    // Position the line at the actual target value, not 90% of max
+                                    return {
+                                      silent: true,
+                                      lineStyle: {
+                                        color: '#FFA726',
+                                        width: 2,
+                                        type: 'dashed'
+                                      },
+                                      label: {
+                                        show: true,
+                                        position: 'middle',
+                                        formatter: `Daily ${formatNumber(targetDailyViews)}`,
+                                        color: '#FFA726',
+                                        fontSize: 11,
+                                        fontWeight: 'bold'
+                                      },
+                                      data: [{
+                                        yAxis: targetDailyViews, // Use actual target value instead of 90% of max
+                                        name: 'Next Bonus Target'
+                                      }]
+                                    };
+                                  }
+                                  return null;
+                                })()
+                              });
                             }
-                          ]
+
+                            return series;
+                          })()
                         }}
                         style={{ height: '100%', width: '100%' }}
                       />
@@ -2882,11 +3253,22 @@ const AnalyticsUpdated = () => {
           {/* Compact KPI Performance Cards - 4 Grouped Cards */}
           <Box sx={{
             display: 'grid',
-            gridTemplateColumns: {
-              xs: 'repeat(2, 1fr)',
-              sm: 'repeat(2, 1fr)',
-              md: 'repeat(4, 1fr)'
-            },
+            gridTemplateColumns: (() => {
+              // For STL writers, show 5 cards (Performance Overview, SHORTS VIEWS, Viral Performance, Decent Performance, Flop Performance)
+              if (isSTLWriter()) {
+                return {
+                  xs: 'repeat(2, 1fr)',
+                  sm: 'repeat(3, 1fr)',
+                  md: 'repeat(5, 1fr)'
+                };
+              }
+              // For non-STL writers, show 4 cards (Performance Overview, Viral Performance, Decent Performance, Flop Performance)
+              return {
+                xs: 'repeat(2, 1fr)',
+                sm: 'repeat(2, 1fr)',
+                md: 'repeat(4, 1fr)'
+              };
+            })(),
             gap: { xs: 1.5, md: 2 },
             width: '100%'
           }}>
@@ -3028,6 +3410,78 @@ const AnalyticsUpdated = () => {
                 )}
               </Box>
             </Box>
+
+
+
+
+
+            {/* SHORTS VIEWS Card - Only for STL Writers (≤189 seconds) */}
+            {isSTLWriter() && analyticsData?.shortsOnlyViews !== undefined && (
+              <Box sx={{
+                background: 'linear-gradient(135deg, rgba(255, 138, 101, 0.25) 0%, rgba(255, 112, 67, 0.15) 100%)',
+                backdropFilter: 'blur(20px)',
+                border: '1px solid rgba(255, 138, 101, 0.4)',
+                borderRadius: 1,
+                p: { xs: 0.75, md: 1 },
+                transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                position: 'relative',
+                overflow: 'hidden',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'space-between',
+                boxShadow: '0 8px 32px rgba(255, 138, 101, 0.15)',
+                '&:hover': {
+                  transform: 'translateY(-1px)',
+                  boxShadow: '0 12px 40px rgba(255, 138, 101, 0.3)',
+                  border: '1px solid rgba(255, 138, 101, 0.6)',
+                  background: 'linear-gradient(135deg, rgba(255, 138, 101, 0.35) 0%, rgba(255, 112, 67, 0.2) 100%)',
+                },
+                '&::before': {
+                  content: '""',
+                  position: 'absolute',
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  height: '3px',
+                  background: 'linear-gradient(90deg, #FF8A65, #FF7043)',
+                }
+              }}>
+                <Typography sx={{
+                  color: 'white',
+                  fontWeight: 700,
+                  fontSize: { xs: '0.65rem', md: '0.75rem' },
+                  letterSpacing: '0.5px',
+                  mb: 1,
+                  textAlign: 'center',
+                  lineHeight: 1.2
+                }}>
+                  SHORTS VIEWS
+                </Typography>
+
+                <Typography sx={{
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  fontSize: { xs: '0.5rem', md: '0.6rem' },
+                  textAlign: 'center',
+                  mb: 1.5,
+                  lineHeight: 1
+                }}>
+                  ≤189 seconds
+                </Typography>
+
+                <Typography variant="h5" sx={{
+                  background: 'linear-gradient(135deg, #FF8A65 0%, #FF7043 100%)',
+                  WebkitBackgroundClip: 'text',
+                  WebkitTextFillColor: 'transparent',
+                  fontWeight: 800,
+                  fontSize: { xs: '1.2rem', md: '1.8rem' },
+                  lineHeight: 1,
+                  textAlign: 'center',
+                  filter: 'drop-shadow(0 2px 8px rgba(255, 138, 101, 0.4))'
+                }}>
+                  {formatNumber(analyticsData.shortsOnlyViews || 0)}
+                </Typography>
+              </Box>
+            )}
 
             {/* Viral Performance Card - Mega Virals + Virals + Almost Virals */}
             <Box

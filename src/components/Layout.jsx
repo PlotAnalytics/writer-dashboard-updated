@@ -73,8 +73,11 @@ const Layout = ({
   // Check if user is retention master or master editor
   const isRetentionMaster = user?.role === "retention_master";
   const isMasterEditor = user?.role === "master_editor";
-  const isFullTimeWriter = user?.secondaryRole === "Full Time";
-  const isRegularWriter = !isFullTimeWriter && !isRetentionMaster && !isMasterEditor;
+
+  // Check if user should see Analytics Updated page
+  const analyticsUpdatedRoles = ["Full Time", "Intern", "Part Time", "STL", "Misc", "Sponsor", "Head"];
+  const shouldSeeAnalyticsUpdated = analyticsUpdatedRoles.includes(user?.secondaryRole);
+  const isRegularWriter = !shouldSeeAnalyticsUpdated && !isRetentionMaster && !isMasterEditor;
 
   const menuItems =
     isRetentionMaster || hideNavigation
@@ -100,9 +103,9 @@ const Layout = ({
             badge: null,
           },
           // Conditionally show Analytics based on secondary_role
-          ...(isFullTimeWriter
+          ...(shouldSeeAnalyticsUpdated
             ? [
-                // Full Time writers see Analytics Updated as "Analytics"
+                // Users with specific secondary roles see Analytics Updated as "Analytics"
                 {
                   text: "Analytics",
                   icon: <InsightsIcon />,
