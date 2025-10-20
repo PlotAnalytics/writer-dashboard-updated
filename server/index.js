@@ -610,13 +610,16 @@ app.post("/api/scripts", async (req, res) => {
     const defaultListID = submissionRoute;
     const stlDestinationListID = "6898270f55dc602c1b578c98";
     const aiSubmissionsListID = "68d98dcf1469947d64157067";
-    const isIntern = "68f485dc83cd79a6c5f77570";
+    const internSubmissionsListID = "68f485dc83cd79a6c5f77570";
 
     // Check if title contains "STL" keyword
     const isSTL = submissionRoute.rows[0]?.trello_list == stlDestinationListID;
 
     // CHeck if writer is AI
     const isAI = submissionRoute.rows[0]?.trello_list == aiSubmissionsListID;
+
+    // CHeck if writer is Intern
+    const isIntern = submissionRoute.rows[0]?.trello_list == internSubmissionsListID;
 
     let targetListId;
     let trelloStatus;
@@ -635,7 +638,7 @@ app.post("/api/scripts", async (req, res) => {
 
     } else if (isIntern) {
       // If it's an AI submission, use AI submissions list and status
-      targetListId = submissionRoute.rows[0]?.trello_list || aiSubmissionsListID;
+      targetListId = submissionRoute.rows[0]?.trello_list || internSubmissionsListID;
       trelloStatus = "Interns QA";
 
     } else {
