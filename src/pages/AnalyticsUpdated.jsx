@@ -2697,7 +2697,8 @@ const AnalyticsUpdated = () => {
                 overflow: 'hidden'
               }}>
 
-                {/* TOP: Leaderboard Card */}
+                {/* TOP: Leaderboard Card - Hidden for Interns */}
+                {user?.secondaryRole !== 'Intern' && (
                 <Box sx={{
                   background: 'linear-gradient(135deg, rgba(255,255,255,0.15) 0%, rgba(255,255,255,0.08) 100%)',
                   backdropFilter: 'blur(15px)',
@@ -3111,6 +3112,7 @@ const AnalyticsUpdated = () => {
                     )}
                   </Box>
                 </Box>
+                )}
 
                 {/* BOTTOM: Realtime Card - Simplified */}
                 <Box sx={{
