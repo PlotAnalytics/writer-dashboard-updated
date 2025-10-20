@@ -130,6 +130,14 @@ const MasterEditor = () => {
   const [writerModalMode, setWriterModalMode] = useState("create");
   const [writerEdit, setWriterEdit] = useState(null);
 
+  // Submission Routing state
+  const [submissionRouting, setSubmissionRouting] = useState([]);
+  const [trelloLists, setTrelloLists] = useState([]);
+  const [submissionRoutingLoading, setSubmissionRoutingLoading] = useState(false);
+  const [routingChanges, setRoutingChanges] = useState({});
+  const [routingSearchTerm, setRoutingSearchTerm] = useState("");
+  const [routingListFilter, setRoutingListFilter] = useState("");
+
   const { logout, user } = useAuth();
   const navigate = useNavigate();
 
@@ -329,6 +337,27 @@ const MasterEditor = () => {
     setWriterSettings(res.data.writerSettings || []);
   };
 
+  // Submission Routing fetch functions
+  const fetchSubmissionRouting = async () => {
+    try {
+      const response = await axios.get("/api/master-editor/submission-routing");
+      setSubmissionRouting(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching submission routing:", error);
+      setError("Failed to fetch submission routing data");
+    }
+  };
+
+  const fetchTrelloLists = async () => {
+    try {
+      const response = await axios.get("/api/master-editor/trello-lists");
+      setTrelloLists(response.data.data || []);
+    } catch (error) {
+      console.error("Error fetching Trello lists:", error);
+      setError("Failed to fetch Trello lists");
+    }
+  };
+
   const suggestNextPostingAccountId = async () => {
     const res = await axios.get("/api/admin/posting-accounts/next-id");
     setNewPostAcct((prev) => ({ ...prev, id: res.data.next_id }));
@@ -337,6 +366,45 @@ const MasterEditor = () => {
   const suggestNextWriterSettingId = async () => {
     const res = await axios.get("/api/admin/writer-settings/next-id");
     setNewWriterSetting((prev) => ({ ...prev, id: res.data.next_id }));
+  };
+
+  // Submission Routing handlers
+  const handleRoutingChange = (writerId, trelloListId) => {
+    setRoutingChanges(prev => ({
+      ...prev,
+      [writerId]: trelloListId
+    }));
+  };
+
+  const saveRoutingChanges = async () => {
+    try {
+      setSaving(true);
+      setError(null);
+      setSuccess(null);
+
+      // Save all changes
+      const promises = Object.entries(routingChanges).map(([writerId, trelloListId]) =>
+        axios.post("/api/master-editor/update-submission-routing", {
+          writer_id: parseInt(writerId),
+          trello_list_id: trelloListId
+        })
+      );
+
+      await Promise.all(promises);
+
+      // Refresh the data
+      await fetchSubmissionRouting();
+
+      // Clear changes
+      setRoutingChanges({});
+
+      setSuccess(`Successfully updated ${Object.keys(routingChanges).length} routing assignment(s)`);
+    } catch (error) {
+      console.error("Error saving routing changes:", error);
+      setError(error?.response?.data?.error || "Failed to save routing changes");
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleTypeChange = (scriptId, newType) => {
@@ -387,6 +455,38 @@ const MasterEditor = () => {
 
   const clearWriterFilter = () => {
     setWriterFilter("");
+  };
+
+  // Filter and sort submission routing data
+  const getFilteredSubmissionRouting = () => {
+    let filtered = submissionRouting;
+
+    // Apply search filter
+    if (routingSearchTerm) {
+      filtered = filtered.filter(
+        (routing) =>
+          routing.name?.toLowerCase().includes(routingSearchTerm.toLowerCase()) ||
+          routing.writer_id?.toString().includes(routingSearchTerm) ||
+          routing.submission_route_name?.toLowerCase().includes(routingSearchTerm.toLowerCase())
+      );
+    }
+
+    // Apply Trello list filter
+    if (routingListFilter) {
+      filtered = filtered.filter(
+        (routing) => routing.trello_list_id === routingListFilter
+      );
+    }
+
+    // Sort by writer_id
+    filtered.sort((a, b) => a.writer_id - b.writer_id);
+
+    return filtered;
+  };
+
+  const clearRoutingFilters = () => {
+    setRoutingSearchTerm("");
+    setRoutingListFilter("");
   };
 
   const handleEdit = async (scriptId) => {
@@ -544,6 +644,19 @@ const MasterEditor = () => {
         }
       };
       loadScripts();
+    } else if (tabIndex === 3 && !submissionRoutingLoading && !loadedTabs.has(3)) {
+      const loadSubmissionRouting = async () => {
+        try {
+          setSubmissionRoutingLoading(true);
+          await Promise.all([fetchSubmissionRouting(), fetchTrelloLists()]);
+          setLoadedTabs((prev) => new Set([...prev, 3]));
+        } catch (e) {
+          setError(e?.response?.data?.error || e.message);
+        } finally {
+          setSubmissionRoutingLoading(false);
+        }
+      };
+      loadSubmissionRouting();
     }
   };
 
@@ -881,6 +994,7 @@ const MasterEditor = () => {
             <Tab label="Posting Accounts" />
             <Tab label="Writers" />
             <Tab label="Script Editor" />
+            <Tab label="Submission Routing" />
           </Tabs>
         </Box>
 
@@ -2418,6 +2532,396 @@ const MasterEditor = () => {
                         No scripts match the current filter criteria
                       </Typography>
                     )}
+                </>
+              )}
+            </>
+          )}
+
+          {/* Submission Routing Tab */}
+          {currentTab === 3 && (
+            <>
+              {submissionRoutingLoading ||
+              (!loadedTabs.has(3) && submissionRouting.length === 0) ? (
+                <Box
+                  display="flex"
+                  flexDirection="column"
+                  justifyContent="center"
+                  alignItems="center"
+                  minHeight="400px"
+                  sx={{
+                    background: "rgba(255,255,255,0.02)",
+                    borderRadius: "12px",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                  }}
+                >
+                  <CircularProgress
+                    size={48}
+                    sx={{
+                      color: "#667eea",
+                      mb: 2,
+                    }}
+                  />
+                  <Typography
+                    variant="h6"
+                    sx={{
+                      color: "white",
+                      mb: 1,
+                      fontWeight: 500,
+                    }}
+                  >
+                    Loading Submission Routing
+                  </Typography>
+                  <Typography
+                    variant="body2"
+                    sx={{
+                      color: "rgba(255,255,255,0.7)",
+                      textAlign: "center",
+                    }}
+                  >
+                    Fetching routing data and Trello lists...
+                  </Typography>
+                </Box>
+              ) : (
+                <>
+                  {/* Header with Save Button */}
+                  <Box
+                    sx={{
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      mb: 3,
+                    }}
+                  >
+                    <Box>
+                      <Typography variant="h6" sx={{ color: "white" }}>
+                        Submission Routing
+                      </Typography>
+                      <Typography variant="body2" sx={{ color: "rgba(255,255,255,0.6)" }}>
+                        {submissionRouting.length > 0 && (
+                          <>
+                            Showing {getFilteredSubmissionRouting().length} of {submissionRouting.length} records
+                            {(routingSearchTerm || routingListFilter) && " (filtered)"}
+                          </>
+                        )}
+                      </Typography>
+                    </Box>
+                    {Object.keys(routingChanges).length > 0 && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={saveRoutingChanges}
+                        disabled={saving}
+                        sx={{
+                          color: "white",
+                          borderColor: "rgba(255,255,255,0.3)",
+                          "&:hover": {
+                            borderColor: "#667eea",
+                            backgroundColor: "rgba(102, 126, 234, 0.1)",
+                          },
+                        }}
+                      >
+                        {saving ? "Saving..." : `Save Changes (${Object.keys(routingChanges).length})`}
+                      </Button>
+                    )}
+                  </Box>
+
+                  {/* Search and Filter Controls */}
+                  <Box
+                    sx={{
+                      mb: 3,
+                      display: "flex",
+                      gap: 2,
+                      alignItems: "center",
+                      flexWrap: "wrap",
+                    }}
+                  >
+                    {/* Search Field */}
+                    <TextField
+                      size="small"
+                      placeholder="Search by writer name, ID, or route..."
+                      value={routingSearchTerm}
+                      onChange={(e) => setRoutingSearchTerm(e.target.value)}
+                      sx={{
+                        minWidth: 300,
+                        "& .MuiOutlinedInput-root": {
+                          color: "white",
+                          background: "rgba(255, 255, 255, 0.04)",
+                          backdropFilter: "blur(5px)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "12px",
+                          transition: "all 0.2s ease-in-out",
+                          "& fieldset": {
+                            border: "none",
+                          },
+                          "&:hover": {
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                            background: "rgba(255, 255, 255, 0.06)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.15)",
+                          },
+                          "&.Mui-focused": {
+                            border: "1px solid rgba(102, 126, 234, 0.5)",
+                            background: "rgba(255, 255, 255, 0.08)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
+                          },
+                        },
+                        "& .MuiOutlinedInput-input::placeholder": {
+                          color: "rgba(255, 255, 255, 0.5)",
+                        },
+                      }}
+                      InputProps={{
+                        startAdornment: (
+                          <SearchIcon sx={{ color: "#667eea", mr: 1 }} />
+                        ),
+                      }}
+                    />
+
+                    {/* Trello List Filter */}
+                    <FormControl size="small" sx={{ minWidth: 200 }}>
+                      <Select
+                        value={routingListFilter}
+                        onChange={(e) => setRoutingListFilter(e.target.value)}
+                        displayEmpty
+                        sx={{
+                          color: "white",
+                          background: "rgba(255, 255, 255, 0.04)",
+                          backdropFilter: "blur(5px)",
+                          border: "1px solid rgba(255, 255, 255, 0.1)",
+                          borderRadius: "12px",
+                          transition: "all 0.2s ease-in-out",
+                          "& .MuiOutlinedInput-notchedOutline": {
+                            border: "none",
+                          },
+                          "&:hover": {
+                            border: "1px solid rgba(102, 126, 234, 0.3)",
+                            background: "rgba(255, 255, 255, 0.06)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 12px rgba(102, 126, 234, 0.15)",
+                          },
+                          "&.Mui-focused": {
+                            border: "1px solid rgba(102, 126, 234, 0.5)",
+                            background: "rgba(255, 255, 255, 0.08)",
+                            transform: "translateY(-1px)",
+                            boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
+                          },
+                        }}
+                        startAdornment={
+                          <FilterIcon sx={{ color: "#667eea", mr: 1 }} />
+                        }
+                      >
+                        <MenuItem value="">All Routes</MenuItem>
+                        {trelloLists.map((list) => (
+                          <MenuItem key={list.trello_list_id} value={list.trello_list_id}>
+                            {list.name}
+                          </MenuItem>
+                        ))}
+                      </Select>
+                    </FormControl>
+
+                    {/* Clear Filters Button */}
+                    {(routingSearchTerm || routingListFilter) && (
+                      <Button
+                        variant="outlined"
+                        size="small"
+                        onClick={clearRoutingFilters}
+                        sx={{
+                          color: "white",
+                          borderColor: "#666",
+                          "&:hover": {
+                            borderColor: "#4fc3f7",
+                            backgroundColor: "rgba(79, 195, 247, 0.1)",
+                          },
+                        }}
+                      >
+                        Clear Filters
+                      </Button>
+                    )}
+
+                    {/* Active Filter Chips */}
+                    {routingSearchTerm && (
+                      <Chip
+                        label={`Search: ${routingSearchTerm}`}
+                        onDelete={() => setRoutingSearchTerm("")}
+                        deleteIcon={<ClearIcon />}
+                        sx={{
+                          backgroundColor: "#4fc3f7",
+                          color: "white",
+                          "& .MuiChip-deleteIcon": {
+                            color: "white",
+                          },
+                        }}
+                      />
+                    )}
+
+                    {routingListFilter && (
+                      <Chip
+                        label={`Route: ${trelloLists.find(list => list.trello_list_id === routingListFilter)?.name || 'Unknown'}`}
+                        onDelete={() => setRoutingListFilter("")}
+                        deleteIcon={<ClearIcon />}
+                        sx={{
+                          backgroundColor: "#667eea",
+                          color: "white",
+                          "& .MuiChip-deleteIcon": {
+                            color: "white",
+                          },
+                        }}
+                      />
+                    )}
+                  </Box>
+
+                  <TableContainer>
+                    <Table>
+                      <TableHead>
+                        <TableRow sx={{ borderBottom: "1px solid #333" }}>
+                          <TableCell
+                            sx={{
+                              color: "#888",
+                              border: "none",
+                              py: 1,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Writer ID
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              color: "#888",
+                              border: "none",
+                              py: 1,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Writer
+                          </TableCell>
+                          <TableCell
+                            sx={{
+                              color: "#888",
+                              border: "none",
+                              py: 1,
+                              fontWeight: "bold",
+                            }}
+                          >
+                            Submission Route
+                          </TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {getFilteredSubmissionRouting().map((routing) => (
+                          <TableRow
+                            key={routing.writer_id}
+                            sx={{
+                              "&:hover": {
+                                backgroundColor: "rgba(255, 255, 255, 0.02)",
+                              },
+                            }}
+                          >
+                            <TableCell sx={{ border: "none", py: 2 }}>
+                              <Typography sx={{ color: "white", fontSize: "14px" }}>
+                                {routing.writer_id}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ border: "none", py: 2 }}>
+                              <Typography sx={{ color: "white", fontSize: "14px" }}>
+                                {routing.name || 'Unknown'}
+                              </Typography>
+                            </TableCell>
+                            <TableCell sx={{ border: "none", py: 2 }}>
+                              <FormControl size="small" sx={{ minWidth: 300 }}>
+                                <Select
+                                  value={routingChanges[routing.writer_id] || routing.trello_list_id || ''}
+                                  onChange={(e) => handleRoutingChange(routing.writer_id, e.target.value)}
+                                  sx={{
+                                    color: "white",
+                                    background: "rgba(255, 255, 255, 0.04)",
+                                    backdropFilter: "blur(5px)",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "12px",
+                                    transition: "all 0.2s ease-in-out",
+                                    "& .MuiOutlinedInput-notchedOutline": {
+                                      border: "none",
+                                    },
+                                    "&:hover": {
+                                      border: "1px solid rgba(102, 126, 234, 0.3)",
+                                      background: "rgba(255, 255, 255, 0.06)",
+                                      transform: "translateY(-1px)",
+                                      boxShadow: "0 4px 12px rgba(102, 126, 234, 0.15)",
+                                    },
+                                    "&.Mui-focused": {
+                                      border: "1px solid rgba(102, 126, 234, 0.5)",
+                                      background: "rgba(255, 255, 255, 0.08)",
+                                      transform: "translateY(-1px)",
+                                      boxShadow: "0 4px 20px rgba(102, 126, 234, 0.25)",
+                                    },
+                                  }}
+                                >
+                                  {trelloLists.map((list) => (
+                                    <MenuItem key={list.trello_list_id} value={list.trello_list_id}>
+                                      {list.name}
+                                    </MenuItem>
+                                  ))}
+                                </Select>
+                              </FormControl>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </TableContainer>
+
+                  {submissionRouting.length === 0 ? (
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 8,
+                        color: "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          mb: 1,
+                          fontWeight: 400,
+                        }}
+                      >
+                        No routing data found
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "rgba(255,255,255,0.4)",
+                        }}
+                      >
+                        No submission routing records available
+                      </Typography>
+                    </Box>
+                  ) : getFilteredSubmissionRouting().length === 0 ? (
+                    <Box
+                      sx={{
+                        textAlign: "center",
+                        py: 8,
+                        color: "rgba(255,255,255,0.5)",
+                      }}
+                    >
+                      <Typography
+                        variant="h6"
+                        sx={{
+                          mb: 1,
+                          fontWeight: 400,
+                        }}
+                      >
+                        No results found
+                      </Typography>
+                      <Typography
+                        variant="body2"
+                        sx={{
+                          color: "rgba(255,255,255,0.4)",
+                        }}
+                      >
+                        Try adjusting your search or filter criteria
+                      </Typography>
+                    </Box>
+                  ) : null}
                 </>
               )}
             </>

@@ -6238,6 +6238,115 @@ app.post('/api/clear-cache', async (req, res) => {
   }
 });
 
+// Master Editor - Submission Routing endpoints
+app.get('/api/master-editor/submission-routing', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    console.log('🔍 Master Editor: Getting submission routing data...');
+
+    const query = `
+      SELECT
+        sr.writer_id,
+        COALESCE(w.name, 'Unknown') as name,
+        sr.trello_list as trello_list_id,
+        COALESCE(atl.name, 'Unknown List') as submission_route_name
+      FROM submission_routing sr
+      LEFT JOIN writer w ON sr.writer_id = w.id
+      LEFT JOIN api_all_trello_lists atl ON sr.trello_list = atl.trello_list_id
+      ORDER BY sr.writer_id
+    `;
+
+    const result = await pool.query(query);
+
+    console.log(`📊 Found ${result.rows.length} submission routing records`);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor submission routing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.get('/api/master-editor/trello-lists', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    console.log('🔍 Master Editor: Getting Trello lists for dropdown...');
+
+    const query = `
+      SELECT trello_list_id, name
+      FROM api_all_trello_lists
+      ORDER BY name
+    `;
+
+    const result = await pool.query(query);
+
+    console.log(`📊 Found ${result.rows.length} Trello lists`);
+
+    res.json({
+      success: true,
+      data: result.rows
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor Trello lists error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.post('/api/master-editor/update-submission-routing', authenticateToken, async (req, res) => {
+  try {
+    // Check if user is master_editor
+    if (req.user.username !== 'master_editor') {
+      return res.status(403).json({ error: 'Access denied. Master editor only.' });
+    }
+
+    const { writer_id, trello_list_id } = req.body;
+
+    if (!writer_id || !trello_list_id) {
+      return res.status(400).json({ error: 'Writer ID and Trello List ID are required' });
+    }
+
+    console.log(`🔄 Master Editor: Updating submission routing for writer ${writer_id} to list ${trello_list_id}`);
+
+    const updateQuery = `
+      UPDATE submission_routing
+      SET trello_list = $1
+      WHERE writer_id = $2
+      RETURNING *
+    `;
+
+    const result = await pool.query(updateQuery, [trello_list_id, writer_id]);
+
+    if (result.rows.length === 0) {
+      return res.status(404).json({ error: 'Writer not found in submission routing' });
+    }
+
+    console.log(`✅ Successfully updated submission routing for writer ${writer_id}`);
+
+    res.json({
+      success: true,
+      message: 'Submission routing updated successfully',
+      data: result.rows[0]
+    });
+
+  } catch (error) {
+    console.error('❌ Master Editor update submission routing error:', error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Test endpoint to create master_editor user
 app.post('/api/create-master-editor', async (req, res) => {
   try {
