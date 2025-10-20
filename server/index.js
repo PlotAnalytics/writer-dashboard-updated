@@ -585,10 +585,6 @@ app.post("/api/scripts", async (req, res) => {
       [writer_id]
     );
     const name = writerSettingsResult.rows[0]?.fullname ?? writerSettingsResult.rows[0]?.writer_username ?? writerResult.rows[0]?.name;
-    const skipQA = writerSettingsResult.rows[0]?.skip_qa;
-    if (!name) {
-      return res.status(404).json({ error: "Writer not found" });
-    }
 
     // Determine Trello list ID and status
 
@@ -604,18 +600,23 @@ app.post("/api/scripts", async (req, res) => {
     // 10. Posted(ID: 66982a7f45ab869b054bdd24)
     // 11. Trash(ID: 678588525730a636c0e25347)
     // 12. AI Submissions(ID: 68d98dcf1469947d64157067)
+    // 13. Intern Submissions(ID: 68f485dc83cd79a6c5f77570)
 
-    const defaultListID = "66982a7f16eca6024cd863cc";
+    const submissionRoute = await pool.query(
+      "select trello_list from submission_routing WHERE writer_id = $1 limit 1",
+      [writer_id]
+    );
+
+    const defaultListID = submissionRoute;
     const stlDestinationListID = "6898270f55dc602c1b578c98";
-    const autoApprovedListID = "66982de89e8cb1bfb456ba0a";
     const aiSubmissionsListID = "68d98dcf1469947d64157067";
+    const isIntern = "68f485dc83cd79a6c5f77570";
 
     // Check if title contains "STL" keyword
-    const isSTL = title.includes("[STL]");
+    const isSTL = submissionRoute.rows[0]?.trello_list == stlDestinationListID;
 
     // CHeck if writer is AI
-    const isAI = writer_id == 1010;
-
+    const isAI = submissionRoute.rows[0]?.trello_list == aiSubmissionsListID;
 
     let targetListId;
     let trelloStatus;
@@ -623,19 +624,24 @@ app.post("/api/scripts", async (req, res) => {
     // Handle STL case separately from skipQA logic
     if (isSTL) {
       // If it's a story line (contains STL), use story continuation list and status
-      targetListId = stlDestinationListID;
+      targetListId = submissionRoute.rows[0]?.trello_list || stlDestinationListID;
       trelloStatus = "STL Writer Submissions (QA)";
     
     // Handle AI submissions separately from skipQA logic
     } else if (isAI) {
-      targetListId = aiSubmissionsListID;
+      // If it's an AI submission, use AI submissions list and status
+      targetListId = submissionRoute.rows[0]?.trello_list || aiSubmissionsListID;
       trelloStatus = "AI Submissions";
+
+    } else if (isIntern) {
+      // If it's an AI submission, use AI submissions list and status
+      targetListId = submissionRoute.rows[0]?.trello_list || aiSubmissionsListID;
+      trelloStatus = "Interns QA";
+
     } else {
-      // If it's not a story line, apply the skipQA logic
-      targetListId = skipQA ? autoApprovedListID : defaultListID;
-      trelloStatus = skipQA
-        ? "Approved Script. Ready for production"
-        : "Writer Submissions (QA)";
+      // Default case: use writer submissions list and status
+      targetListId = submissionRoute.rows[0]?.trello_list || defaultListID;
+      trelloStatus = "Writer Submissions (QA)";
     }
 
     // Create a Trello card with properly named attachments
