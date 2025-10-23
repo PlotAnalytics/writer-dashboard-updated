@@ -2342,39 +2342,8 @@ const AnalyticsUpdated = () => {
                           },
                           yAxis: {
                             type: 'value',
-                            scale: true, // Enable auto-scaling
-                            min: (value) => {
-                              // For STL writers with split data, consider both lines
-                              if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
-                                const shortsViews = analyticsData.shortsData.map(item => item.views);
-                                const longsViews = analyticsData.longsData.map(item => item.views);
-                                const allViews = [...shortsViews, ...longsViews];
-                                const minViews = Math.min(...allViews);
-                                const calculatedMin = Math.max(0, Math.floor(minViews * 0.9));
-                                console.log('📊 Y-axis min calculation for STL:', { shortsViews, longsViews, minViews, calculatedMin });
-                                return calculatedMin;
-                              }
-                              // For non-STL writers, use aggregated data
-                              const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
-                              const minViews = Math.min(...viewsData);
-                              return Math.max(0, Math.floor(minViews * 0.9));
-                            },
-                            max: (value) => {
-                              // For STL writers with split data, consider both lines
-                              if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
-                                const shortsViews = analyticsData.shortsData.map(item => item.views);
-                                const longsViews = analyticsData.longsData.map(item => item.views);
-                                const allViews = [...shortsViews, ...longsViews];
-                                const maxViews = Math.max(...allViews);
-                                const calculatedMax = Math.ceil(maxViews * 1.1);
-                                console.log('📊 Y-axis max calculation for STL:', { shortsViews, longsViews, maxViews, calculatedMax });
-                                return calculatedMax;
-                              }
-                              // For non-STL writers, use aggregated data
-                              const viewsData = analyticsData.aggregatedViewsData.map(item => item.views);
-                              const maxViews = Math.max(...viewsData);
-                              return Math.ceil(maxViews * 1.1);
-                            },
+                            scale: false, // Disable auto-scaling for even intervals
+                            min: 0, // Always start from 0
                             axisLabel: {
                               formatter: (value) => {
                                 if (value >= 1000000) {
