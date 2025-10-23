@@ -1,5 +1,4 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState } from 'react';
 import {
   Box,
   Card,
@@ -7,58 +6,63 @@ import {
   TextField,
   Button,
   Typography,
-  Alert,
   Container,
-  Avatar,
-  IconButton,
+  Alert,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
   InputAdornment,
-  Chip,
-  Link,
+  IconButton,
+  Link
 } from '@mui/material';
-import {
-  Edit as EditIcon,
-  Visibility,
-  VisibilityOff,
-  VideoLibrary,
-  Analytics,
-  TrendingUp,
-  PlayCircle
-} from '@mui/icons-material';
-import { useAuth } from '../contexts/AuthContext.jsx';
+import { Visibility, VisibilityOff, Edit as EditIcon } from '@mui/icons-material';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
-const Login = () => {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
-
-  const { login, user } = useAuth();
+const Register = () => {
   const navigate = useNavigate();
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    username: '',
+    password: '',
+    email: '',
+    registrationCode: '',
+    writerType: ''
+  });
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    if (user) {
-      // Navigate based on user role
-      if (user.role === 'retention_master') {
-        navigate('/retention-master');
-      } else if (user.role === 'master_editor') {
-        navigate('/master-editor');
-      } else {
-        navigate('/dashboard');
-      }
-    }
-  }, [user, navigate]);
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value
+    });
+    // Clear error when user starts typing
+    if (error) setError('');
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
     setLoading(true);
+    setError('');
 
     try {
-      await login(username, password);
-      // Navigation will be handled by useEffect when user state updates
-    } catch (err) {
-      setError(err.message);
+      const response = await axios.post('/api/auth/register', formData);
+      
+      if (response.data.success) {
+        setSuccess('Account request submitted successfully! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Registration error:', error);
+      setError(error.response?.data?.message || 'Registration failed. Please try again.');
+    } finally {
       setLoading(false);
     }
   };
@@ -68,8 +72,8 @@ const Login = () => {
       sx={{
         minHeight: '100vh',
         background: `
-          linear-gradient(135deg,
-            #0a0a0a 0%,
+          linear-gradient(135deg, 
+            #0a0a0a 0%, 
             #1a1a1a 25%,
             #0f0f0f 50%,
             #151515 75%,
@@ -195,16 +199,15 @@ const Login = () => {
                 fontFamily: 'monospace',
               }}
             >
-              Classified Analytics Portal
+              Writer Registration Portal
             </Typography>
-
           </Box>
 
-          {/* CIA-Style Access Panel */}
+          {/* CIA-Style Registration Panel */}
           <Card
             sx={{
               width: '100%',
-              maxWidth: 400,
+              maxWidth: 450,
               background: 'rgba(255, 255, 255, 0.02)',
               backdropFilter: 'blur(20px)',
               border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -237,7 +240,7 @@ const Login = () => {
                     mb: 1,
                   }}
                 >
-                  Secure Access Required
+                  New Writer Registration
                 </Typography>
                 <Box
                   sx={{
@@ -268,17 +271,86 @@ const Login = () => {
                 </Alert>
               )}
 
+              {success && (
+                <Alert
+                  severity="success"
+                  sx={{
+                    mb: 3,
+                    background: 'rgba(34, 197, 94, 0.1)',
+                    backdropFilter: 'blur(10px)',
+                    border: '1px solid rgba(34, 197, 94, 0.3)',
+                    borderRadius: '4px',
+                    color: 'rgba(74, 222, 128, 0.9)',
+                    '& .MuiAlert-icon': {
+                      color: 'rgba(74, 222, 128, 0.9)',
+                    },
+                  }}
+                >
+                  {success}
+                </Alert>
+              )}
+
               <form onSubmit={handleSubmit}>
+                {/* Writer Type Selection */}
+                <FormControl fullWidth sx={{ mb: 3 }}>
+                  <InputLabel 
+                    sx={{ 
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      fontSize: '14px',
+                      '&.Mui-focused': {
+                        color: 'rgba(255, 255, 255, 0.9)',
+                      },
+                    }}
+                  >
+                    Writer Type
+                  </InputLabel>
+                  <Select
+                    name="writerType"
+                    value={formData.writerType}
+                    onChange={handleChange}
+                    required
+                    sx={{
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '4px',
+                      height: '50px',
+                      '& .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      },
+                      '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        borderWidth: '1px',
+                      },
+                      '& .MuiSelect-select': {
+                        color: 'rgba(255, 255, 255, 0.95)',
+                        fontSize: '14px',
+                        fontFamily: 'monospace',
+                      },
+                      '& .MuiSvgIcon-root': {
+                        color: 'rgba(255, 255, 255, 0.7)',
+                      },
+                    }}
+                  >
+                    <MenuItem value="interviewed">Being Interviewed</MenuItem>
+                    <MenuItem value="part-time">Part Time Writer</MenuItem>
+                    <MenuItem value="full-time">Full Time Writer</MenuItem>
+                    <MenuItem value="stl">STL Writer</MenuItem>
+                  </Select>
+                </FormControl>
+
+                {/* First Name */}
                 <TextField
                   fullWidth
-                  label="Username"
-                  type="text"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  label="First Name"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
                   margin="normal"
                   required
-                  autoComplete="username"
-                  autoFocus
                   sx={{
                     mb: 3,
                     '& .MuiOutlinedInput-root': {
@@ -314,15 +386,149 @@ const Login = () => {
                   }}
                 />
 
+                {/* Last Name */}
+                <TextField
+                  fullWidth
+                  label="Last Name"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  margin="normal"
+                  required
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '4px',
+                      height: '50px',
+                      '& fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      fontSize: '14px',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    },
+                  }}
+                />
+
+                {/* Username */}
+                <TextField
+                  fullWidth
+                  label="Username"
+                  name="username"
+                  value={formData.username}
+                  onChange={handleChange}
+                  margin="normal"
+                  required
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '4px',
+                      height: '50px',
+                      '& fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      fontSize: '14px',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    },
+                  }}
+                />
+
+                {/* Email */}
+                <TextField
+                  fullWidth
+                  label="Email"
+                  name="email"
+                  type="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  margin="normal"
+                  required
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '4px',
+                      height: '50px',
+                      '& fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      fontSize: '14px',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    },
+                  }}
+                />
+
+                {/* Password */}
                 <TextField
                   fullWidth
                   label="Password"
+                  name="password"
                   type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+                  value={formData.password}
+                  onChange={handleChange}
                   margin="normal"
                   required
-                  autoComplete="current-password"
                   InputProps={{
                     endAdornment: (
                       <InputAdornment position="end">
@@ -342,6 +548,50 @@ const Login = () => {
                       </InputAdornment>
                     ),
                   }}
+                  sx={{
+                    mb: 3,
+                    '& .MuiOutlinedInput-root': {
+                      background: 'rgba(255, 255, 255, 0.03)',
+                      backdropFilter: 'blur(10px)',
+                      borderRadius: '4px',
+                      height: '50px',
+                      '& fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)',
+                        border: '1px solid rgba(255, 255, 255, 0.2)',
+                      },
+                      '&:hover fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)',
+                      },
+                      '&.Mui-focused fieldset': {
+                        borderColor: 'rgba(255, 255, 255, 0.6)',
+                        borderWidth: '1px',
+                      },
+                    },
+                    '& .MuiInputLabel-root': {
+                      color: 'rgba(255, 255, 255, 0.7)',
+                      fontWeight: '400',
+                      fontSize: '14px',
+                    },
+                    '& .MuiInputLabel-root.Mui-focused': {
+                      color: 'rgba(255, 255, 255, 0.9)',
+                    },
+                    '& .MuiOutlinedInput-input': {
+                      color: 'rgba(255, 255, 255, 0.95)',
+                      fontSize: '14px',
+                      fontFamily: 'monospace',
+                    },
+                  }}
+                />
+
+                {/* Registration Code */}
+                <TextField
+                  fullWidth
+                  label="Registration Code"
+                  name="registrationCode"
+                  value={formData.registrationCode}
+                  onChange={handleChange}
+                  margin="normal"
+                  required
                   sx={{
                     mb: 4,
                     '& .MuiOutlinedInput-root': {
@@ -377,6 +627,7 @@ const Login = () => {
                   }}
                 />
 
+                {/* Submit Button */}
                 <Button
                   type="submit"
                   fullWidth
@@ -423,10 +674,10 @@ const Login = () => {
                           },
                         }}
                       />
-                      Authenticating...
+                      Creating Account...
                     </Box>
                   ) : (
-                    'Access Portal'
+                    'Create Account'
                   )}
                 </Button>
               </form>
@@ -446,29 +697,23 @@ const Login = () => {
                 mb: 2,
               }}
             >
-              Need access?{' '}
-              <Box
+              Already have an account?{' '}
+              <Link
                 component="button"
-                onClick={() => {
-                  console.log('Navigating to register...');
-                  navigate('/register');
-                }}
+                type="button"
+                onClick={() => navigate('/login')}
                 sx={{
-                  background: 'none',
-                  border: 'none',
                   color: 'rgba(255, 255, 255, 0.7)',
                   textDecoration: 'underline',
                   fontFamily: 'monospace',
                   fontSize: '11px',
-                  cursor: 'pointer',
-                  padding: 0,
                   '&:hover': {
                     color: 'rgba(255, 255, 255, 0.9)',
                   },
                 }}
               >
-                Request Account
-              </Box>
+                Sign In
+              </Link>
             </Typography>
             <Typography
               variant="body2"
@@ -489,4 +734,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Register;

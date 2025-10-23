@@ -146,6 +146,127 @@ router.post('/login', async (req, res) => {
   }
 });
 
+// Registration endpoint
+router.post('/register', async (req, res) => {
+  try {
+    const {
+      firstName,
+      lastName,
+      username,
+      password,
+      email,
+      registrationCode,
+      writerType
+    } = req.body;
+
+    console.log('📝 Registration attempt for username:', username);
+
+    // Validate input
+    if (!firstName || !lastName || !username || !password || !email || !registrationCode || !writerType) {
+      console.log('❌ Missing required fields');
+      return res.status(400).json({
+        success: false,
+        message: 'All fields are required'
+      });
+    }
+
+    // Validate registration code
+    if (registrationCode !== '125646') {
+      console.log('❌ Invalid registration code:', registrationCode);
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid registration code'
+      });
+    }
+
+    // Check if username already exists
+    const existingUserResult = await pool.query(
+      "SELECT username FROM login WHERE username = $1",
+      [username]
+    );
+
+    if (existingUserResult.rows.length > 0) {
+      console.log('❌ Username already exists:', username);
+      return res.status(400).json({
+        success: false,
+        message: 'Username already exists. Please choose a different username.'
+      });
+    }
+
+    // Map writer type to secondary_role
+    let secondaryRole;
+    switch (writerType) {
+      case 'interviewed':
+        secondaryRole = 'Intern';
+        break;
+      case 'part-time':
+        secondaryRole = 'Part Time';
+        break;
+      case 'full-time':
+        secondaryRole = 'Full Time';
+        break;
+      case 'stl':
+        secondaryRole = 'STL';
+        break;
+      default:
+        return res.status(400).json({
+          success: false,
+          message: 'Invalid writer type'
+        });
+    }
+
+    // Start transaction
+    const client = await pool.connect();
+
+    try {
+      await client.query('BEGIN');
+
+      // Insert into login table
+      const loginInsertResult = await client.query(
+        `INSERT INTO login (username, password, email, role, secondary_role)
+         VALUES ($1, $2, $3, $4, $5)
+         RETURNING id`,
+        [username, password, email, 'writer', secondaryRole]
+      );
+
+      const loginId = loginInsertResult.rows[0].id;
+      console.log('✅ Login record created with ID:', loginId);
+
+      // Insert into writer table
+      const fullName = `${firstName} ${lastName}`;
+      await client.query(
+        `INSERT INTO writer (name, password, email, login_id)
+         VALUES ($1, $2, $3, $4)`,
+        [fullName, password, email, loginId]
+      );
+
+      console.log('✅ Writer record created for:', fullName);
+
+      await client.query('COMMIT');
+
+      res.json({
+        success: true,
+        message: 'Account created successfully! You can now log in.',
+        username: username
+      });
+
+    } catch (error) {
+      await client.query('ROLLBACK');
+      throw error;
+    } finally {
+      client.release();
+    }
+
+  } catch (error) {
+    console.error("❌ Error during registration:", error);
+    res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+      error: error.message
+    });
+  }
+});
+
 // Get writer information endpoint
 router.get('/getWriter', async (req, res) => {
   try {

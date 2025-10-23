@@ -10,6 +10,7 @@ import { AuthProvider } from "./contexts/AuthContext.jsx";
 import { NotificationProvider } from "./contexts/NotificationContext.jsx";
 import { ProtectedRoute } from "./components/ProtectedRoute.jsx";
 import Login from "./pages/Login.jsx";
+import Register from "./pages/Register.jsx";
 import Dashboard from "./pages/Dashboard.jsx";
 import WriterDashboard from "./pages/WriterDashboard.jsx";
 import Analytics from "./pages/Analytics.jsx";
@@ -186,6 +187,7 @@ function App() {
           <Router>
             <Routes>
               <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
               <Route
                 path="/retention-master"
                 element={
