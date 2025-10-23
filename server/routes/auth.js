@@ -235,7 +235,7 @@ router.post('/register', async (req, res) => {
       // Insert into writer table
       const fullName = `${firstName} ${lastName}`;
       await client.query(
-        `INSERT INTO writer (name, password, email, login_id)
+        `INSERT INTO writer (name, pw_hash, email, login_id)
          VALUES ($1, $2, $3, $4)`,
         [fullName, password, email, loginId]
       );
