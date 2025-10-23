@@ -564,7 +564,7 @@ const createTrelloCard = async (
 };
 
 app.post("/api/scripts", async (req, res) => {
-  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason } = req.body;
+  const { writer_id, title, googleDocLink, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason, spark_document } = req.body;
   try {
     // Fetch Trello settings
     const settingsResult = await pool.query(
@@ -712,9 +712,9 @@ app.post("/api/scripts", async (req, res) => {
 
     // Insert script into the database with trello_card_id (only if no errors occurred)
     const { rows } = await pool.query(
-      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason, created_at)
-          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP) RETURNING *`,
-      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason]
+      `INSERT INTO script (writer_id, title, google_doc_link, approval_status, trello_card_id, ai_chat_url, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason, spark_document, created_at)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP) RETURNING *`,
+      [writer_id, title, googleDocLink, trelloStatus, trelloCardId, aiChatUrl, structure_explanation, inspiration_link, core_concept_doc, structure, viewer_retention_reason, spark_document]
     );
     const script = rows[0];
 

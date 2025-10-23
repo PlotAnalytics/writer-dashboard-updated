@@ -42,6 +42,10 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
 
+  // New state for Module functionality
+  const [moduleSubType, setModuleSubType] = useState(''); // For Module sub-dropdown
+  const [sparkDocument, setSparkDocument] = useState(''); // For Spark Document link
+
   // Enhanced form state from reference
   const [tropeList, setTropeList] = useState([]);
   const [structureList, setStructureList] = useState([]);
@@ -377,10 +381,19 @@ const Dashboard = () => {
     console.log('🎭 Type validation - prefixType:', prefixType, 'Type:', typeof prefixType);
     if (!prefixType || prefixType === '' || prefixType === '-- Select Type --') {
       console.log('❌ Type validation failed - must select a valid type');
-      setError('Please select a Type (Original, Remix, Re-write, or STL).');
+      setError('Please select a Type (Original, Remix, Re-write, STL, or Module).');
       return;
     }
     console.log('✅ Type validation passed');
+
+    // Validate Module sub-type selection
+    if (prefixType === 'Module') {
+      if (!moduleSubType || moduleSubType === '' || moduleSubType === '-- Select Module Type --') {
+        setError('Please select a Module Type (Original, Remix, or Re-write).');
+        return;
+      }
+      console.log('✅ Module sub-type validation passed');
+    }
 
     // Structure validation removed - no longer used
     const isIntern = user?.secondaryRole === 'Intern';
@@ -458,13 +471,35 @@ const Dashboard = () => {
       return;
     }
 
+    // Validate Spark Document for Module with Remix or Re-write
+    if (prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write')) {
+      if (!sparkDocument.trim()) {
+        setError("Spark Document is required for Module Remix and Re-write scripts.");
+        return;
+      }
+
+      if (!sparkDocument.includes('docs.google.com')) {
+        setError("Spark Document must contain 'docs.google.com'.");
+        return;
+      }
+    }
+
     setError(''); // Clear previous errors
     setIsSubmitting(true);
 
     try {
       // Build full title with structure and type prefix (no structure for intern writers)
       const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : '';
-      const fullTitle = structurePrefix + `[${prefixType}] ${title}`;
+
+      // Handle Module type title generation
+      let typePrefix;
+      if (prefixType === 'Module') {
+        typePrefix = `[Module ${moduleSubType}]`;
+      } else {
+        typePrefix = `[${prefixType}]`;
+      }
+
+      const fullTitle = structurePrefix + `${typePrefix} ${title}`;
 
       // Filter out empty URLs and join multiple URLs with forward slashes
       const filteredUrls = aiChatUrls.filter(url => url.trim() !== '');
@@ -480,6 +515,7 @@ const Dashboard = () => {
         core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
         viewer_retention_reason: (prefixType === 'Remix' && !isExcludedFromRetentionField) ? viewerRetentionReason : null,
         structure: null, // No longer used
+        spark_document: (prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write')) ? sparkDocument : null,
       });
 
       // Refresh the scripts list to get the latest data
@@ -495,6 +531,8 @@ const Dashboard = () => {
       setStructureExplanation('');
       setInspirationLink('');
       setCoreConceptDoc('');
+      setModuleSubType('');
+      setSparkDocument('');
 
       setError(null);
       alert('Approval pending, may take 24-48 hours');
@@ -523,6 +561,8 @@ const Dashboard = () => {
       setInspirationLink('');
       setCoreConceptDoc('');
       setViewerRetentionReason('');
+      setModuleSubType('');
+      setSparkDocument('');
 
       setError(null);
       alert('Script submitted successfully! (Demo mode - API not available)');
@@ -534,7 +574,18 @@ const Dashboard = () => {
   // Handle type change
   const handleTypeChange = (e) => {
     setPrefixType(e.target.value);
-    // Clear inspiration link if not Remix or Re-write
+
+    // Reset module sub-type when changing main type
+    if (e.target.value !== 'Module') {
+      setModuleSubType('');
+    }
+
+    // Clear spark document when not Module or when Module sub-type changes
+    if (e.target.value !== 'Module') {
+      setSparkDocument('');
+    }
+
+    // Clear inspiration link if not Remix or Re-write (and not Module with Remix/Re-write)
     if (e.target.value !== 'Remix' && e.target.value !== 'Re-write') {
       setInspirationLink('');
     }
@@ -542,6 +593,14 @@ const Dashboard = () => {
     if (e.target.value !== 'Remix' && e.target.value !== 'STL') {
       setCoreConceptDoc('');
     }
+  };
+
+  // Handle module sub-type change
+  const handleModuleSubTypeChange = (e) => {
+    setModuleSubType(e.target.value);
+
+    // Clear spark document when changing sub-type
+    setSparkDocument('');
   };
 
   // Handle multiple AI Chat URLs
@@ -1062,11 +1121,71 @@ const Dashboard = () => {
                         <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Type --</MenuItem>
                         <MenuItem value="Original">Original</MenuItem>
                         <MenuItem value="Remix">Remix</MenuItem>
-                        <MenuItem value="Re-write">Re-write</MenuItem>
-                        <MenuItem value="STL">STL</MenuItem>
+                        {!isIntern && <MenuItem value="Re-write">Re-write</MenuItem>}
+                        {!isIntern && <MenuItem value="STL">STL</MenuItem>}
+                        {!isIntern && <MenuItem value="Module">Module</MenuItem>}
                       </Select>
                     </FormControl>
 
+                    {/* Module Sub-type Dropdown (conditional) */}
+                    {prefixType === 'Module' && (
+                      <FormControl size="medium" sx={{ minWidth: '200px' }} required>
+                        <Select
+                          value={moduleSubType}
+                          onChange={handleModuleSubTypeChange}
+                          displayEmpty
+                          MenuProps={{
+                            PaperProps: {
+                              sx: {
+                                background: 'rgba(255, 255, 255, 0.04)',
+                                backdropFilter: 'blur(12px)',
+                                border: '1px solid rgba(255, 255, 255, 0.1)',
+                                borderRadius: '8px',
+                                boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2)',
+                                '& .MuiMenuItem-root': {
+                                  color: 'rgba(255, 255, 255, 0.9)',
+                                  '&:hover': {
+                                    background: 'rgba(102, 126, 234, 0.2)',
+                                  },
+                                  '&.Mui-selected': {
+                                    background: 'rgba(102, 126, 234, 0.3)',
+                                    '&:hover': {
+                                      background: 'rgba(102, 126, 234, 0.4)',
+                                    },
+                                  },
+                                },
+                              },
+                            },
+                          }}
+                          sx={{
+                            background: 'rgba(255, 255, 255, 0.04)',
+                            backdropFilter: 'blur(5px)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '8px',
+                            transition: 'all 0.2s ease',
+                            '& .MuiOutlinedInput-notchedOutline': { border: 'none' },
+                            '&:hover': {
+                              border: '1px solid rgba(102, 126, 234, 0.3)',
+                              background: 'rgba(255, 255, 255, 0.06)',
+                            },
+                            '&.Mui-focused': {
+                              border: '1px solid rgba(102, 126, 234, 0.5)',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                            },
+                            '& .MuiSelect-select': {
+                              color: 'rgba(255, 255, 255, 0.9)',
+                              padding: '10px 12px'
+                            },
+                            '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
+                          }}
+                        >
+                          <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Module Type --</MenuItem>
+                          <MenuItem value="Original">Original</MenuItem>
+                          <MenuItem value="Remix">Remix</MenuItem>
+                          <MenuItem value="Re-write">Re-write</MenuItem>
+                        </Select>
+                      </FormControl>
+                    )}
 
                   </Box>
                 </Box>
@@ -1249,6 +1368,56 @@ const Dashboard = () => {
                       placeholder="https://docs.google.com/document/d/..."
                       value={coreConceptDoc}
                       onChange={(e) => setCoreConceptDoc(e.target.value)}
+                      required
+                      size="medium"
+                      sx={{
+                        '& .MuiOutlinedInput-root': {
+                          background: 'rgba(255, 255, 255, 0.04)',
+                          backdropFilter: 'blur(5px)',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          transition: 'all 0.2s ease',
+                          '& fieldset': { border: 'none' },
+                          '&:hover': {
+                            border: '1px solid rgba(102, 126, 234, 0.3)',
+                            background: 'rgba(255, 255, 255, 0.06)',
+                          },
+                          '&.Mui-focused': {
+                            border: '1px solid rgba(102, 126, 234, 0.5)',
+                            background: 'rgba(255, 255, 255, 0.08)',
+                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
+                          },
+                        },
+                        '& .MuiInputBase-input': {
+                          color: 'rgba(255, 255, 255, 0.9)',
+                          fontSize: '14px',
+                          padding: '10px 12px',
+                          '&::placeholder': {
+                            color: 'rgba(255, 255, 255, 0.4)',
+                          }
+                        },
+                      }}
+                    />
+                  </Box>
+                )}
+
+                {/* Spark Document (conditional - Module with Remix or Re-write) */}
+                {prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write') && (
+                  <Box sx={{ mb: 2.5 }}>
+                    <Typography variant="body2" sx={{
+                      color: 'rgba(255, 255, 255, 0.8)',
+                      mb: 1.2,
+                      fontWeight: '700',
+                      fontSize: '13px'
+                    }}>
+                      Spark Document <span style={{ color: '#ff4444' }}>*</span>
+                    </Typography>
+                    <TextField
+                      fullWidth
+                      type="url"
+                      placeholder="https://docs.google.com/document/d/..."
+                      value={sparkDocument}
+                      onChange={(e) => setSparkDocument(e.target.value)}
                       required
                       size="medium"
                       sx={{
