@@ -2347,7 +2347,10 @@ const AnalyticsUpdated = () => {
                             axisLabel: {
                               formatter: (value) => {
                                 if (value >= 1000000) {
-                                  return Math.round(value / 1000000) + 'M';
+                                  // Use one decimal place for millions to avoid duplicates
+                                  const millions = value / 1000000;
+                                  const formatted = millions % 1 === 0 ? millions + 'M' : millions.toFixed(1) + 'M';
+                                  return formatted;
                                 } else if (value >= 1000) {
                                   return Math.round(value / 1000) + 'K';
                                 }
@@ -2357,18 +2360,40 @@ const AnalyticsUpdated = () => {
                               fontSize: 10
                             },
                             axisLine: {
-                              lineStyle: { color: '#424242' }
+                              show: true,
+                              lineStyle: { color: '#666666', width: 1 }
+                            },
+                            axisTick: {
+                              show: true,
+                              lineStyle: { color: '#666666', width: 1 },
+                              length: 6
                             },
                             splitLine: {
+                              show: true,
                               lineStyle: { color: 'rgba(66, 66, 66, 0.3)', type: 'dashed' }
                             }
                           },
                           series: (() => {
                             const series = [];
 
+                            console.log('🎯 CHART DEBUG: Starting series configuration');
+                            console.log('🎯 isSTLWriter():', isSTLWriter());
+                            console.log('🎯 analyticsData.hasSplitData:', analyticsData.hasSplitData);
+                            console.log('🎯 analyticsData.shortsData length:', analyticsData.shortsData?.length);
+                            console.log('🎯 analyticsData.longsData length:', analyticsData.longsData?.length);
+                            console.log('🎯 analyticsData.aggregatedViewsData length:', analyticsData.aggregatedViewsData?.length);
+
                             // Check if we have split data for STL writers
                             if (isSTLWriter() && analyticsData.hasSplitData && analyticsData.shortsData && analyticsData.longsData) {
                               console.log('📊 Rendering split chart with shorts and longs data');
+
+                              // Log the actual data values
+                              const shortsValues = analyticsData.shortsData.map(item => item.views);
+                              const longsValues = analyticsData.longsData.map(item => item.views);
+                              console.log('🎯 Shorts data values:', shortsValues);
+                              console.log('🎯 Longs data values:', longsValues);
+                              console.log('🎯 Max shorts value:', Math.max(...shortsValues.filter(v => v !== null)));
+                              console.log('🎯 Max longs value:', Math.max(...longsValues.filter(v => v !== null)));
 
                               // Add Long Videos series (blue line)
                               const longsData = analyticsData.longsData.map(item => item.views);
@@ -2445,9 +2470,14 @@ const AnalyticsUpdated = () => {
                               }
                             } else {
                               // Original single line chart for non-STL writers
+                              console.log('🎯 Rendering single chart for non-STL writer');
+                              const dailyViewsData = analyticsData.aggregatedViewsData.map(item => item.views);
+                              console.log('🎯 Daily views data:', dailyViewsData);
+                              console.log('🎯 Max daily views value:', Math.max(...dailyViewsData.filter(v => v !== null)));
+
                               series.push({
                                 name: 'Daily Views',
-                                data: analyticsData.aggregatedViewsData.map(item => item.views),
+                                data: dailyViewsData,
                                 type: 'line',
                                 smooth: true,
                                 lineStyle: {
@@ -2479,13 +2509,16 @@ const AnalyticsUpdated = () => {
                                 markLine: (() => {
                                   // Don't show target line for STL writers since they use all-time view progression
                                   if (isSTLWriter()) {
+                                    console.log('🎯 MarkLine: Skipping for STL writer');
                                     return null;
                                   }
 
                                   const targetDailyViews = calculateTargetDailyViews();
                                   console.log('🎯 MarkLine creation:', { targetDailyViews, monthlyBonusData });
+                                  console.log('🎯 MarkLine: Target daily views calculated:', targetDailyViews);
 
                                   if (targetDailyViews > 0) {
+                                    console.log('🎯 MarkLine: Creating target line at yAxis value:', targetDailyViews);
                                     // Position the line at the actual target value, not 90% of max
                                     return {
                                       silent: true,
@@ -2508,10 +2541,22 @@ const AnalyticsUpdated = () => {
                                       }]
                                     };
                                   }
+                                  console.log('🎯 MarkLine: No target line (targetDailyViews <= 0)');
                                   return null;
                                 })()
                               });
                             }
+
+                            console.log('🎯 Final series configuration:', series);
+                            console.log('🎯 Number of series:', series.length);
+                            series.forEach((s, index) => {
+                              console.log(`🎯 Series ${index}:`, {
+                                name: s.name,
+                                dataLength: s.data?.length,
+                                hasMarkLine: !!s.markLine,
+                                maxValue: s.data ? Math.max(...s.data.filter(v => v !== null && v !== undefined)) : 'no data'
+                              });
+                            });
 
                             return series;
                           })()
