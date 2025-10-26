@@ -42,8 +42,8 @@ const Dashboard = () => {
   const [error, setError] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
 
-  // New state for Module functionality
-  const [moduleSubType, setModuleSubType] = useState(''); // For Module sub-dropdown
+  // New state for Format functionality
+  const [format, setFormat] = useState(''); // For Format dropdown (Original/Spark)
   const [sparkDocument, setSparkDocument] = useState(''); // For Spark Document link
 
   // Enhanced form state from reference
@@ -371,6 +371,9 @@ const Dashboard = () => {
 
 
 
+    // Define isIntern at the top
+    const isIntern = user?.secondaryRole === 'Intern';
+
     // Validate Title
     if (!title.trim()) {
       setError('Title is required.');
@@ -381,22 +384,25 @@ const Dashboard = () => {
     console.log('🎭 Type validation - prefixType:', prefixType, 'Type:', typeof prefixType);
     if (!prefixType || prefixType === '' || prefixType === '-- Select Type --') {
       console.log('❌ Type validation failed - must select a valid type');
-      setError('Please select a Type (Original, Remix, Re-write, STL, or Module).');
+      if (isIntern) {
+        setError('Please select a Type (Original or Remix).');
+      } else {
+        setError('Please select a Type (Short or STL).');
+      }
       return;
     }
     console.log('✅ Type validation passed');
 
-    // Validate Module sub-type selection
-    if (prefixType === 'Module') {
-      if (!moduleSubType || moduleSubType === '' || moduleSubType === '-- Select Module Type --') {
-        setError('Please select a Module Type (Original, Remix, or Re-write).');
+    // Validate Format selection for non-Intern users
+    if (!isIntern && (prefixType === 'Short' || prefixType === 'STL')) {
+      if (!format || format === '' || format === '-- Select Format --') {
+        setError('Please select a Format (Original or Spark).');
         return;
       }
-      console.log('✅ Module sub-type validation passed');
+      console.log('✅ Format validation passed');
     }
 
     // Structure validation removed - no longer used
-    const isIntern = user?.secondaryRole === 'Intern';
     console.log('🏗️ Structure validation skipped - structures no longer used');
     console.log('✅ Structure validation passed');
 
@@ -422,59 +428,48 @@ const Dashboard = () => {
 
     // Structure explanation validation removed - no longer used
 
-    // Validate Inspiration Link for Remix and Re-write
-    if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
+    // Validate Inspiration Link for Remix and Re-write (Intern users only)
+    if (isIntern && (prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.trim()) {
       setError("Inspiration link is required for Remix and Re-write scripts.");
       return;
     }
 
-    if ((prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.includes('docs.google.com')) {
+    if (isIntern && (prefixType === 'Remix' || prefixType === 'Re-write') && !inspirationLink.includes('docs.google.com')) {
       setError("Inspiration link must contain 'docs.google.com'.");
       return;
     }
 
-    // Validate Core Concept Doc for Remix only
-    if (prefixType === 'Remix' && !coreConceptDoc.trim()) {
+    // Validate Core Concept Doc for Remix only (Intern users only)
+    if (isIntern && prefixType === 'Remix' && !coreConceptDoc.trim()) {
       setError("Core Concept Doc is required for Remix scripts.");
       return;
     }
 
-    if (prefixType === 'Remix' && !coreConceptDoc.includes('docs.google.com')) {
+    if (isIntern && prefixType === 'Remix' && !coreConceptDoc.includes('docs.google.com')) {
       setError("Core Concept Doc must contain 'docs.google.com'.");
       return;
     }
 
-    // Validate Viewer Retention Reason for Remix only (skip for excluded users)
-    if (prefixType === 'Remix' && !isExcludedFromRetentionField && !viewerRetentionReason.trim()) {
+    // Validate Viewer Retention Reason for Remix only (Intern users only, skip for excluded users)
+    if (isIntern && prefixType === 'Remix' && !isExcludedFromRetentionField && !viewerRetentionReason.trim()) {
       setError("Please explain why the viewer will watch till the end (required for Remix scripts).");
       return;
     }
 
-    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length < 50) {
+    if (isIntern && prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length < 50) {
       setError("Viewer retention reason must be at least 50 characters.");
       return;
     }
 
-    if (prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 500) {
+    if (isIntern && prefixType === 'Remix' && !isExcludedFromRetentionField && viewerRetentionReason.length > 500) {
       setError("Viewer retention reason must be no more than 500 characters.");
       return;
     }
 
-    // Validate Core Concept Doc for STL only
-    if (prefixType === 'STL' && !coreConceptDoc.trim()) {
-      setError("Core Concept Doc is required for STL scripts.");
-      return;
-    }
-
-    if (prefixType === 'STL' && !coreConceptDoc.includes('docs.google.com')) {
-      setError("Core Concept Doc must contain 'docs.google.com'.");
-      return;
-    }
-
-    // Validate Spark Document for Module with Remix or Re-write
-    if (prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write')) {
+    // Validate Spark Document for Format = Spark
+    if (!isIntern && format === 'Spark') {
       if (!sparkDocument.trim()) {
-        setError("Spark Document is required for Module Remix and Re-write scripts.");
+        setError("Spark Document is required when Format is Spark.");
         return;
       }
 
@@ -491,12 +486,14 @@ const Dashboard = () => {
       // Build full title with structure and type prefix (no structure for intern writers)
       const structurePrefix = (selectedStructure && !isIntern) ? `[${selectedStructure}] ` : '';
 
-      // Handle Module type title generation
+      // Handle title generation based on user type
       let typePrefix;
-      if (prefixType === 'Module') {
-        typePrefix = `[Module ${moduleSubType}]`;
-      } else {
+      if (isIntern) {
+        // Intern users: use original logic (Original/Remix)
         typePrefix = `[${prefixType}]`;
+      } else {
+        // Non-intern users: combine Type and Format (Short Original, Short Spark, STL Original, STL Spark)
+        typePrefix = `[${prefixType} ${format}]`;
       }
 
       const fullTitle = structurePrefix + `${typePrefix} ${title}`;
@@ -511,11 +508,11 @@ const Dashboard = () => {
         googleDocLink: googleDocLink,
         aiChatUrl: aiChatUrlsString,
         structure_explanation: null, // No longer used
-        inspiration_link: (prefixType === 'Remix' || prefixType === 'Re-write') ? inspirationLink : null,
-        core_concept_doc: (prefixType === 'Remix' || prefixType === 'STL') ? coreConceptDoc : null,
-        viewer_retention_reason: (prefixType === 'Remix' && !isExcludedFromRetentionField) ? viewerRetentionReason : null,
+        inspiration_link: (isIntern && (prefixType === 'Remix' || prefixType === 'Re-write')) ? inspirationLink : null,
+        core_concept_doc: (isIntern && prefixType === 'Remix') ? coreConceptDoc : null,
+        viewer_retention_reason: (isIntern && prefixType === 'Remix' && !isExcludedFromRetentionField) ? viewerRetentionReason : null,
         structure: null, // No longer used
-        spark_document: (prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write')) ? sparkDocument : null,
+        spark_document: (!isIntern && format === 'Spark') ? sparkDocument : null,
       });
 
       // Refresh the scripts list to get the latest data
@@ -531,7 +528,7 @@ const Dashboard = () => {
       setStructureExplanation('');
       setInspirationLink('');
       setCoreConceptDoc('');
-      setModuleSubType('');
+      setFormat('');
       setSparkDocument('');
 
       setError(null);
@@ -561,7 +558,7 @@ const Dashboard = () => {
       setInspirationLink('');
       setCoreConceptDoc('');
       setViewerRetentionReason('');
-      setModuleSubType('');
+      setFormat('');
       setSparkDocument('');
 
       setError(null);
@@ -575,32 +572,30 @@ const Dashboard = () => {
   const handleTypeChange = (e) => {
     setPrefixType(e.target.value);
 
-    // Reset module sub-type when changing main type
-    if (e.target.value !== 'Module') {
-      setModuleSubType('');
-    }
+    // Reset format when changing type
+    setFormat('');
 
-    // Clear spark document when not Module or when Module sub-type changes
-    if (e.target.value !== 'Module') {
-      setSparkDocument('');
-    }
+    // Clear spark document when changing type
+    setSparkDocument('');
 
-    // Clear inspiration link if not Remix or Re-write (and not Module with Remix/Re-write)
-    if (e.target.value !== 'Remix' && e.target.value !== 'Re-write') {
-      setInspirationLink('');
-    }
-    // Clear core concept doc if not Remix or STL
-    if (e.target.value !== 'Remix' && e.target.value !== 'STL') {
-      setCoreConceptDoc('');
-    }
+    // Clear inspiration link when changing type
+    setInspirationLink('');
+
+    // Clear core concept doc when changing type
+    setCoreConceptDoc('');
+
+    // Clear viewer retention reason when changing type
+    setViewerRetentionReason('');
   };
 
-  // Handle module sub-type change
-  const handleModuleSubTypeChange = (e) => {
-    setModuleSubType(e.target.value);
+  // Handle format change
+  const handleFormatChange = (e) => {
+    setFormat(e.target.value);
 
-    // Clear spark document when changing sub-type
-    setSparkDocument('');
+    // Clear spark document when changing format
+    if (e.target.value !== 'Spark') {
+      setSparkDocument('');
+    }
   };
 
   // Handle multiple AI Chat URLs
@@ -1119,20 +1114,22 @@ const Dashboard = () => {
                         }}
                       >
                         <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Type --</MenuItem>
-                        <MenuItem value="Original">Original</MenuItem>
-                        <MenuItem value="Remix">Remix</MenuItem>
-                        {!isIntern && <MenuItem value="Re-write">Re-write</MenuItem>}
-                        {!isIntern && <MenuItem value="STL">STL</MenuItem>}
-                        {!isIntern && <MenuItem value="Module">Module</MenuItem>}
+                        {isIntern ? [
+                          <MenuItem key="original" value="Original">Original</MenuItem>,
+                          <MenuItem key="remix" value="Remix">Remix</MenuItem>
+                        ] : [
+                          <MenuItem key="short" value="Short">Short</MenuItem>,
+                          <MenuItem key="stl" value="STL">STL</MenuItem>
+                        ]}
                       </Select>
                     </FormControl>
 
-                    {/* Module Sub-type Dropdown (conditional) */}
-                    {prefixType === 'Module' && (
+                    {/* Format Dropdown (conditional for non-Intern users) */}
+                    {!isIntern && (prefixType === 'Short' || prefixType === 'STL') && (
                       <FormControl size="medium" sx={{ minWidth: '200px' }} required>
                         <Select
-                          value={moduleSubType}
-                          onChange={handleModuleSubTypeChange}
+                          value={format}
+                          onChange={handleFormatChange}
                           displayEmpty
                           MenuProps={{
                             PaperProps: {
@@ -1179,10 +1176,9 @@ const Dashboard = () => {
                             '& .MuiSvgIcon-root': { color: 'rgba(255, 255, 255, 0.6)' },
                           }}
                         >
-                          <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Module Type --</MenuItem>
+                          <MenuItem value="" sx={{ color: 'rgba(255, 255, 255, 0.9)', fontStyle: 'italic' }}>-- Select Format --</MenuItem>
                           <MenuItem value="Original">Original</MenuItem>
-                          <MenuItem value="Remix">Remix</MenuItem>
-                          <MenuItem value="Re-write">Re-write</MenuItem>
+                          <MenuItem value="Spark">Spark</MenuItem>
                         </Select>
                       </FormControl>
                     )}
@@ -1190,8 +1186,8 @@ const Dashboard = () => {
                   </Box>
                 </Box>
 
-                {/* Inspiration Link (conditional) */}
-                {(prefixType === 'Remix' || prefixType === 'Re-write') && (
+                {/* Inspiration Link (conditional - only for Intern users with Remix/Re-write) */}
+                {isIntern && (prefixType === 'Remix' || prefixType === 'Re-write') && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
@@ -1240,8 +1236,8 @@ const Dashboard = () => {
                   </Box>
                 )}
 
-                {/* Core Concept Doc (conditional - Remix only) */}
-                {prefixType === 'Remix' && (
+                {/* Core Concept Doc (conditional - Remix only for Intern users) */}
+                {isIntern && prefixType === 'Remix' && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
@@ -1290,8 +1286,8 @@ const Dashboard = () => {
                   </Box>
                 )}
 
-                {/* Viewer Retention Reason (conditional - Remix only, excluded users don't see this) */}
-                {prefixType === 'Remix' && !isExcludedFromRetentionField && (
+                {/* Viewer Retention Reason (conditional - Remix only for Intern users, excluded users don't see this) */}
+                {isIntern && prefixType === 'Remix' && !isExcludedFromRetentionField && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
@@ -1351,58 +1347,10 @@ const Dashboard = () => {
                   </Box>
                 )}
 
-                {/* Core Concept Doc (conditional - STL only) */}
-                {prefixType === 'STL' && (
-                  <Box sx={{ mb: 2.5 }}>
-                    <Typography variant="body2" sx={{
-                      color: 'rgba(255, 255, 255, 0.8)',
-                      mb: 1.2,
-                      fontWeight: '700',
-                      fontSize: '13px'
-                    }}>
-                      Core Concept Doc <span style={{ color: '#ff4444' }}>*</span>
-                    </Typography>
-                    <TextField
-                      fullWidth
-                      type="url"
-                      placeholder="https://docs.google.com/document/d/..."
-                      value={coreConceptDoc}
-                      onChange={(e) => setCoreConceptDoc(e.target.value)}
-                      required
-                      size="medium"
-                      sx={{
-                        '& .MuiOutlinedInput-root': {
-                          background: 'rgba(255, 255, 255, 0.04)',
-                          backdropFilter: 'blur(5px)',
-                          border: '1px solid rgba(255, 255, 255, 0.1)',
-                          borderRadius: '8px',
-                          transition: 'all 0.2s ease',
-                          '& fieldset': { border: 'none' },
-                          '&:hover': {
-                            border: '1px solid rgba(102, 126, 234, 0.3)',
-                            background: 'rgba(255, 255, 255, 0.06)',
-                          },
-                          '&.Mui-focused': {
-                            border: '1px solid rgba(102, 126, 234, 0.5)',
-                            background: 'rgba(255, 255, 255, 0.08)',
-                            boxShadow: '0 0 0 2px rgba(102, 126, 234, 0.1)',
-                          },
-                        },
-                        '& .MuiInputBase-input': {
-                          color: 'rgba(255, 255, 255, 0.9)',
-                          fontSize: '14px',
-                          padding: '10px 12px',
-                          '&::placeholder': {
-                            color: 'rgba(255, 255, 255, 0.4)',
-                          }
-                        },
-                      }}
-                    />
-                  </Box>
-                )}
 
-                {/* Spark Document (conditional - Module with Remix or Re-write) */}
-                {prefixType === 'Module' && (moduleSubType === 'Remix' || moduleSubType === 'Re-write') && (
+
+                {/* Spark Document (conditional - Format is Spark) */}
+                {!isIntern && format === 'Spark' && (
                   <Box sx={{ mb: 2.5 }}>
                     <Typography variant="body2" sx={{
                       color: 'rgba(255, 255, 255, 0.8)',
