@@ -492,8 +492,8 @@ const Dashboard = () => {
         // Intern users: use original logic (Original/Remix)
         typePrefix = `[${prefixType}]`;
       } else {
-        // Non-intern users: combine Type and Format (Short Original, Short Spark, STL Original, STL Spark)
-        typePrefix = `[${prefixType} ${format}]`;
+        // Non-intern users: separate Type and Format brackets [STL] [Spark]
+        typePrefix = `[${prefixType}] [${format}]`;
       }
 
       const fullTitle = structurePrefix + `${typePrefix} ${title}`;
