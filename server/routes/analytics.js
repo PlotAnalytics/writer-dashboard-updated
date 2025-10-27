@@ -1658,6 +1658,76 @@ async function getBigQueryAnalyticsOverview(
             }
           });
 
+          // Step 7: Add hardcoded supplement data for specific writers during gap period
+          console.log('🔄 Step 7: Adding hardcoded supplement data for gap period');
+
+          // Hardcoded data for writers 135 (Benni Taylor) and 78 (Grace) during Oct 23-26, 2025
+          const hardcodedSupplementData = [
+            // Benni Taylor (writer_id: 135)
+            { writer_id: 135, date: '2025-10-23', views: 4654 },
+            { writer_id: 135, date: '2025-10-24', views: 9051 },
+            { writer_id: 135, date: '2025-10-25', views: 7901 },
+            { writer_id: 135, date: '2025-10-26', views: 4197 },
+            { writer_id: 135, date: '2025-10-23', views: 4487 },
+            { writer_id: 135, date: '2025-10-24', views: 6694 },
+            { writer_id: 135, date: '2025-10-25', views: 7978 },
+            { writer_id: 135, date: '2025-10-26', views: 7134 },
+            { writer_id: 135, date: '2025-10-23', views: 8999 },
+            { writer_id: 135, date: '2025-10-24', views: 5093 },
+            { writer_id: 135, date: '2025-10-25', views: 1846 },
+            { writer_id: 135, date: '2025-10-26', views: 1261 },
+            { writer_id: 135, date: '2025-10-23', views: 10912 },
+            { writer_id: 135, date: '2025-10-24', views: 8999 },
+            { writer_id: 135, date: '2025-10-25', views: 60957 },
+            { writer_id: 135, date: '2025-10-26', views: 180337 },
+            // Grace (writer_id: 78)
+            { writer_id: 78, date: '2025-10-23', views: 12044 },
+            { writer_id: 78, date: '2025-10-24', views: 1193 },
+            { writer_id: 78, date: '2025-10-25', views: 4970 },
+            { writer_id: 78, date: '2025-10-26', views: 35665 },
+            { writer_id: 78, date: '2025-10-23', views: 7261 },
+            { writer_id: 78, date: '2025-10-24', views: 2107 },
+            { writer_id: 78, date: '2025-10-25', views: 1002 },
+            { writer_id: 78, date: '2025-10-26', views: 433 }
+          ];
+
+          // Check if current writer needs supplement data
+          const currentWriterId = parseInt(writerId);
+          const writerSupplementData = hardcodedSupplementData.filter(item => item.writer_id === currentWriterId);
+
+          if (writerSupplementData.length > 0) {
+            console.log(`📊 Adding hardcoded supplement data for writer ${currentWriterId} (${writerSupplementData.length} entries)`);
+
+            // Group supplement data by date and sum views
+            const supplementByDate = new Map();
+            writerSupplementData.forEach(item => {
+              if (!supplementByDate.has(item.date)) {
+                supplementByDate.set(item.date, 0);
+              }
+              supplementByDate.set(item.date, supplementByDate.get(item.date) + item.views);
+            });
+
+            // Add supplement data to dailyTotals
+            supplementByDate.forEach((supplementViews, dateStr) => {
+              if (dailyTotals.has(dateStr)) {
+                // Add to existing data
+                const existing = dailyTotals.get(dateStr);
+                existing.total_views += supplementViews;
+                existing.unique_videos.add('hardcoded_supplement');
+                console.log(`📊 Supplement added: ${dateStr} += ${supplementViews.toLocaleString()} views (total now: ${existing.total_views.toLocaleString()})`);
+              } else {
+                // Create new entry for this date
+                dailyTotals.set(dateStr, {
+                  total_views: supplementViews,
+                  unique_videos: new Set(['hardcoded_supplement'])
+                });
+                console.log(`📊 Supplement created: ${dateStr} = ${supplementViews.toLocaleString()} views (new entry)`);
+              }
+            });
+          } else {
+            console.log(`📊 No hardcoded supplement data needed for writer ${currentWriterId}`);
+          }
+
           // Convert to array format expected by the rest of the function
           // CRITICAL FIX: Only include dates within the target range in final output
           dailyTotalsRows = Array.from(dailyTotals.entries())
