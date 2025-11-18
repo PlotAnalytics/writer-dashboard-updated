@@ -30,6 +30,7 @@ router.post('/', async (req, res) => {
     trello_card_id,
     status,
     long_video_url,
+    tiktok_url,
     timestamp,
     loom,
     short_video_url,
@@ -125,8 +126,9 @@ router.post('/', async (req, res) => {
       // Validate at least one video URL is provided
       const hasShortVideo = short_video_url && typeof short_video_url === 'string' && short_video_url.trim();
       const hasLongVideo = long_video_url && typeof long_video_url === 'string' && long_video_url.trim();
+      const hasTikTokVideo = tiktok_url && typeof tiktok_url === 'string' && tiktok_url.trim();
 
-      if (!hasShortVideo && !hasLongVideo) {
+      if (!hasShortVideo && !hasLongVideo && !hasTikTokVideo) {
         await client.query('ROLLBACK');
         return res.status(400).json({ error: "At least one valid video URL required for posted status" });
       }
@@ -157,6 +159,9 @@ router.post('/', async (req, res) => {
       }
       if (hasLongVideo) {
         urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: posting_account_id });
+      }
+      if (hasTikTokVideo) {
+        urlsToInsert.push({ url: tiktok_url.trim(), type: 'tiktok', account_id: posting_account_id });
       }
 
       // Upsert videos
@@ -308,6 +313,7 @@ router.post('/', async (req, res) => {
         video_details: updatedScript.video_details,
         short_video_url: short_video_url?.trim() || null,
         long_video_url: long_video_url?.trim() || null,
+        tiktok_url: tiktok_url?.trim() || null,
         posted_at: updatedScript.updated_at
       };
     }
