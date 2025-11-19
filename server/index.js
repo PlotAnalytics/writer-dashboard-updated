@@ -718,78 +718,78 @@ app.post("/api/scripts", async (req, res) => {
     );
     const script = rows[0];
 
-    // Call getPostingAccount API to get a posting account for this card
-    try {
-      // Use the server's own URL for the API call
-      // In production, use the actual domain; in development, use localhost
-      const serverUrl =
-        process.env.SERVER_URL ||
-        (process.env.NODE_ENV === "production"
-          ? `https://${process.env.VERCEL_URL ||
-          "https://writer-dashboard-updated.vercel.app"
-          }`
-          : `http://localhost:${PORT}`);
+    // // Call getPostingAccount API to get a posting account for this card
+    // try {
+    //   // Use the server's own URL for the API call
+    //   // In production, use the actual domain; in development, use localhost
+    //   const serverUrl =
+    //     process.env.SERVER_URL ||
+    //     (process.env.NODE_ENV === "production"
+    //       ? `https://${process.env.VERCEL_URL ||
+    //       "https://writer-dashboard-updated.vercel.app"
+    //       }`
+    //       : `http://localhost:${PORT}`);
 
-      console.log(
-        `Making internal API call to: ${serverUrl}/api/getPostingAccount`
-      );
-      const response = await axios.post(`${serverUrl}/api/getPostingAccount`, {
-        trello_card_id: trelloCardId,
-        ignore_daily_limit: Boolean(isSTL),
-      });
-      const accountName = response.data?.account;
+    //   console.log(
+    //     `Making internal API call to: ${serverUrl}/api/getPostingAccount`
+    //   );
+    //   const response = await axios.post(`${serverUrl}/api/getPostingAccount`, {
+    //     trello_card_id: trelloCardId,
+    //     ignore_daily_limit: Boolean(isSTL),
+    //   });
+    //   const accountName = response.data?.account;
 
-      if (accountName) {
-        try {
-          // Query to find account ID based on the name
-          const accountQuery = await pool.query(
-            `SELECT id FROM posting_accounts WHERE account = $1`,
-            [accountName]
-          );
-          const accountId = accountQuery.rows[0]?.id;
+    //   if (accountName) {
+    //     try {
+    //       // Query to find account ID based on the name
+    //       const accountQuery = await pool.query(
+    //         `SELECT id FROM posting_accounts WHERE account = $1`,
+    //         [accountName]
+    //       );
+    //       const accountId = accountQuery.rows[0]?.id;
 
-          if (accountId) {
-            // Update script row with account_id
-            await pool.query(
-              `UPDATE script SET account_id = $1 WHERE id = $2`,
-              [accountId, script.id]
-            );
-            console.log(
-              `Updated script ${script.id} with account ID ${accountId}`
-            );
-          } else {
-            console.warn(
-              `Account name "${accountName}" not found in posting_accounts table`
-            );
-          }
-        } catch (err) {
-          console.error(
-            "Failed to update script with posting account ID:",
-            err
-          );
-        }
-      }
+    //       if (accountId) {
+    //         // Update script row with account_id
+    //         await pool.query(
+    //           `UPDATE script SET account_id = $1 WHERE id = $2`,
+    //           [accountId, script.id]
+    //         );
+    //         console.log(
+    //           `Updated script ${script.id} with account ID ${accountId}`
+    //         );
+    //       } else {
+    //         console.warn(
+    //           `Account name "${accountName}" not found in posting_accounts table`
+    //         );
+    //       }
+    //     } catch (err) {
+    //       console.error(
+    //         "Failed to update script with posting account ID:",
+    //         err
+    //       );
+    //     }
+    //   }
 
-      console.log(`Posting account assigned for card ${trelloCardId}`);
-    } catch (postingAccountError) {
-      console.error("Error assigning posting account:", postingAccountError);
-      console.error("Error details:", {
-        message: postingAccountError.message,
-        code: postingAccountError.code,
-        errno: postingAccountError.errno,
-        syscall: postingAccountError.syscall,
-        address: postingAccountError.address,
-        port: postingAccountError.port,
-        config: postingAccountError.config
-          ? {
-            url: postingAccountError.config.url,
-            method: postingAccountError.config.method,
-            baseURL: postingAccountError.config.baseURL,
-          }
-          : "No config available",
-      });
-      // Continue execution - don't fail the request if posting account assignment fails
-    }
+    //   console.log(`Posting account assigned for card ${trelloCardId}`);
+    // } catch (postingAccountError) {
+    //   console.error("Error assigning posting account:", postingAccountError);
+    //   console.error("Error details:", {
+    //     message: postingAccountError.message,
+    //     code: postingAccountError.code,
+    //     errno: postingAccountError.errno,
+    //     syscall: postingAccountError.syscall,
+    //     address: postingAccountError.address,
+    //     port: postingAccountError.port,
+    //     config: postingAccountError.config
+    //       ? {
+    //         url: postingAccountError.config.url,
+    //         method: postingAccountError.config.method,
+    //         baseURL: postingAccountError.config.baseURL,
+    //       }
+    //       : "No config available",
+    //   });
+    //   // Continue execution - don't fail the request if posting account assignment fails
+    // }
 
     // Send data to Google Sheets using Apps Script Web App URL
     const appsScriptUrl =
@@ -4451,227 +4451,227 @@ async function logAccountActivity(postAcctId, postAcctName, trelloCardId) {
 }
 
 // Endpoint to handle the posting account request
-app.post("/api/getPostingAccount", async (req, res) => {
-  try {
-    // Check if counters need to be reset based on time and last activity
-    await checkAndResetCounters();
+// app.post("/api/getPostingAccount", async (req, res) => {
+//   try {
+//     // Check if counters need to be reset based on time and last activity
+//     await checkAndResetCounters();
 
-    // Validate request parameters
-    const { trello_card_id, ignore_daily_limit = false } = req.body;
-    if (!trello_card_id) {
-      return res.status(400).json({
-        success: false,
-        error: "Trello card ID is required.",
-      });
-    }
+//     // Validate request parameters
+//     const { trello_card_id, ignore_daily_limit = false } = req.body;
+//     if (!trello_card_id) {
+//       return res.status(400).json({
+//         success: false,
+//         error: "Trello card ID is required.",
+//       });
+//     }
 
-    // Log if we're ignoring daily limits
-    if (ignore_daily_limit) {
-      console.log(
-        `Request for card ${trello_card_id} is ignoring daily usage limits`
-      );
-    }
+//     // Log if we're ignoring daily limits
+//     if (ignore_daily_limit) {
+//       console.log(
+//         `Request for card ${trello_card_id} is ignoring daily usage limits`
+//       );
+//     }
 
-    // Retrieve Trello API credentials
-    let api_key, token;
-    try {
-      const credentials = await getTrelloCredentials();
-      api_key = credentials.api_key;
-      token = credentials.token;
-    } catch (error) {
-      console.error("Error retrieving Trello credentials:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to retrieve Trello credentials.",
-      });
-    }
+//     // Retrieve Trello API credentials
+//     let api_key, token;
+//     try {
+//       const credentials = await getTrelloCredentials();
+//       api_key = credentials.api_key;
+//       token = credentials.token;
+//     } catch (error) {
+//       console.error("Error retrieving Trello credentials:", error);
+//       return res.status(500).json({
+//         success: false,
+//         error: "Failed to retrieve Trello credentials.",
+//       });
+//     }
 
-    // Retrieve accounts from the database
-    let accounts;
-    try {
-      // If ignore_daily_limit is true, we'll get all accounts regardless of their daily usage
-      // Otherwise, we'll use the standard post_acct_list view which may filter based on daily limits
-      // Add a limit to prevent memory issues with large result sets
-      let itemsListQuery;
-
-
-
-      let queryParams = [];
+//     // Retrieve accounts from the database
+//     let accounts;
+//     try {
+//       // If ignore_daily_limit is true, we'll get all accounts regardless of their daily usage
+//       // Otherwise, we'll use the standard post_acct_list view which may filter based on daily limits
+//       // Add a limit to prevent memory issues with large result sets
+//       let itemsListQuery;
 
 
-      if (ignore_daily_limit) {
-        itemsListQuery = `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`;
-      } else {
-        // Use parameterized query to avoid SQL injection - removed problematic cast
-        itemsListQuery = `SELECT id, account from post_accts_by_trello_id_v4($1) ORDER BY id`;
-        queryParams = [trello_card_id];
-      }
 
-      console.log(
-        `Using query: ${itemsListQuery} (ignore_daily_limit=${ignore_daily_limit})`
-      );
+//       let queryParams = [];
 
-      const result = await pool.query(itemsListQuery, queryParams);
-      if (result.rows.length === 0) {
-        return res.status(400).json({
-          success: false,
-          error:
-            "No accounts available. Please check account status and usage limits.",
-        });
-      }
-      accounts = result.rows;
-      console.log(`Found ${accounts.length} available accounts`);
-    } catch (error) {
-      console.error("Error retrieving accounts:", error);
-      console.error("Error details:", {
-        code: error.code,
-        detail: error.detail,
-        hint: error.hint,
-        where: error.where,
-      });
 
-      // Fallback to the simple query if the function fails
-      try {
-        console.log("Attempting fallback to post_acct_list...");
-        const fallbackResult = await pool.query(
-          `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`
-        );
-        accounts = fallbackResult.rows;
-        console.log(
-          `Fallback successful: Retrieved ${accounts.length} accounts`
-        );
+//       if (ignore_daily_limit) {
+//         itemsListQuery = `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`;
+//       } else {
+//         // Use parameterized query to avoid SQL injection - removed problematic cast
+//         itemsListQuery = `SELECT id, account from post_accts_by_trello_id_v4($1) ORDER BY id`;
+//         queryParams = [trello_card_id];
+//       }
 
-        if (accounts.length === 0) {
-          return res.status(400).json({
-            success: false,
-            error:
-              "No accounts available. Please check account status and usage limits.",
-          });
-        }
-      } catch (fallbackError) {
-        console.error("Fallback query also failed:", fallbackError);
-        return res.status(500).json({
-          success: false,
-          error: "Failed to retrieve accounts from database.",
-          details: error.message,
-        });
-      }
-    }
+//       console.log(
+//         `Using query: ${itemsListQuery} (ignore_daily_limit=${ignore_daily_limit})`
+//       );
 
-    // Extract account names and create ID mapping
-    const itemsList = accounts.map((row) => row.account);
-    const accountIdMap = accounts.reduce((map, row) => {
-      map[row.account] = row.id;
-      return map;
-    }, {});
+//       const result = await pool.query(itemsListQuery, queryParams);
+//       if (result.rows.length === 0) {
+//         return res.status(400).json({
+//           success: false,
+//           error:
+//             "No accounts available. Please check account status and usage limits.",
+//         });
+//       }
+//       accounts = result.rows;
+//       console.log(`Found ${accounts.length} available accounts`);
+//     } catch (error) {
+//       console.error("Error retrieving accounts:", error);
+//       console.error("Error details:", {
+//         code: error.code,
+//         detail: error.detail,
+//         hint: error.hint,
+//         where: error.where,
+//       });
 
-    // Validate that we have accounts to select from
-    if (itemsList.length === 0) {
-      console.error("No accounts available for selection after filtering");
-      return res.status(400).json({
-        success: false,
-        error: "No accounts available for selection after applying filters.",
-      });
-    }
+//       // Fallback to the simple query if the function fails
+//       try {
+//         console.log("Attempting fallback to post_acct_list...");
+//         const fallbackResult = await pool.query(
+//           `SELECT id, account FROM post_acct_list ORDER BY id LIMIT 1000`
+//         );
+//         accounts = fallbackResult.rows;
+//         console.log(
+//           `Fallback successful: Retrieved ${accounts.length} accounts`
+//         );
 
-    // Select a random account
-    let selectedItem;
-    try {
-      selectedItem = balancedRandomChoice(itemsList);
-      if (!selectedItem) {
-        throw new Error("balancedRandomChoice returned null or undefined");
-      }
-    } catch (error) {
-      console.error("Error selecting random account:", error);
-      return res.status(500).json({
-        success: false,
-        error: "Failed to select a random account.",
-      });
-    }
+//         if (accounts.length === 0) {
+//           return res.status(400).json({
+//             success: false,
+//             error:
+//               "No accounts available. Please check account status and usage limits.",
+//           });
+//         }
+//       } catch (fallbackError) {
+//         console.error("Fallback query also failed:", fallbackError);
+//         return res.status(500).json({
+//           success: false,
+//           error: "Failed to retrieve accounts from database.",
+//           details: error.message,
+//         });
+//       }
+//     }
 
-    // Validate the selected account has a valid ID
-    const selectedAccountId = accountIdMap[selectedItem];
-    if (!selectedAccountId) {
-      console.error(`Selected account "${selectedItem}" has no valid ID`);
-      return res.status(500).json({
-        success: false,
-        error: "Internal error: Invalid account selection.",
-      });
-    }
+//     // Extract account names and create ID mapping
+//     const itemsList = accounts.map((row) => row.account);
+//     const accountIdMap = accounts.reduce((map, row) => {
+//       map[row.account] = row.id;
+//       return map;
+//     }, {});
 
-    // Update the usage counter in the database (unless ignore_daily_limit is true)
-    if (!ignore_daily_limit) {
-      try {
-        const updateQuery = `
-                  UPDATE posting_accounts
-                  SET daily_used = daily_used + 1
-                  WHERE id = $1
-                  RETURNING id, account, daily_used;
-              `;
-        const updateResult = await pool.query(updateQuery, [selectedAccountId]);
+//     // Validate that we have accounts to select from
+//     if (itemsList.length === 0) {
+//       console.error("No accounts available for selection after filtering");
+//       return res.status(400).json({
+//         success: false,
+//         error: "No accounts available for selection after applying filters.",
+//       });
+//     }
 
-        // Log the update result
-        if (updateResult.rows.length > 0) {
-          console.log(
-            `Updated daily_used for account ${selectedItem}:`,
-            updateResult.rows[0]
-          );
-        } else {
-          console.warn(
-            `No rows updated for account ${selectedItem} (ID: ${selectedAccountId})`
-          );
-        }
-      } catch (error) {
-        console.error(
-          `Error updating usage counter for account ${selectedItem}:`,
-          error
-        );
-        // Continue execution - we don't want to fail the request just because the counter update failed
-      }
-    } else {
-      console.log(
-        `Skipping daily usage update for account ${selectedItem} (ignore_daily_limit=true)`
-      );
-    }
+//     // Select a random account
+//     let selectedItem;
+//     try {
+//       selectedItem = balancedRandomChoice(itemsList);
+//       if (!selectedItem) {
+//         throw new Error("balancedRandomChoice returned null or undefined");
+//       }
+//     } catch (error) {
+//       console.error("Error selecting random account:", error);
+//       return res.status(500).json({
+//         success: false,
+//         error: "Failed to select a random account.",
+//       });
+//     }
 
-    // Log this account activity to the audit table
-    await logAccountActivity(selectedAccountId, selectedItem, trello_card_id);
+//     // Validate the selected account has a valid ID
+//     const selectedAccountId = accountIdMap[selectedItem];
+//     if (!selectedAccountId) {
+//       console.error(`Selected account "${selectedItem}" has no valid ID`);
+//       return res.status(500).json({
+//         success: false,
+//         error: "Internal error: Invalid account selection.",
+//       });
+//     }
 
-    // Update Trello card with the selected account
-    try {
-      await setPostingAccountValue(
-        trello_card_id,
-        selectedItem,
-        api_key,
-        token
-      );
-      await addPostingAccountComment(
-        trello_card_id,
-        selectedItem,
-        api_key,
-        token
-      );
-    } catch (error) {
-      console.error("Error updating Trello card:", error);
-      // We still return the selected account even if Trello update fails
-    }
+//     // Update the usage counter in the database (unless ignore_daily_limit is true)
+//     if (!ignore_daily_limit) {
+//       try {
+//         const updateQuery = `
+//                   UPDATE posting_accounts
+//                   SET daily_used = daily_used + 1
+//                   WHERE id = $1
+//                   RETURNING id, account, daily_used;
+//               `;
+//         const updateResult = await pool.query(updateQuery, [selectedAccountId]);
 
-    // Return the selected account
-    return res.status(200).json({
-      success: true,
-      account: selectedItem,
-      ignored_daily_limit: ignore_daily_limit,
-    });
-  } catch (error) {
-    // Catch-all for any unhandled errors
-    console.error("Unhandled error in getPostingAccount:", error);
-    return res.status(500).json({
-      success: false,
-      error: "An unexpected error occurred while processing your request.",
-      details: error.message,
-    });
-  }
-});
+//         // Log the update result
+//         if (updateResult.rows.length > 0) {
+//           console.log(
+//             `Updated daily_used for account ${selectedItem}:`,
+//             updateResult.rows[0]
+//           );
+//         } else {
+//           console.warn(
+//             `No rows updated for account ${selectedItem} (ID: ${selectedAccountId})`
+//           );
+//         }
+//       } catch (error) {
+//         console.error(
+//           `Error updating usage counter for account ${selectedItem}:`,
+//           error
+//         );
+//         // Continue execution - we don't want to fail the request just because the counter update failed
+//       }
+//     } else {
+//       console.log(
+//         `Skipping daily usage update for account ${selectedItem} (ignore_daily_limit=true)`
+//       );
+//     }
+
+//     // Log this account activity to the audit table
+//     await logAccountActivity(selectedAccountId, selectedItem, trello_card_id);
+
+//     // Update Trello card with the selected account
+//     try {
+//       await setPostingAccountValue(
+//         trello_card_id,
+//         selectedItem,
+//         api_key,
+//         token
+//       );
+//       await addPostingAccountComment(
+//         trello_card_id,
+//         selectedItem,
+//         api_key,
+//         token
+//       );
+//     } catch (error) {
+//       console.error("Error updating Trello card:", error);
+//       // We still return the selected account even if Trello update fails
+//     }
+
+//     // Return the selected account
+//     return res.status(200).json({
+//       success: true,
+//       account: selectedItem,
+//       ignored_daily_limit: ignore_daily_limit,
+//     });
+//   } catch (error) {
+//     // Catch-all for any unhandled errors
+//     console.error("Unhandled error in getPostingAccount:", error);
+//     return res.status(500).json({
+//       success: false,
+//       error: "An unexpected error occurred while processing your request.",
+//       details: error.message,
+//     });
+//   }
+// });
 
 //Archiving Of Trello Cards
 // Endpoint to archive Trello cards based on scripts_for_archive table
