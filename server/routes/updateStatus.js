@@ -35,6 +35,7 @@ router.post('/', async (req, res) => {
     loom,
     short_video_url,
     posting_account,
+    sponsor,
   } = req.body;
 
   // Input validation
@@ -43,6 +44,7 @@ router.post('/', async (req, res) => {
   }
 
   let posting_account_id = null;
+  let sponsor_id = null;
 
   if (posting_account && typeof posting_account === 'string') {
     try {
@@ -50,7 +52,7 @@ router.post('/', async (req, res) => {
         `SELECT id FROM posting_accounts WHERE account ILIKE $1 LIMIT 1`,
         [`%${posting_account.trim()}%`]
       );
-      
+
       if (result.rows.length > 0) {
         posting_account_id = result.rows[0].id;
         console.log(`✅ Found posting account: ${posting_account} -> ID: ${posting_account_id}`);
@@ -59,6 +61,25 @@ router.post('/', async (req, res) => {
       }
     } catch (error) {
       console.error(`❌ Error looking up posting account:`, error);
+    }
+  }
+
+  // Lookup sponsor_id if sponsor is provided
+  if (sponsor && typeof sponsor === 'string') {
+    try {
+      const result = await pool.query(
+        `SELECT id FROM sponsor WHERE LOWER(TRIM(name)) = LOWER(TRIM($1)) LIMIT 1`,
+        [sponsor.trim()]
+      );
+
+      if (result.rows.length > 0) {
+        sponsor_id = result.rows[0].id;
+        console.log(`✅ Found sponsor: ${sponsor} -> ID: ${sponsor_id}`);
+      } else {
+        console.log(`⚠️ Sponsor not found: ${sponsor}`);
+      }
+    } catch (error) {
+      console.error(`❌ Error looking up sponsor:`, error);
     }
   }
 
@@ -155,13 +176,13 @@ router.post('/', async (req, res) => {
       // Prepare video URLs to insert (already validated above)
       const urlsToInsert = [];
       if (hasShortVideo) {
-        urlsToInsert.push({ url: short_video_url.trim(), type: 'short', account_id: posting_account_id });
+        urlsToInsert.push({ url: short_video_url.trim(), type: 'short', account_id: posting_account_id, sponsor_id });
       }
       if (hasLongVideo) {
-        urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: posting_account_id });
+        urlsToInsert.push({ url: long_video_url.trim(), type: 'long', account_id: posting_account_id, sponsor_id });
       }
       if (hasTikTokVideo) {
-        urlsToInsert.push({ url: tiktok_url.trim(), type: 'tiktok', account_id: posting_account_id });
+        urlsToInsert.push({ url: tiktok_url.trim(), type: 'tiktok', account_id: posting_account_id, sponsor_id });
       }
 
       // Upsert videos
@@ -171,9 +192,9 @@ router.post('/', async (req, res) => {
       for (const videoData of urlsToInsert) {
         try {
           const videoResult = await client.query(`
-            INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat)
-            VALUES ($1, $2, $3, $4, $5, $6, $7)
-            ON CONFLICT (url) 
+            INSERT INTO video (url, created, writer_id, script_title, trello_card_id, account_id, video_cat, sponsor_id)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+            ON CONFLICT (url)
             DO UPDATE SET
               created = EXCLUDED.created,
               writer_id = EXCLUDED.writer_id,
@@ -181,6 +202,7 @@ router.post('/', async (req, res) => {
               trello_card_id = EXCLUDED.trello_card_id,
               account_id = EXCLUDED.account_id,
               video_cat = EXCLUDED.video_cat,
+              sponsor_id = EXCLUDED.sponsor_id,
               updated_at = NOW()
             RETURNING id, (xmax = 0) AS inserted;
           `, [
@@ -190,7 +212,8 @@ router.post('/', async (req, res) => {
             script_title,
             trello_card_id.trim(),
             videoData.account_id,
-            videoData.type
+            videoData.type,
+            videoData.sponsor_id
           ]);
 
           const { id: videoId, inserted: wasInserted } = videoResult.rows[0];
@@ -299,6 +322,14 @@ router.post('/', async (req, res) => {
       status: scriptStatus,
       trello_card_id: trello_card_id.trim(),
     };
+
+    // Add sponsor information if provided
+    if (sponsor && sponsor_id) {
+      responseData.sponsor_details = {
+        sponsor_name: sponsor.trim(),
+        sponsor_id: sponsor_id
+      };
+    }
 
     // Add branch-specific data
     if (scriptStatus === "rejected") {
