@@ -1477,7 +1477,7 @@ async function getBigQueryAnalyticsOverview(
           const extendedStartDateStr = extendedStartDate.toISOString().slice(0, 10);
 
           // Check if this is an STL writer that needs duration filtering
-          const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+          const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
           const isSTLWriter = stlWriters.includes(writerName);
 
           let viewCountsQuery;
@@ -1916,7 +1916,7 @@ async function getBigQueryAnalyticsOverview(
 
     try {
       // Check if this is an STL writer with different thresholds
-      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
       const isSTLWriter = stlWriters.includes(writerName);
 
       console.log(`🔍 Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
@@ -2039,7 +2039,7 @@ async function getBigQueryAnalyticsOverview(
       console.log(`🎬 Getting video details for each category for writer ${writerName}`);
 
       // Check if this is an STL writer with different thresholds
-      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+      const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
       const isSTLWriter = stlWriters.includes(writerName);
 
       const videoDetailsQuery = `
@@ -2155,7 +2155,7 @@ async function getBigQueryAnalyticsOverview(
     let totalAllViews = finalTotalViews; // Default to current total views (long videos for STL)
 
     // Check if this is an STL writer that needs shorts calculation
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     if (isSTLWriter) {
@@ -2928,7 +2928,7 @@ async function handleVideoDetailsRequest(req, res) {
     const writerName = writerRows[0].name;
 
     // Check if this is an STL writer with different thresholds
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     console.log(`🔍 Video Details - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
@@ -7699,7 +7699,7 @@ router.get('/video-details', authenticateToken, async (req, res) => {
     const writerName = writerRows[0].name;
 
     // Check if this is an STL writer with different thresholds
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
     const isSTLWriter = stlWriters.includes(writerName);
 
     console.log(`🔍 Video Details v2 - Writer: ${writerName}, Is STL Writer: ${isSTLWriter}`);
