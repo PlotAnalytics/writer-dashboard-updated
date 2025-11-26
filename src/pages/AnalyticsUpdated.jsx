@@ -1347,7 +1347,7 @@ const AnalyticsUpdated = () => {
 
   // Check if user is STL writer
   const isSTLWriter = () => {
-    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu"];
+    const stlWriters = ["Grace's STL", "LucisSTL", "Maebh STL", "Hannah STL", "Monica STL", "MyloSTL", "Steven Abreu", "AIwriter"];
     return stlWriters.includes(user?.name);
   };
 
