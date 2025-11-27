@@ -269,7 +269,7 @@ async function getBigQueryViews(writerId, startDate, endDate, influxService = nu
     console.log(`📊 NEW APPROACH: Getting daily view increases for writer ${writerId} from ${startDate} to ${endDate}`);
 
     // Check if this writer should get shorts/long split
-    const splitWriters = [1001, 1002, 1004, 130, 136, 131];
+    const splitWriters = [1001, 1002, 1004, 130, 136, 131, 1010]; // Added 1010 for AIwriter
     const shouldSplitByType = splitWriters.includes(parseInt(writerId));
 
     console.log(`📊 Writer ${writerId} split by type: ${shouldSplitByType}`);
@@ -3170,7 +3170,7 @@ async function handleAnalyticsRequest(req, res) {
         });
 
         // Check if this writer should get shorts/long split
-        const splitWriters = [1001, 1002, 1004, 130, 136, 131];
+        const splitWriters = [1001, 1002, 1004, 130, 136, 131, 1010]; // Added 1010 for AIwriter
         const shouldSplitByType = splitWriters.includes(parseInt(writerId));
 
         // Use BigQuery for analytics overview with writer name from PostgreSQL
