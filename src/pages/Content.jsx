@@ -832,6 +832,9 @@ const Content = () => {
               '& .MuiTabs-indicator': {
                 backgroundColor: 'white',
                 height: 2
+              },
+              '& .MuiTab-root:nth-of-type(4)': {
+                display: 'none' // Hide Virals tab
               }
             }}
           >
