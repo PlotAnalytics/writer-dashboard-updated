@@ -1316,47 +1316,8 @@ async function getBigQueryAnalyticsOverview(
       finalInfluxStartDate: '${finalInfluxStartDate}'
     }`);
 
-    // ———————————————— 5) QA: Raw Views from BigQuery ————————————————
-
-    let rawViewsRows = [];
-    if (useBigQuery) {
-      const rawViewsQuery = `
-        SELECT
-          FORMAT_DATE('%Y-%m-%d', date_day) as date_string,
-          video_id,
-          video_title,
-          views,
-          account_name
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-        WHERE writer_name = @writer_name
-          AND date_day >= @start_date
-          AND date_day <= @end_date
-          ${useBigQuery && useInfluxDB ? 'AND date_day <= DATE_SUB(CURRENT_DATE(), INTERVAL 3 DAY)' : ''}
-          AND writer_name IS NOT NULL
-          AND views IS NOT NULL
-        ORDER BY date_day DESC, views DESC;
-
-      `;
-      const [bigQueryRawRows] = await bigquery.query({
-        query: rawViewsQuery,
-        params: {
-          writer_name: writerName,
-          start_date: finalStartDate,
-          end_date: finalBigQueryEndDate,
-        }
-      });
-      rawViewsRows = bigQueryRawRows;
-    }
-    console.log(`📋 Raw Views (${rawViewsRows.length} rows):`);
-    console.table(rawViewsRows.slice(0, 100).map(row => ({
-      date_string: row.date_string,
-      video_id: row.video_id,
-      video_title: row.video_title,
-      views: row.views,
-      account_name: row.account_name
-    })));
-
-    console.log('✅ Raw views processing completed successfully');
+    // ———————————————— 5) Skip raw views query (youtube_video_report_historical table removed) ————————————————
+    console.log('✅ Skipping raw views query (table removed)');
     console.log('🔍 About to start daily totals query...');
 
     // ——— NEW APPROACH: Daily view increases via BigQuery metadata ———
@@ -1400,50 +1361,24 @@ async function getBigQueryAnalyticsOverview(
         // Use youtube_metadata_historical for July 4th onwards (more up-to-date)
         console.log('🔍 Step 2: Getting distinct video_ids from both tables for writer:', writerName);
 
-        const cutoffDate = '2025-07-03';
+        // Get video IDs from youtube_metadata_historical only (youtube_video_report_historical removed)
         let allVideoIds = new Set();
 
-        // Get video IDs from youtube_video_report_historical (up to July 3rd)
-        if (finalStartDate <= cutoffDate) {
-          const videoIdsQuery1 = `
-            SELECT DISTINCT video_id
-            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-            WHERE writer_name = @writer_name
-              AND date_day <= @cutoff_date
-          `;
+        const videoIdsQuery = `
+          SELECT DISTINCT video_id
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
+          WHERE writer_name = @writer_name
+        `;
 
-          const [videoIdsResult1] = await bigquery.query({
-            query: videoIdsQuery1,
-            params: {
-              writer_name: writerName,
-              cutoff_date: cutoffDate
-            }
-          });
+        const [videoIdsResult] = await bigquery.query({
+          query: videoIdsQuery,
+          params: {
+            writer_name: writerName
+          }
+        });
 
-          console.log(`📊 Found ${videoIdsResult1.length} video IDs from youtube_video_report_historical (up to ${cutoffDate})`);
-          videoIdsResult1.forEach(row => allVideoIds.add(row.video_id));
-        }
-
-        // Get video IDs from youtube_metadata_historical (July 4th onwards)
-        if (finalEndDate > cutoffDate) {
-          const videoIdsQuery2 = `
-            SELECT DISTINCT video_id
-            FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
-            WHERE writer_name = @writer_name
-              AND snapshot_date > @cutoff_date
-          `;
-
-          const [videoIdsResult2] = await bigquery.query({
-            query: videoIdsQuery2,
-            params: {
-              writer_name: writerName,
-              cutoff_date: cutoffDate
-            }
-          });
-
-          console.log(`📊 Found ${videoIdsResult2.length} video IDs from youtube_metadata_historical (after ${cutoffDate})`);
-          videoIdsResult2.forEach(row => allVideoIds.add(row.video_id));
-        }
+        console.log(`📊 Found ${videoIdsResult.length} video IDs from youtube_metadata_historical`);
+        videoIdsResult.forEach(row => allVideoIds.add(row.video_id));
 
         const videoIds = Array.from(allVideoIds);
         console.log(`📊 Total unique video IDs for writer: ${videoIds.length}`);
@@ -2220,17 +2155,16 @@ async function getBigQueryAnalyticsOverview(
         lowestDay: dailyTotalsData.length > 0 ? Math.min(...dailyTotalsData.map(d => d.views)) : 0
       },
       metadata: {
-        source: 'BigQuery youtube_video_report_historical (confirmed YouTube Analytics data)',
+        source: 'BigQuery youtube_metadata_historical (confirmed YouTube Analytics data)',
         dataSource: 'BigQuery: all historical data from YouTube Analytics',
         lastUpdated: new Date().toISOString(),
         range: range,
         bigQueryIntegrated: true,
         influxDBIntegrated: false,
-        tableUsed: 'youtube_video_report_historical',
+        tableUsed: 'youtube_metadata_historical',
         influxDBDays: 0
       },
-      // Keep raw data for debugging
-      rawViews: rawViewsRows,
+      // Keep raw data for debugging (rawViews removed - youtube_video_report_historical table no longer exists)
       dailyTotals: dailyTotalsRows,
       influxData: [] // Always empty since InfluxDB is disabled
     };
@@ -5592,15 +5526,15 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
 
     if (videoIds.length > 0) {
       try {
-        // Query BigQuery for duration data and account names from youtube_video_report_historical
+        // Query BigQuery for duration data and account names from youtube_metadata_historical
         const bigQuerySql = `
           SELECT
             video_id,
-            video_duration_seconds,
+            content_details_duration,
             channel_title
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
           WHERE video_id IN UNNEST(@video_ids)
-          GROUP BY video_id, video_duration_seconds, channel_title
+          GROUP BY video_id, content_details_duration, channel_title
         `;
 
         const bigQueryOptions = {
@@ -5665,7 +5599,7 @@ router.get('/writer/top-content', authenticateToken, async (req, res) => {
         isShort: finalIsShort,
         video_duration_seconds: bigQueryData?.duration_seconds || null,
         duration: formattedDuration, // Use properly formatted duration
-        account_name: bigQueryData?.channel_title || 'Unknown Account', // Use channel_title from youtube_video_report_historical
+        account_name: bigQueryData?.channel_title || 'Unknown Account', // Use channel_title from youtube_metadata_historical
         channel_title: bigQueryData?.channel_title,
         thumbnail: video.thumbnail // Keep original thumbnail
       };
@@ -5974,12 +5908,12 @@ router.get('/writer/latest-content', authenticateToken, async (req, res) => {
       console.log('🔍 Extracted video ID for BigQuery lookup:', videoId, 'from URL:', latestContent.url);
 
       if (videoId) {
-        // Query BigQuery for enhanced data (using youtube_video_report_historical like top content)
+        // Query BigQuery for enhanced data (using youtube_metadata_historical)
         const bigQuerySql = `
           SELECT
             video_id,
             channel_title
-          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
+          FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_metadata_historical\`
           WHERE video_id = @video_id
           GROUP BY video_id, channel_title
           LIMIT 1
@@ -6252,41 +6186,10 @@ router.get('/debug-writer-130-july-8', async (req, res) => {
       data_sources: {}
     };
 
-    // Check youtube_video_report_historical
-    try {
-      const reportQuery = `
-        SELECT
-          date_day,
-          video_id,
-          video_title,
-          views,
-          account_name,
-          writer_name
-        FROM \`speedy-web-461014-g3.dbt_youtube_analytics.youtube_video_report_historical\`
-        WHERE writer_name = @writer_name
-          AND date_day = @target_date
-        ORDER BY views DESC
-        LIMIT 10
-      `;
-
-      const [reportRows] = await global.bigqueryClient.query({
-        query: reportQuery,
-        params: { writer_name: writerName, target_date: targetDate }
-      });
-
-      results.data_sources.youtube_video_report_historical = {
-        found_records: reportRows.length,
-        total_views: reportRows.reduce((sum, row) => sum + parseInt(row.views || 0), 0),
-        sample_data: reportRows.slice(0, 3).map(row => ({
-          video_id: row.video_id,
-          video_title: row.video_title,
-          views: row.views,
-          writer_name: row.writer_name
-        }))
-      };
-    } catch (error) {
-      results.data_sources.youtube_video_report_historical = { error: error.message };
-    }
+    // Skip youtube_video_report_historical check (table removed)
+    results.data_sources.youtube_video_report_historical = {
+      status: 'Table removed - no longer in use'
+    };
 
     // Check historical_video_metadata_past
     try {
@@ -6888,7 +6791,7 @@ router.get('/test/top-content', async (req, res) => {
         shorts: 'Only videos < 183 seconds',
         content: 'Only videos >= 183 seconds'
       },
-      bigquery_table: 'youtube_video_report_historical',
+      bigquery_table: 'youtube_metadata_historical',
       account_name_source: 'channel_title'
     });
 
@@ -7304,9 +7207,9 @@ router.get('/retention-master', async (req, res) => {
         WHERE video_id IS NOT NULL
       )
       SELECT COUNT(DISTINCT v.video_id) as total_count
-      FROM \`${projectId}.${dataset}.youtube_video_report_historical\` v
+      FROM \`${projectId}.${dataset}.youtube_metadata_historical\` v
       INNER JOIN unique_videos uv ON v.video_id = uv.video_id
-      WHERE v.video_title IS NOT NULL
+      WHERE v.snippet_title IS NOT NULL
     `;
 
     console.log('🔍 Getting total count of videos with retention data');
@@ -7328,18 +7231,18 @@ router.get('/retention-master', async (req, res) => {
       unique_video_reports AS (
         SELECT DISTINCT
           v.video_id,
-          FIRST_VALUE(v.video_title) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as video_title,
-          FIRST_VALUE(v.video_duration_seconds) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as video_duration_seconds,
-          FIRST_VALUE(v.writer_name) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as writer_name,
-          FIRST_VALUE(v.account_name) OVER (PARTITION BY v.video_id ORDER BY v.date_day DESC) as account_name
-        FROM \`${projectId}.${dataset}.youtube_video_report_historical\` v
+          FIRST_VALUE(v.snippet_title) OVER (PARTITION BY v.video_id ORDER BY v.snapshot_date DESC) as video_title,
+          FIRST_VALUE(v.content_details_duration) OVER (PARTITION BY v.video_id ORDER BY v.snapshot_date DESC) as video_duration,
+          FIRST_VALUE(v.writer_name) OVER (PARTITION BY v.video_id ORDER BY v.snapshot_date DESC) as writer_name,
+          FIRST_VALUE(v.channel_title) OVER (PARTITION BY v.video_id ORDER BY v.snapshot_date DESC) as account_name
+        FROM \`${projectId}.${dataset}.youtube_metadata_historical\` v
         INNER JOIN unique_videos uv ON v.video_id = uv.video_id
-        WHERE v.video_title IS NOT NULL
+        WHERE v.snippet_title IS NOT NULL
       )
       SELECT DISTINCT
         video_id,
         video_title,
-        video_duration_seconds,
+        video_duration,
         writer_name,
         account_name
       FROM unique_video_reports
