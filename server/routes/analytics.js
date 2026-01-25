@@ -7050,13 +7050,12 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
         total_views,
         total_videos,
         avg_daily_increase,
-        rank_position as rank,
         calculation_date,
         period
       FROM \`speedy-web-461014-g3.dbt_youtube_analytics.writer_weekly_leaderboard\`
       WHERE calculation_date = CURRENT_DATE()
         AND period = @period
-      ORDER BY rank_position
+      ORDER BY total_views DESC
       LIMIT @limit
     `;
 
@@ -7081,12 +7080,11 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
           total_views,
           total_videos,
           avg_daily_increase,
-          rank_position as rank,
           calculation_date,
           period
         FROM \`speedy-web-461014-g3.dbt_youtube_analytics.writer_weekly_leaderboard\`
         WHERE period = @period
-        ORDER BY calculation_date DESC, rank_position
+        ORDER BY calculation_date DESC, total_views DESC
         LIMIT @limit
       `;
 
@@ -7144,8 +7142,8 @@ router.get('/writer/leaderboard', authenticateToken, async (req, res) => {
       }
     }
 
-    const leaderboardData = leaderboardRows.map(row => ({
-      rank: parseInt(row.rank),
+    const leaderboardData = leaderboardRows.map((row, index) => ({
+      rank: index + 1, // Calculate rank based on position (1, 2, 3, ...) since we sorted by total_views DESC
       writer_name: row.writer_name,
       writer_id: row.writer_id,
       total_views: parseInt(row.total_views),
